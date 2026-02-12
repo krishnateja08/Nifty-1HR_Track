@@ -1,31 +1,21 @@
-name: Nifty Trading Analyzer
+name: Nifty Trading Analyzer - Fixed
 
-# Workflow triggers
 on:
-  # Run on schedule (cron format in UTC)
   schedule:
-    # Run at 3:45 AM UTC (9:15 AM IST) - Market Open
+    # 9:15 AM IST (3:45 AM UTC)
     - cron: '45 3 * * 1-5'
-    # Run at 6:30 AM UTC (12:00 PM IST) - Mid-day
+    # 12:00 PM IST (6:30 AM UTC)
     - cron: '30 6 * * 1-5'
-    # Run at 9:30 AM UTC (3:00 PM IST) - Before Market Close
+    # 3:00 PM IST (9:30 AM UTC)
     - cron: '30 9 * * 1-5'
   
-  # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
   
-  # Run on push to main branch (for testing)
   push:
     branches:
       - main
       - master
-    paths:
-      - '**.py'
-      - '**.yml'
-      - '**.yaml'
-      - 'requirements.txt'
 
-# Environment variables
 env:
   PYTHON_VERSION: '3.10'
 
@@ -35,54 +25,28 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
       
-      # Step 2: List files (debugging)
-      - name: List repository files
-        run: |
-          echo "=== Repository Contents ==="
-          ls -la
-          echo "=== Looking for Python files ==="
-          find . -name "*.py" -type f
-          echo "=== Looking for requirements.txt ==="
-          find . -name "requirements.txt" -type f
-      
-      # Step 3: Set up Python
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      # Step 4: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           
-          # Check if requirements.txt exists
           if [ -f "requirements.txt" ]; then
-            echo "Installing from requirements.txt"
             pip install -r requirements.txt
           else
-            echo "requirements.txt not found, installing packages directly"
-            pip install pandas>=1.5.0
-            pip install numpy>=1.23.0
-            pip install yfinance>=0.2.0
-            pip install requests>=2.28.0
-            pip install beautifulsoup4>=4.11.0
-            pip install pyyaml>=6.0
+            pip install pandas numpy yfinance requests beautifulsoup4 pyyaml
           fi
           
-          echo "=== Installed packages ==="
           pip list
       
-      # Step 5: Create config from secrets
-      - name: Configure analyzer settings
+      - name: Create config.yml
         run: |
-          # Create config.yml from secrets
           cat > config.yml << 'EOF'
           email:
             recipient: "${{ secrets.RECIPIENT_EMAIL }}"
@@ -92,13 +56,13 @@ jobs:
             send_on_failure: false
           
           technical:
-            timeframe: "${{ vars.TIMEFRAME || '1h' }}"
-            period: "${{ vars.PERIOD || '6mo' }}"
-            rsi_period: ${{ vars.RSI_PERIOD || 14 }}
-            rsi_overbought: ${{ vars.RSI_OVERBOUGHT || 70 }}
-            rsi_oversold: ${{ vars.RSI_OVERSOLD || 30 }}
-            ema_short: ${{ vars.EMA_SHORT || 20 }}
-            ema_long: ${{ vars.EMA_LONG || 50 }}
+            timeframe: "1h"
+            period: "6mo"
+            rsi_period: 14
+            rsi_overbought: 70
+            rsi_oversold: 30
+            ema_short: 20
+            ema_long: 50
             num_support_levels: 2
             num_resistance_levels: 2
           
@@ -149,59 +113,52 @@ jobs:
             min_data_points: 100
           EOF
           
-          echo "=== Config file created ==="
-          cat config.yml
+          echo "=== Config created ==="
+          # Mask sensitive data in output
+          sed 's/app_password: .*/app_password: "***HIDDEN***"/' config.yml
       
-      # Step 6: Create necessary directories
       - name: Create directories
         run: |
-          mkdir -p reports
-          mkdir -p logs
-          echo "=== Directories created ==="
+          mkdir -p reports logs
           ls -la
       
-      # Step 7: Find and run the analyzer
-      - name: Run Nifty Analysis
+      - name: Run Analysis
+        id: analysis
         run: |
-          # Find the Python script
           if [ -f "nifty_analyzer_with_yaml.py" ]; then
-            echo "Running nifty_analyzer_with_yaml.py"
             python nifty_analyzer_with_yaml.py
           elif [ -f "nifty_trading_analyzer.py" ]; then
-            echo "Running nifty_trading_analyzer.py"
             python nifty_trading_analyzer.py
           else
-            echo "ERROR: No analyzer script found!"
-            echo "Available Python files:"
-            find . -name "*.py" -type f
+            echo "ERROR: Python script not found!"
+            ls -la *.py
             exit 1
           fi
         continue-on-error: true
       
-      # Step 8: Check for generated reports
-      - name: Check generated files
+      - name: Check outputs
         if: always()
         run: |
-          echo "=== Reports directory ==="
-          ls -la reports/ || echo "No reports directory"
-          echo "=== Logs directory ==="
-          ls -la logs/ || echo "No logs directory"
-          echo "=== Root directory ==="
-          ls -la *.html || echo "No HTML files in root"
+          echo "=== Generated Reports ==="
+          ls -lah reports/ 2>/dev/null || echo "No reports"
+          
+          echo "=== Logs ==="
+          ls -lah logs/ 2>/dev/null || echo "No logs"
+          
+          echo "=== Log Content ==="
+          cat logs/nifty_analyzer.log 2>/dev/null || echo "No log file"
       
-      # Step 9: Upload reports as artifacts
-      - name: Upload HTML Reports
+      - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nifty-report-${{ github.run_number }}
+          name: nifty-reports-${{ github.run_number }}
           path: |
             reports/*.html
             *.html
           if-no-files-found: warn
           retention-days: 30
       
-      # Step 10: Upload logs
       - name: Upload Logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -209,28 +166,23 @@ jobs:
           name: analyzer-logs-${{ github.run_number }}
           path: |
             logs/*.log
-            *.log
           if-no-files-found: warn
           retention-days: 7
       
-      # Step 11: Display log contents (for debugging)
-      - name: Display logs
+      - name: Summary
         if: always()
         run: |
-          echo "=== Analyzer Logs ==="
+          echo "## 📊 Nifty Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           if [ -f "logs/nifty_analyzer.log" ]; then
-            cat logs/nifty_analyzer.log
-          else
-            echo "No log file found"
+            echo "### 📝 Last Log Entries:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -20 logs/nifty_analyzer.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
           fi
-      
-      # Step 12: Send notification on failure (optional)
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "❌ Analysis failed. Check the logs for details."
-          echo "Common issues:"
-          echo "1. Missing requirements.txt - Install packages directly"
-          echo "2. Missing Python script - Upload nifty_analyzer_with_yaml.py"
-          echo "3. NSE API blocking - Set fallback_to_sample: true"
-          echo "4. Email credentials - Check GitHub secrets"
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML Reports: \`nifty-reports-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Logs: \`analyzer-logs-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
