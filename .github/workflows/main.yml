@@ -1,4 +1,4 @@
-name: Nifty Trading Analyzer + GitHub Pages
+name: Nifty Trading Analyzer (Deploy to gh-pages)
 
 on:
   schedule:
@@ -12,9 +12,7 @@ on:
       - master
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 env:
   PYTHON_VERSION: '3.10'
@@ -26,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # required for branch creation
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,7 +40,6 @@ jobs:
           else
             pip install pandas numpy yfinance requests beautifulsoup4 pyyaml
           fi
-          pip list
 
       - name: Create config.yml
         run: |
@@ -111,8 +110,7 @@ jobs:
           CONFIG_EOF
 
       - name: Create directories
-        run: |
-          mkdir -p reports logs
+        run: mkdir -p reports logs
 
       - name: Run Analysis Script
         run: |
@@ -122,28 +120,39 @@ jobs:
             python nifty_trading_analyzer.py
           else
             echo "ERROR: Python script not found!"
-            ls -la *.py
             exit 1
           fi
         continue-on-error: true
 
-      - name: Prepare GitHub Pages site
+      - name: Create gh-pages branch if not exists
         run: |
-          mkdir -p public
-          latest_report=$(ls -t reports/*.html 2>/dev/null | head -n 1 || echo "")
-          if [ -n "$latest_report" ]; then
-            cp "$latest_report" public/index.html
+          git fetch
+          if ! git rev-parse --verify origin/gh-pages; then
+            echo "⚠️ gh-pages branch not found — creating it now"
+            git checkout --orphan gh-pages
+            git rm -rf .
+            echo "<h1>Initializing GitHub Pages</h1>" > index.html
+            git add index.html
+            git commit -m "Initialize gh-pages"
+            git push origin gh-pages
           else
-            echo "<html><body><h2>No report generated</h2></body></html>" > public/index.html
+            echo "✅ gh-pages branch already exists"
           fi
 
-      - name: Upload GitHub Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
+      - name: Copy latest report into gh-pages branch
+        run: |
+          latest_report=$(ls -t reports/*.html 2>/dev/null | head -n 1 || echo "")
+          if [ -z "$latest_report" ]; then
+            echo "<h1>No report generated</h1>" > index.html
+          else
+            cp "$latest_report" index.html
+          fi
 
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+          git checkout gh-pages
+          cp index.html index.html
+          git add index.html
+          git commit -m "Update report $(date)" || echo "No changes to commit"
+          git push origin gh-pages
 
       - name: Upload Reports as Artifacts
         if: always()
@@ -161,4 +170,4 @@ jobs:
           name: analyzer-logs-${{ github.run_number }}
           path: logs/*.log
           if-no-files-found: warn
-          retention-days: 7
+          retention
