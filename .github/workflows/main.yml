@@ -2,12 +2,8 @@ name: Nifty Trading Analyzer
 
 on:
   schedule:
-    # 9:15 AM IST (3:45 AM UTC)
-    - cron: '45 3 * * 1-5'
-    # 12:00 PM IST (6:30 AM UTC)
-    - cron: '30 6 * * 1-5'
-    # 3:00 PM IST (9:30 AM UTC)
-    - cron: '30 9 * * 1-5'
+   - cron: '37 3 * * 1-5'  # 9:07 AM IST - Less competition than 9:00 or 9:30
+   - cron: '42 4-10 * * 1-5'  # Market hours
   
   workflow_dispatch:
   
