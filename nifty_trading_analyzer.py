@@ -1,7 +1,7 @@
 """
 Nifty Option Chain & Technical Analysis for Day Trading
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
-Enhanced with Pivot Points (Traditional Method)
+Enhanced with Pivot Points (Traditional Method) - Optimized & Responsive
 """
 
 import pandas as pd
@@ -373,32 +373,25 @@ class NiftyAnalyzer:
         Calculate Traditional Pivot Points (Daily)
         Matches TradingView's Pivot Points Standard indicator
         """
-        # Get yesterday's OHLC (last completed daily candle)
         try:
-            # Get daily data for pivot calculation
             ticker = yf.Ticker(self.nifty_symbol)
             daily_df = ticker.history(period='5d', interval='1d')
             
             if len(daily_df) >= 2:
-                # Use previous day's data
                 prev_high = daily_df['High'].iloc[-2]
                 prev_low = daily_df['Low'].iloc[-2]
                 prev_close = daily_df['Close'].iloc[-2]
             else:
-                # Fallback to current data if daily not available
                 prev_high = df['High'].max()
                 prev_low = df['Low'].min()
                 prev_close = df['Close'].iloc[-1]
             
-            # Traditional Pivot Point calculation
             pivot = (prev_high + prev_low + prev_close) / 3
             
-            # Resistance levels
             r1 = (2 * pivot) - prev_low
             r2 = pivot + (prev_high - prev_low)
             r3 = prev_high + 2 * (pivot - prev_low)
             
-            # Support levels
             s1 = (2 * pivot) - prev_high
             s2 = pivot - (prev_high - prev_low)
             s3 = prev_low - 2 * (prev_high - pivot)
@@ -420,7 +413,6 @@ class NiftyAnalyzer:
             
         except Exception as e:
             self.logger.error(f"Error calculating pivot points: {e}")
-            # Return sample pivot points
             return {
                 'pivot': 24520.00,
                 'r1': 24590.00,
@@ -494,13 +486,11 @@ class NiftyAnalyzer:
         
         current_price = df['Close'].iloc[-1]
         
-        # RSI using Wilder's method (matches TradingView)
         df['RSI'] = self.calculate_rsi(df['Close'])
         current_rsi = df['RSI'].iloc[-1]
         
         self.logger.info(f"🎯 RSI(14) calculated: {current_rsi:.2f} (Wilder's method)")
         
-        # Moving Averages
         ema_short = self.config['technical']['ema_short']
         ema_long = self.config['technical']['ema_long']
         
@@ -510,13 +500,10 @@ class NiftyAnalyzer:
         ema_short_val = df['EMA_Short'].iloc[-1]
         ema_long_val = df['EMA_Long'].iloc[-1]
         
-        # Support and Resistance
         sr_levels = self.calculate_support_resistance(df, current_price)
         
-        # Pivot Points
         pivot_points = self.calculate_pivot_points(df, current_price)
         
-        # Trend analysis
         if current_price > ema_short_val > ema_long_val:
             trend = "Strong Uptrend"
         elif current_price > ema_short_val:
@@ -528,7 +515,6 @@ class NiftyAnalyzer:
         else:
             trend = "Sideways"
         
-        # RSI signal
         rsi_ob = self.config['technical']['rsi_overbought']
         rsi_os = self.config['technical']['rsi_oversold']
         
@@ -593,7 +579,6 @@ class NiftyAnalyzer:
         bearish_signals = 0
         reasons = []
         
-        # PCR Analysis
         pcr = oc_analysis.get('pcr', 0)
         if pcr >= oc_config['pcr_very_bullish']:
             bullish_signals += 2
@@ -608,7 +593,6 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append(f"PCR at {pcr} shows bearish bias")
         
-        # OI Buildup
         if oc_analysis.get('oi_sentiment') == 'Bullish':
             bullish_signals += 1
             reasons.append("Put OI buildup > Call OI buildup (Bullish)")
@@ -616,7 +600,6 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append("Call OI buildup > Put OI buildup (Bearish)")
         
-        # RSI
         rsi = tech_analysis.get('rsi', 50)
         rsi_os = tech_config['rsi_oversold']
         rsi_ob = tech_config['rsi_overbought']
@@ -634,7 +617,6 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append(f"RSI at {rsi:.1f} - Above neutral (Bearish)")
         
-        # Trend
         trend = tech_analysis.get('trend', '')
         if 'Uptrend' in trend:
             bullish_signals += 1
@@ -643,7 +625,6 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append(f"Trend: {trend}")
         
-        # EMA Analysis
         current_price = tech_analysis.get('current_price', 0)
         ema20 = tech_analysis.get('ema20', 0)
         if current_price > ema20:
@@ -653,7 +634,6 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append("Price below EMA20 (Bearish)")
         
-        # Final Recommendation
         signal_diff = bullish_signals - bearish_signals
         
         strong_buy_t = config['strong_buy_threshold']
@@ -703,7 +683,6 @@ class NiftyAnalyzer:
         
         strategies = []
         
-        # Bullish Strategies
         if bias == 'Bullish':
             strategies.append({
                 'name': 'Long Call',
@@ -725,7 +704,6 @@ class NiftyAnalyzer:
                 'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐⭐'
             })
         
-        # Bearish Strategies
         elif bias == 'Bearish':
             strategies.append({
                 'name': 'Long Put',
@@ -747,7 +725,6 @@ class NiftyAnalyzer:
                 'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐'
             })
         
-        # Neutral Strategies
         else:
             if high_volatility:
                 strategies.append({
@@ -777,11 +754,9 @@ class NiftyAnalyzer:
         all_resistances = [pivot_points['r1'], pivot_points['r2'], pivot_points['r3']]
         all_supports = [pivot_points['s1'], pivot_points['s2'], pivot_points['s3']]
         
-        # Find nearest resistance (above current price)
         resistances_above = [r for r in all_resistances if r > current_price]
         nearest_resistance = min(resistances_above) if resistances_above else None
         
-        # Find nearest support (below current price)
         supports_below = [s for s in all_supports if s < current_price]
         nearest_support = max(supports_below) if supports_below else None
         
@@ -791,7 +766,7 @@ class NiftyAnalyzer:
         }
     
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with pivot points and highlighting"""
+        """Create beautiful HTML report with optimized, responsive pivot points table"""
         now_ist = self.format_ist_time()
         
         colors = self.config['report'].get('colors', {})
@@ -812,7 +787,6 @@ class NiftyAnalyzer:
         
         strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
         
-        # Get pivot points and find nearest levels
         pivot_points = tech_analysis.get('pivot_points', {})
         current_price = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
@@ -863,14 +837,52 @@ class NiftyAnalyzer:
                 </div>
             """
         
-        # Pivot Points HTML with highlighting
+        # Helper function for highlighting
         def get_level_class(level_value):
-            """Return CSS class for highlighting nearest levels"""
             if level_value == nearest_levels.get('nearest_resistance'):
                 return 'nearest-resistance'
             elif level_value == nearest_levels.get('nearest_support'):
                 return 'nearest-support'
             return ''
+        
+        # Build pivot table rows in reverse order for supports (S3, S2, S1)
+        pivot_rows = f"""
+                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r3'))}">
+                        <td>R3</td>
+                        <td>₹{pivot_points.get('r3', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r3') == nearest_levels.get('nearest_resistance') else ''}</td>
+                        <td>{f'+{pivot_points.get("r3", 0) - current_price:.2f}' if pivot_points.get('r3') else 'N/A'}</td>
+                    </tr>
+                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r2'))}">
+                        <td>R2</td>
+                        <td>₹{pivot_points.get('r2', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r2') == nearest_levels.get('nearest_resistance') else ''}</td>
+                        <td>{f'+{pivot_points.get("r2", 0) - current_price:.2f}' if pivot_points.get('r2') else 'N/A'}</td>
+                    </tr>
+                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r1'))}">
+                        <td>R1</td>
+                        <td>₹{pivot_points.get('r1', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r1') == nearest_levels.get('nearest_resistance') else ''}</td>
+                        <td>{f'+{pivot_points.get("r1", 0) - current_price:.2f}' if pivot_points.get('r1') else 'N/A'}</td>
+                    </tr>
+                    <tr class="pivot-row pivot">
+                        <td>PP</td>
+                        <td>₹{pivot_points.get('pivot', 'N/A')}</td>
+                        <td>{f'{pivot_points.get("pivot", 0) - current_price:+.2f}' if pivot_points.get('pivot') else 'N/A'}</td>
+                    </tr>
+                    <tr class="pivot-row support {get_level_class(pivot_points.get('s3'))}">
+                        <td>S3</td>
+                        <td>₹{pivot_points.get('s3', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s3') == nearest_levels.get('nearest_support') else ''}</td>
+                        <td>{f'{pivot_points.get("s3", 0) - current_price:.2f}' if pivot_points.get('s3') else 'N/A'}</td>
+                    </tr>
+                    <tr class="pivot-row support {get_level_class(pivot_points.get('s2'))}">
+                        <td>S2</td>
+                        <td>₹{pivot_points.get('s2', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s2') == nearest_levels.get('nearest_support') else ''}</td>
+                        <td>{f'{pivot_points.get("s2", 0) - current_price:.2f}' if pivot_points.get('s2') else 'N/A'}</td>
+                    </tr>
+                    <tr class="pivot-row support {get_level_class(pivot_points.get('s1'))}">
+                        <td>S1</td>
+                        <td>₹{pivot_points.get('s1', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s1') == nearest_levels.get('nearest_support') else ''}</td>
+                        <td>{f'{pivot_points.get("s1", 0) - current_price:.2f}' if pivot_points.get('s1') else 'N/A'}</td>
+                    </tr>
+        """
         
         html = f"""
 <!DOCTYPE html>
@@ -879,58 +891,95 @@ class NiftyAnalyzer:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 25px; }}
+        * {{ box-sizing: border-box; }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 10px; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }}
         .header {{ text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h1 {{ color: #007bff; margin: 0; font-size: 28px; }}
-        .timestamp {{ color: #6c757d; font-size: 13px; margin-top: 8px; font-weight: bold; }}
-        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-top: 10px; }}
-        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
-        .recommendation-box h2 {{ margin: 0 0 8px 0; font-size: 32px; font-weight: bold; }}
-        .recommendation-box .subtitle {{ font-size: 16px; opacity: 0.9; }}
-        .section {{ margin-bottom: 25px; }}
-        .section-title {{ background-color: #007bff; color: white; padding: 10px 18px; border-radius: 5px; font-size: 18px; font-weight: bold; margin-bottom: 12px; }}
-        .data-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }}
-        .data-item {{ background-color: #f8f9fa; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #007bff; }}
-        .data-item .label {{ color: #6c757d; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
-        .data-item .value {{ color: #212529; font-size: 18px; font-weight: bold; }}
-        .levels {{ display: flex; justify-content: space-between; gap: 20px; }}
-        .levels-box {{ flex: 1; background-color: #f8f9fa; padding: 12px; border-radius: 8px; }}
+        .header h1 {{ color: #007bff; margin: 0; font-size: 24px; }}
+        .timestamp {{ color: #6c757d; font-size: 12px; margin-top: 8px; font-weight: bold; }}
+        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
+        .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
+        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
+        .section {{ margin-bottom: 20px; }}
+        .section-title {{ background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
+        .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
+        .data-item {{ background-color: #f8f9fa; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #007bff; }}
+        .data-item .label {{ color: #6c757d; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
+        .data-item .value {{ color: #212529; font-size: 16px; font-weight: bold; }}
+        .levels {{ display: flex; flex-wrap: wrap; gap: 15px; }}
+        .levels-box {{ flex: 1; min-width: 250px; background-color: #f8f9fa; padding: 10px; border-radius: 8px; }}
         .levels-box.resistance {{ border-left: 4px solid #dc3545; }}
         .levels-box.support {{ border-left: 4px solid #28a745; }}
-        .levels-box h4 {{ margin: 0 0 8px 0; font-size: 14px; font-weight: 600; }}
+        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; }}
         .levels-box ul {{ margin: 0; padding-left: 20px; }}
-        .levels-box li {{ margin: 4px 0; font-size: 14px; font-weight: 500; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-        .pivot-table th {{ background-color: #007bff; color: white; padding: 10px; text-align: center; font-size: 13px; }}
-        .pivot-table td {{ padding: 10px; text-align: center; border-bottom: 1px solid #e9ecef; font-size: 14px; font-weight: 500; }}
+        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; }}
+        
+        /* Optimized Pivot Table - Responsive */
+        .pivot-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+        .pivot-info {{ color: #6c757d; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
+        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+        .pivot-table th {{ background-color: #007bff; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; position: sticky; top: 0; }}
+        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #e9ecef; font-weight: 500; }}
         .pivot-row {{ background-color: #f8f9fa; }}
         .pivot-row.resistance {{ color: #dc3545; }}
         .pivot-row.support {{ color: #28a745; }}
         .pivot-row.pivot {{ background-color: #fff3cd; color: #856404; font-weight: bold; }}
-        .nearest-resistance {{ background-color: #f8d7da !important; border: 2px solid #dc3545; font-weight: bold; }}
-        .nearest-support {{ background-color: #d4edda !important; border: 2px solid #28a745; font-weight: bold; }}
-        .highlight-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 5px; }}
-        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 5px; }}
-        .reasons ul {{ margin: 8px 0 0 0; padding-left: 20px; }}
-        .reasons li {{ margin: 6px 0; color: #856404; font-size: 13px; }}
-        .signal-badge {{ display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 13px; margin: 4px; font-weight: 600; }}
+        .nearest-resistance {{ background-color: #f8d7da !important; border: 2px solid #dc3545; }}
+        .nearest-support {{ background-color: #d4edda !important; border: 2px solid #28a745; }}
+        .highlight-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
+        
+        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; }}
+        .reasons ul {{ margin: 6px 0 0 0; padding-left: 20px; }}
+        .reasons li {{ margin: 4px 0; color: #856404; font-size: 12px; }}
+        .signal-badge {{ display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin: 4px; font-weight: 600; }}
         .bullish {{ background-color: #d4edda; color: #155724; }}
         .bearish {{ background-color: #f8d7da; color: #721c24; }}
-        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
-        .oi-table th {{ background-color: #007bff; color: white; padding: 8px; text-align: left; font-size: 12px; font-weight: 600; }}
-        .oi-table td {{ padding: 8px; border-bottom: 1px solid #e9ecef; font-size: 13px; }}
-        .badge-itm {{ background-color: #28a745; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
-        .badge-atm {{ background-color: #ffc107; color: #000; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
-        .badge-otm {{ background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
-        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }}
-        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 12px; }}
-        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 8px; margin-bottom: 8px; }}
-        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 16px; }}
-        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-top: 4px; }}
-        .strategy-body p {{ margin: 6px 0; font-size: 13px; line-height: 1.4; }}
-        .recommendation-stars {{ color: #ffc107; font-size: 14px; }}
-        .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 12px; }}
+        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }}
+        .oi-table th {{ background-color: #007bff; color: white; padding: 6px 4px; text-align: left; font-size: 11px; font-weight: 600; }}
+        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #e9ecef; font-size: 12px; }}
+        .badge-itm {{ background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .badge-atm {{ background-color: #ffc107; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .badge-otm {{ background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }}
+        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; }}
+        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 6px; margin-bottom: 6px; }}
+        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 14px; }}
+        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
+        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; }}
+        .recommendation-stars {{ color: #ffc107; font-size: 13px; }}
+        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 11px; }}
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {{
+            .container {{ padding: 12px; }}
+            .header h1 {{ font-size: 20px; }}
+            .recommendation-box h2 {{ font-size: 22px; }}
+            .section-title {{ font-size: 14px; padding: 6px 12px; }}
+            .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
+            .data-item .value {{ font-size: 14px; }}
+            .levels {{ flex-direction: column; }}
+            .levels-box {{ min-width: 100%; }}
+            .pivot-table {{ font-size: 11px; }}
+            .pivot-table th {{ padding: 6px 4px; font-size: 10px; }}
+            .pivot-table td {{ padding: 6px 4px; }}
+            .highlight-badge {{ font-size: 8px; padding: 1px 4px; }}
+            .strategies-grid {{ grid-template-columns: 1fr; }}
+            .oi-table {{ font-size: 10px; }}
+            .oi-table th, .oi-table td {{ padding: 4px 2px; }}
+        }}
+        
+        @media (max-width: 480px) {{
+            body {{ padding: 5px; }}
+            .container {{ padding: 8px; }}
+            .header h1 {{ font-size: 18px; }}
+            .timeframe-badge {{ font-size: 10px; padding: 3px 8px; }}
+            .recommendation-box {{ padding: 10px; }}
+            .recommendation-box h2 {{ font-size: 20px; }}
+            .data-grid {{ grid-template-columns: 1fr; }}
+            .pivot-table {{ font-size: 10px; }}
+            .pivot-info {{ font-size: 10px; }}
+        }}
     </style>
 </head>
 <body>
@@ -944,21 +993,21 @@ class NiftyAnalyzer:
         <div class="recommendation-box">
             <h2>{recommendation['recommendation']}</h2>
             <div class="subtitle">Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}</div>
-            <div style="margin-top: 15px;">
-                <span class="signal-badge bullish">Bullish Signals: {recommendation['bullish_signals']}</span>
-                <span class="signal-badge bearish">Bearish Signals: {recommendation['bearish_signals']}</span>
+            <div style="margin-top: 12px;">
+                <span class="signal-badge bullish">Bullish: {recommendation['bullish_signals']}</span>
+                <span class="signal-badge bearish">Bearish: {recommendation['bearish_signals']}</span>
             </div>
         </div>
         
         <div class="section">
-            <div class="section-title">📈 Technical Analysis (1 Hour Timeframe)</div>
+            <div class="section-title">📈 Technical Analysis (1H)</div>
             <div class="data-grid">
                 <div class="data-item">
                     <div class="label">Current Price</div>
                     <div class="value">₹{tech_analysis.get('current_price', 'N/A')}</div>
                 </div>
                 <div class="data-item">
-                    <div class="label">RSI (14) - Wilder's Method</div>
+                    <div class="label">RSI (14)</div>
                     <div class="value">{tech_analysis.get('rsi', 'N/A')}</div>
                 </div>
                 <div class="data-item">
@@ -981,14 +1030,14 @@ class NiftyAnalyzer:
         </div>
         
         <div class="section">
-            <div class="section-title">🎯 Support & Resistance Levels (1H)</div>
+            <div class="section-title">🎯 Support & Resistance (1H)</div>
             <div class="levels">
                 <div class="levels-box resistance">
-                    <h4>🔴 Resistance Levels</h4>
+                    <h4>🔴 Resistance</h4>
                     <ul>{''.join([f'<li>R{i+1}: ₹{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}</ul>
                 </div>
                 <div class="levels-box support">
-                    <h4>🟢 Support Levels</h4>
+                    <h4>🟢 Support</h4>
                     <ul>{''.join([f'<li>S{i+1}: ₹{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
                 </div>
             </div>
@@ -996,70 +1045,30 @@ class NiftyAnalyzer:
         
         <div class="section">
             <div class="section-title">📍 Pivot Points (Traditional - Daily)</div>
-            <p style="color: #6c757d; margin-bottom: 10px; font-size: 13px;">
-                Based on Previous Day: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
+            <p class="pivot-info">
+                Previous Day: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
             </p>
-            <table class="pivot-table">
-                <thead>
-                    <tr>
-                        <th>Level</th>
-                        <th>Type</th>
-                        <th>Value</th>
-                        <th>Distance from Spot</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r3'))}">
-                        <td>R3</td>
-                        <td>Resistance 3</td>
-                        <td>₹{pivot_points.get('r3', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r3') == nearest_levels.get('nearest_resistance') else ''}</td>
-                        <td>{f'+{pivot_points.get("r3", 0) - current_price:.2f}' if pivot_points.get('r3') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r2'))}">
-                        <td>R2</td>
-                        <td>Resistance 2</td>
-                        <td>₹{pivot_points.get('r2', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r2') == nearest_levels.get('nearest_resistance') else ''}</td>
-                        <td>{f'+{pivot_points.get("r2", 0) - current_price:.2f}' if pivot_points.get('r2') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r1'))}">
-                        <td>R1</td>
-                        <td>Resistance 1</td>
-                        <td>₹{pivot_points.get('r1', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r1') == nearest_levels.get('nearest_resistance') else ''}</td>
-                        <td>{f'+{pivot_points.get("r1", 0) - current_price:.2f}' if pivot_points.get('r1') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row pivot">
-                        <td>PP</td>
-                        <td>Pivot Point</td>
-                        <td>₹{pivot_points.get('pivot', 'N/A')}</td>
-                        <td>{f'{pivot_points.get("pivot", 0) - current_price:+.2f}' if pivot_points.get('pivot') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s1'))}">
-                        <td>S1</td>
-                        <td>Support 1</td>
-                        <td>₹{pivot_points.get('s1', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s1') == nearest_levels.get('nearest_support') else ''}</td>
-                        <td>{f'{pivot_points.get("s1", 0) - current_price:.2f}' if pivot_points.get('s1') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s2'))}">
-                        <td>S2</td>
-                        <td>Support 2</td>
-                        <td>₹{pivot_points.get('s2', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s2') == nearest_levels.get('nearest_support') else ''}</td>
-                        <td>{f'{pivot_points.get("s2", 0) - current_price:.2f}' if pivot_points.get('s2') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s3'))}">
-                        <td>S3</td>
-                        <td>Support 3</td>
-                        <td>₹{pivot_points.get('s3', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s3') == nearest_levels.get('nearest_support') else ''}</td>
-                        <td>{f'{pivot_points.get("s3", 0) - current_price:.2f}' if pivot_points.get('s3') else 'N/A'}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="pivot-container">
+                <table class="pivot-table">
+                    <thead>
+                        <tr>
+                            <th>Level</th>
+                            <th>Value</th>
+                            <th>Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+{pivot_rows}
+                    </tbody>
+                </table>
+            </div>
         </div>
         
         <div class="section">
             <div class="section-title">📊 Option Chain Analysis</div>
             <div class="data-grid">
                 <div class="data-item">
-                    <div class="label">Put-Call Ratio (PCR)</div>
+                    <div class="label">Put-Call Ratio</div>
                     <div class="value">{oc_analysis.get('pcr', 'N/A')}</div>
                 </div>
                 <div class="data-item">
@@ -1072,7 +1081,7 @@ class NiftyAnalyzer:
                 </div>
             </div>
             
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 15px;">
                 <div class="levels">
                     <div class="levels-box resistance">
                         <h4>🔴 OI Resistance</h4>
@@ -1087,17 +1096,17 @@ class NiftyAnalyzer:
         </div>
         
         <div class="section">
-            <div class="section-title">🏆 Top 5 Strikes by Open Interest</div>
+            <div class="section-title">🏆 Top 5 Strikes by OI</div>
             <div class="levels">
                 <div class="levels-box" style="border-left: 4px solid #dc3545;">
-                    <h4>📞 Call Options (CE)</h4>
+                    <h4>📞 Call Options</h4>
                     <table class="oi-table">
                         <thead><tr><th>#</th><th>Strike</th><th>OI</th><th>LTP</th><th>IV</th><th>Type</th></tr></thead>
                         <tbody>{top_ce_html}</tbody>
                     </table>
                 </div>
                 <div class="levels-box" style="border-left: 4px solid #28a745;">
-                    <h4>📉 Put Options (PE)</h4>
+                    <h4>📉 Put Options</h4>
                     <table class="oi-table">
                         <thead><tr><th>#</th><th>Strike</th><th>OI</th><th>LTP</th><th>IV</th><th>Type</th></tr></thead>
                         <tbody>{top_pe_html}</tbody>
@@ -1109,20 +1118,20 @@ class NiftyAnalyzer:
         <div class="section">
             <div class="section-title">💡 Analysis Summary</div>
             <div class="reasons">
-                <strong>Key Factors Behind Recommendation:</strong>
+                <strong>Key Factors:</strong>
                 <ul>{''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}</ul>
             </div>
         </div>
         
         <div class="section">
-            <div class="section-title">🎯 Options Trading Strategies</div>
-            <p style="color: #6c757d; margin-bottom: 15px;">Based on 1-hour analysis ({recommendation['bias']} bias):</p>
+            <div class="section-title">🎯 Options Strategies</div>
+            <p style="color: #6c757d; margin-bottom: 12px; font-size: 12px;">Based on {recommendation['bias']} bias:</p>
             <div class="strategies-grid">{strategies_html}</div>
         </div>
         
         <div class="footer">
             <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk.</p>
-            <p>© 2025 Nifty Trading Analyzer | 1-Hour Timeframe Analysis with Pivot Points</p>
+            <p>© 2025 Nifty Trading Analyzer | 1H Analysis with Pivot Points</p>
         </div>
     </div>
 </body>
