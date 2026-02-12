@@ -16,6 +16,17 @@ on:
       - main
       - master
 
+# Sets permissions for GitHub Pages deployment
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 env:
   PYTHON_VERSION: '3.10'
 
@@ -119,7 +130,7 @@ jobs:
       
       - name: Create directories
         run: |
-          mkdir -p reports logs
+          mkdir -p reports logs docs
           ls -la
       
       - name: Run Analysis
@@ -136,11 +147,266 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Prepare GitHub Pages
+        if: always()
+        run: |
+          echo "=== Preparing GitHub Pages deployment ==="
+          
+          # Create docs directory for GitHub Pages
+          mkdir -p docs
+          
+          # Copy the latest report to index.html
+          if ls reports/*.html 1> /dev/null 2>&1; then
+            LATEST_REPORT=$(ls -t reports/*.html | head -1)
+            cp "$LATEST_REPORT" docs/index.html
+            echo "✅ Copied $LATEST_REPORT to docs/index.html"
+            
+            # Copy all reports with timestamps
+            cp reports/*.html docs/ 2>/dev/null || true
+            
+            # Create an archive page listing all reports
+            cat > docs/archive.html << 'ARCHIVE_EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Nifty Analysis - Report Archive</title>
+              <style>
+                  body {
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      margin: 0;
+                      padding: 20px;
+                      min-height: 100vh;
+                  }
+                  .container {
+                      max-width: 1000px;
+                      margin: 0 auto;
+                      background-color: white;
+                      border-radius: 15px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                      padding: 40px;
+                  }
+                  .header {
+                      text-align: center;
+                      border-bottom: 3px solid #667eea;
+                      padding-bottom: 20px;
+                      margin-bottom: 30px;
+                  }
+                  .header h1 {
+                      color: #667eea;
+                      margin: 0;
+                      font-size: 36px;
+                  }
+                  .nav-links {
+                      text-align: center;
+                      margin-bottom: 30px;
+                  }
+                  .nav-links a {
+                      display: inline-block;
+                      margin: 0 10px;
+                      padding: 10px 20px;
+                      background-color: #667eea;
+                      color: white;
+                      text-decoration: none;
+                      border-radius: 5px;
+                      transition: background-color 0.3s;
+                  }
+                  .nav-links a:hover {
+                      background-color: #764ba2;
+                  }
+                  .report-list {
+                      list-style: none;
+                      padding: 0;
+                  }
+                  .report-item {
+                      background-color: #f8f9fa;
+                      margin: 15px 0;
+                      padding: 20px;
+                      border-radius: 8px;
+                      border-left: 4px solid #667eea;
+                      transition: transform 0.2s, box-shadow 0.2s;
+                  }
+                  .report-item:hover {
+                      transform: translateX(5px);
+                      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                  }
+                  .report-item a {
+                      color: #667eea;
+                      text-decoration: none;
+                      font-size: 18px;
+                      font-weight: 600;
+                  }
+                  .report-item a:hover {
+                      text-decoration: underline;
+                  }
+                  .report-date {
+                      color: #6c757d;
+                      font-size: 14px;
+                      margin-top: 5px;
+                  }
+                  .footer {
+                      text-align: center;
+                      margin-top: 40px;
+                      padding-top: 20px;
+                      border-top: 2px solid #e9ecef;
+                      color: #6c757d;
+                      font-size: 14px;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>📊 Nifty Analysis Archive</h1>
+                      <p>Historical Reports</p>
+                  </div>
+                  
+                  <div class="nav-links">
+                      <a href="index.html">Latest Report</a>
+                      <a href="archive.html">All Reports</a>
+                  </div>
+                  
+                  <div class="reports">
+                      <h2>Available Reports</h2>
+                      <ul class="report-list" id="reportList">
+                          <!-- Reports will be listed here -->
+                      </ul>
+                  </div>
+                  
+                  <div class="footer">
+                      <p>© 2025 Nifty Trading Analyzer | Auto-updated via GitHub Actions</p>
+                  </div>
+              </div>
+              
+              <script>
+                  // This will be populated by the build script
+                  const reports = [
+          ARCHIVE_EOF
+            
+            # Add report files to JavaScript array
+            first=true
+            for report in $(ls -t docs/nifty_analysis_*.html 2>/dev/null); do
+              filename=$(basename "$report")
+              if [ "$first" = true ]; then
+                first=false
+              else
+                echo "," >> docs/archive.html
+              fi
+              echo "          {file: '$filename', name: '$filename'}" >> docs/archive.html
+            done
+            
+            cat >> docs/archive.html << 'ARCHIVE_EOF2'
+                  ];
+                  
+                  const reportList = document.getElementById('reportList');
+                  if (reports.length === 0) {
+                      reportList.innerHTML = '<li class="report-item">No reports available yet.</li>';
+                  } else {
+                      reports.forEach(report => {
+                          const li = document.createElement('li');
+                          li.className = 'report-item';
+                          
+                          const link = document.createElement('a');
+                          link.href = report.file;
+                          link.textContent = report.name.replace('.html', '').replace(/_/g, ' ');
+                          
+                          const date = document.createElement('div');
+                          date.className = 'report-date';
+                          date.textContent = 'View Report →';
+                          
+                          li.appendChild(link);
+                          li.appendChild(date);
+                          reportList.appendChild(li);
+                      });
+                  }
+              </script>
+          </body>
+          </html>
+          ARCHIVE_EOF2
+            
+            echo "✅ Archive page created"
+          else
+            echo "⚠️ No reports found, creating placeholder"
+            cat > docs/index.html << 'PLACEHOLDER_EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Nifty Option Chain Analysis</title>
+              <style>
+                  body {
+                      font-family: Arial, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      min-height: 100vh;
+                      margin: 0;
+                  }
+                  .container {
+                      background: white;
+                      padding: 40px;
+                      border-radius: 15px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                      text-align: center;
+                      max-width: 600px;
+                  }
+                  h1 {
+                      color: #667eea;
+                      margin-bottom: 20px;
+                  }
+                  p {
+                      color: #666;
+                      line-height: 1.6;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>📊 Nifty Option Chain Analysis</h1>
+                  <p>Analysis reports will appear here once the workflow runs successfully.</p>
+                  <p>The analyzer runs at 9:15 AM, 12:00 PM, and 3:00 PM IST on weekdays.</p>
+              </div>
+          </body>
+          </html>
+          PLACEHOLDER_EOF
+          fi
+          
+          # Create a README for the docs folder
+          cat > docs/README.md << 'README_EOF'
+          # Nifty Option Chain Analysis - Live Reports
+          
+          This folder contains auto-generated trading analysis reports for Nifty options.
+          
+          ## Latest Report
+          View the latest analysis: [index.html](index.html)
+          
+          ## All Reports
+          Browse historical reports: [archive.html](archive.html)
+          
+          ## Schedule
+          Reports are generated at:
+          - 9:15 AM IST
+          - 12:00 PM IST
+          - 3:00 PM IST
+          
+          *Auto-updated via GitHub Actions*
+          README_EOF
+          
+          echo "=== GitHub Pages content ready ==="
+          ls -lah docs/
+      
       - name: Check outputs
         if: always()
         run: |
           echo "=== Generated Reports ==="
           ls -lah reports/ 2>/dev/null || echo "No reports"
+          
+          echo "=== GitHub Pages ==="
+          ls -lah docs/ 2>/dev/null || echo "No docs"
           
           echo "=== Logs ==="
           ls -lah logs/ 2>/dev/null || echo "No logs"
@@ -148,7 +414,7 @@ jobs:
           echo "=== Log Content ==="
           cat logs/nifty_analyzer.log 2>/dev/null || echo "No log file"
       
-      - name: Upload Reports
+      - name: Upload Reports as Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -169,10 +435,35 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       
+      - name: Deploy to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy Nifty Analysis Report - ${{ github.run_number }}'
+      
       - name: Summary
         if: always()
         run: |
           echo "## 📊 Nifty Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get repository info
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          REPO_OWNER="${GITHUB_REPOSITORY%/*}"
+          
+          echo "### 🌐 Live Report URL:" >> $GITHUB_STEP_SUMMARY
+          echo "**https://${REPO_OWNER}.github.io/${REPO_NAME}/**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📑 Pages:" >> $GITHUB_STEP_SUMMARY
+          echo "- [Latest Report](https://${REPO_OWNER}.github.io/${REPO_NAME}/)" >> $GITHUB_STEP_SUMMARY
+          echo "- [All Reports Archive](https://${REPO_OWNER}.github.io/${REPO_NAME}/archive.html)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ -f "logs/nifty_analyzer.log" ]; then
@@ -186,3 +477,6 @@ jobs:
           echo "### 📁 Artifacts:" >> $GITHUB_STEP_SUMMARY
           echo "- HTML Reports: \`nifty-reports-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Logs: \`analyzer-logs-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Report deployed to GitHub Pages automatically*" >> $GITHUB_STEP_SUMMARY
