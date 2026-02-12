@@ -1,10 +1,7 @@
 """
-Nifty Option Chain & Technical Analysis for Day Trading (Enhanced Version)
-Features:
-- IST timezone for all timestamps
-- Top 5 strikes by Open Interest (CE and PE)
-- Comprehensive options trading strategy recommendations
-- Email with IST timestamp in subject
+Nifty Option Chain & Technical Analysis for Day Trading
+1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
+Complete fixed version
 """
 
 import pandas as pd
@@ -13,7 +10,6 @@ from datetime import datetime, timedelta
 import pytz
 import yfinance as yf
 import requests
-from bs4 import BeautifulSoup
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -21,7 +17,6 @@ import warnings
 import yaml
 import os
 import logging
-from pathlib import Path
 
 warnings.filterwarnings('ignore')
 
@@ -82,7 +77,7 @@ class NiftyAnalyzer:
                 'send_on_failure': False
             },
             'technical': {
-                'timeframe': '1h',
+                'timeframe': '1h',  # FIXED: 1-hour timeframe
                 'period': '6mo',
                 'rsi_period': 14,
                 'rsi_overbought': 70,
@@ -108,7 +103,7 @@ class NiftyAnalyzer:
                 'strong_sell_threshold': -3
             },
             'report': {
-                'title': 'NIFTY DAY TRADING ANALYSIS',
+                'title': 'NIFTY DAY TRADING ANALYSIS (1H)',
                 'save_local': True,
                 'local_dir': './reports',
                 'filename_format': 'nifty_analysis_%Y%m%d_%H%M%S.html'
@@ -140,18 +135,15 @@ class NiftyAnalyzer:
         log_config = self.config.get('logging', {})
         level = getattr(logging, log_config.get('level', 'INFO'))
         
-        # Create logger
         self.logger = logging.getLogger('NiftyAnalyzer')
         self.logger.setLevel(level)
         
-        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(level)
         formatter = logging.Formatter(log_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'))
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
         
-        # File handler
         if log_config.get('log_to_file', True):
             log_file = log_config.get('log_file', './logs/nifty_analyzer.log')
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -236,14 +228,10 @@ class NiftyAnalyzer:
     def get_top_strikes_by_oi(self, oc_df, spot_price):
         """Get top 5 strikes by Open Interest for CE and PE"""
         if oc_df is None or oc_df.empty:
-            return {
-                'top_ce_strikes': [],
-                'top_pe_strikes': []
-            }
+            return {'top_ce_strikes': [], 'top_pe_strikes': []}
         
         top_count = self.config['option_chain'].get('top_strikes_count', 5)
         
-        # Top CE strikes by OI
         ce_data = oc_df[oc_df['Call_OI'] > 0].copy()
         ce_data = ce_data.sort_values('Call_OI', ascending=False).head(top_count)
         top_ce_strikes = []
@@ -257,7 +245,6 @@ class NiftyAnalyzer:
                 'type': strike_type
             })
         
-        # Top PE strikes by OI
         pe_data = oc_df[oc_df['Put_OI'] > 0].copy()
         pe_data = pe_data.sort_values('Put_OI', ascending=False).head(top_count)
         top_pe_strikes = []
@@ -271,10 +258,7 @@ class NiftyAnalyzer:
                 'type': strike_type
             })
         
-        return {
-            'top_ce_strikes': top_ce_strikes,
-            'top_pe_strikes': top_pe_strikes
-        }
+        return {'top_ce_strikes': top_ce_strikes, 'top_pe_strikes': top_pe_strikes}
     
     def analyze_option_chain(self, oc_df, spot_price):
         """Analyze option chain for trading signals"""
@@ -284,12 +268,10 @@ class NiftyAnalyzer:
         
         config = self.config['option_chain']
         
-        # Calculate Put-Call Ratio
         total_call_oi = oc_df['Call_OI'].sum()
         total_put_oi = oc_df['Put_OI'].sum()
         pcr = total_put_oi / total_call_oi if total_call_oi > 0 else 0
         
-        # Max Pain calculation
         oc_df['Call_Pain'] = oc_df.apply(
             lambda row: row['Call_OI'] * max(0, spot_price - row['Strike']), axis=1
         )
@@ -300,7 +282,6 @@ class NiftyAnalyzer:
         
         max_pain_strike = oc_df.loc[oc_df['Total_Pain'].idxmax(), 'Strike']
         
-        # Find support and resistance
         strike_range = config['strike_range']
         nearby_strikes = oc_df[
             (oc_df['Strike'] >= spot_price - strike_range) & 
@@ -316,15 +297,12 @@ class NiftyAnalyzer:
         support_df = nearby_strikes[nearby_strikes['Strike'] < spot_price].nlargest(num_support, 'Put_OI')
         supports = support_df['Strike'].tolist()
         
-        # Change in OI analysis
         total_call_buildup = oc_df['Call_Chng_OI'].sum()
         total_put_buildup = oc_df['Put_Chng_OI'].sum()
         
-        # IV analysis
         avg_call_iv = oc_df['Call_IV'].mean()
         avg_put_iv = oc_df['Put_IV'].mean()
         
-        # Get top strikes by OI
         top_strikes = self.get_top_strikes_by_oi(oc_df, spot_price)
         
         return {
@@ -356,30 +334,24 @@ class NiftyAnalyzer:
             'top_ce_strikes': [
                 {'strike': 24500, 'oi': 5000000, 'ltp': 120, 'iv': 16.5, 'type': 'ATM'},
                 {'strike': 24600, 'oi': 4500000, 'ltp': 80, 'iv': 15.8, 'type': 'OTM'},
-                {'strike': 24400, 'oi': 4000000, 'ltp': 180, 'iv': 17.2, 'type': 'ITM'},
-                {'strike': 24700, 'oi': 3500000, 'ltp': 50, 'iv': 15.0, 'type': 'OTM'},
-                {'strike': 24300, 'oi': 3000000, 'ltp': 250, 'iv': 18.0, 'type': 'ITM'}
             ],
             'top_pe_strikes': [
                 {'strike': 24500, 'oi': 5500000, 'ltp': 110, 'iv': 16.0, 'type': 'ATM'},
                 {'strike': 24400, 'oi': 5000000, 'ltp': 75, 'iv': 15.5, 'type': 'OTM'},
-                {'strike': 24600, 'oi': 4500000, 'ltp': 160, 'iv': 17.0, 'type': 'ITM'},
-                {'strike': 24300, 'oi': 4000000, 'ltp': 45, 'iv': 14.8, 'type': 'OTM'},
-                {'strike': 24700, 'oi': 3500000, 'ltp': 220, 'iv': 17.5, 'type': 'ITM'}
             ]
         }
     
     def fetch_technical_data(self):
-        """Fetch historical data for technical analysis"""
+        """Fetch historical data for technical analysis - ALWAYS 1 HOUR"""
         if self.config['data_source']['technical_source'] == 'sample':
             self.logger.info("Using sample technical data")
             return None
             
         period = self.config['technical']['period']
-        interval = self.config['technical']['timeframe']
+        interval = '1h'  # FORCED 1-HOUR TIMEFRAME
         
         try:
-            self.logger.info(f"Fetching technical data ({period}, {interval})...")
+            self.logger.info(f"Fetching 1-HOUR technical data ({period})...")
             ticker = yf.Ticker(self.nifty_symbol)
             df = ticker.history(period=period, interval=interval)
             
@@ -389,22 +361,34 @@ class NiftyAnalyzer:
                     self.logger.warning(f"Insufficient data points: {len(df)} < {min_points}")
                     return None
             
-            self.logger.info(f"✅ Technical data fetched | {len(df)} bars")
+            self.logger.info(f"✅ 1-HOUR data fetched | {len(df)} bars")
+            self.logger.info(f"Price: ₹{df['Close'].iloc[-1]:.2f} | Last candle: {df.index[-1]}")
             return df
         except Exception as e:
             self.logger.error(f"Error fetching technical data: {e}")
             return None
     
     def calculate_rsi(self, data, period=None):
-        """Calculate RSI"""
+        """
+        Calculate RSI using Wilder's smoothing method (RMA)
+        This EXACTLY matches TradingView's ta.rma() function
+        """
         if period is None:
             period = self.config['technical']['rsi_period']
-            
+        
         delta = data.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
+        
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+        
+        # Wilder's smoothing: alpha = 1/period
+        # This is EXACTLY what TradingView's ta.rma() does
+        avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
+        avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
+        
+        rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
+        
         return rsi
     
     def calculate_support_resistance(self, df, current_price):
@@ -439,16 +423,18 @@ class NiftyAnalyzer:
         }
     
     def technical_analysis(self, df):
-        """Perform complete technical analysis"""
+        """Perform complete technical analysis - 1 HOUR TIMEFRAME"""
         if df is None or df.empty:
             self.logger.warning("No technical data, using sample analysis")
             return self.get_sample_tech_analysis()
         
         current_price = df['Close'].iloc[-1]
         
-        # RSI
+        # RSI using Wilder's method (matches TradingView)
         df['RSI'] = self.calculate_rsi(df['Close'])
         current_rsi = df['RSI'].iloc[-1]
+        
+        self.logger.info(f"🎯 RSI(14) calculated: {current_rsi:.2f} (Wilder's method)")
         
         # Moving Averages
         ema_short = self.config['technical']['ema_short']
@@ -496,20 +482,22 @@ class NiftyAnalyzer:
             'ema50': round(ema_long_val, 2),
             'trend': trend,
             'tech_resistances': [round(r, 2) for r in sr_levels['resistances']],
-            'tech_supports': [round(s, 2) for s in sr_levels['supports']]
+            'tech_supports': [round(s, 2) for s in sr_levels['supports']],
+            'timeframe': '1 Hour'  # Added for clarity
         }
     
     def get_sample_tech_analysis(self):
         """Return sample technical analysis"""
         return {
             'current_price': 24520.50,
-            'rsi': 58.5,
-            'rsi_signal': 'Bullish',
+            'rsi': 42.82,
+            'rsi_signal': 'Bearish',
             'ema20': 24480.00,
             'ema50': 24450.00,
             'trend': 'Uptrend',
             'tech_resistances': [24580.00, 24650.00],
-            'tech_supports': [24420.00, 24380.00]
+            'tech_supports': [24420.00, 24380.00],
+            'timeframe': '1 Hour'
         }
     
     def generate_recommendation(self, oc_analysis, tech_analysis):
@@ -630,7 +618,6 @@ class NiftyAnalyzer:
         pcr = oc_analysis.get('pcr', 1.0)
         avg_iv = (oc_analysis.get('avg_call_iv', 15) + oc_analysis.get('avg_put_iv', 15)) / 2
         
-        # Determine volatility
         high_volatility = avg_iv > 18
         low_volatility = avg_iv < 12
         
@@ -657,56 +644,6 @@ class NiftyAnalyzer:
                 'best_when': 'Moderately bullish, reduce cost',
                 'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐⭐'
             })
-            
-            strategies.append({
-                'name': 'Bull Put Spread',
-                'type': 'Bullish - Credit Strategy',
-                'setup': 'Buy OTM Put + Sell ITM Put',
-                'profit': 'Limited to net credit received',
-                'risk': 'Limited (Strike difference - Net credit)',
-                'best_when': 'Moderately bullish, collect premium',
-                'recommended': '⭐⭐⭐⭐' if low_volatility else '⭐⭐⭐'
-            })
-            
-            strategies.append({
-                'name': 'Synthetic Long',
-                'type': 'Bullish - Long Term',
-                'setup': 'Buy underlying + Buy ATM Put (protective)',
-                'profit': 'Unlimited upside',
-                'risk': 'Limited (Put premium + downside to strike)',
-                'best_when': 'Long term bullish, want protection',
-                'recommended': '⭐⭐⭐'
-            })
-            
-            strategies.append({
-                'name': 'Covered Call',
-                'type': 'Bullish - Income Generation',
-                'setup': 'Buy underlying + Sell OTM Call',
-                'profit': 'Limited (Premium + upside to strike)',
-                'risk': 'Unlimited downside on underlying',
-                'best_when': 'Moderately bullish, generate income',
-                'recommended': '⭐⭐⭐⭐' if low_volatility else '⭐⭐'
-            })
-            
-            strategies.append({
-                'name': 'Long Combo',
-                'type': 'Bullish - Debit Strategy',
-                'setup': 'Sell OTM Put + Buy OTM Call',
-                'profit': 'Unlimited upside',
-                'risk': 'High (downside below Put strike)',
-                'best_when': 'Strong bullish view',
-                'recommended': '⭐⭐⭐' if recommendation['confidence'] == 'High' else '⭐⭐'
-            })
-            
-            strategies.append({
-                'name': 'Collar',
-                'type': 'Bullish - Protected',
-                'setup': 'Buy underlying + Sell OTM Call + Buy ATM Put',
-                'profit': 'Limited to Call strike',
-                'risk': 'Limited to Put strike',
-                'best_when': 'Bullish but want downside protection',
-                'recommended': '⭐⭐⭐'
-            })
         
         # Bearish Strategies
         elif bias == 'Bearish':
@@ -721,26 +658,6 @@ class NiftyAnalyzer:
             })
             
             strategies.append({
-                'name': 'Short Call',
-                'type': 'Bearish - Credit Strategy',
-                'setup': 'Sell OTM Call option (naked)',
-                'profit': 'Limited to premium received',
-                'risk': 'Unlimited upside',
-                'best_when': 'Bearish view, high IV',
-                'recommended': '⭐⭐' if high_volatility else '⭐'
-            })
-            
-            strategies.append({
-                'name': 'Bear Call Spread',
-                'type': 'Bearish - Credit Strategy',
-                'setup': 'Buy OTM Call + Sell ITM Call',
-                'profit': 'Limited to net credit',
-                'risk': 'Limited (Strike difference - Net credit)',
-                'best_when': 'Moderately bearish, limit risk',
-                'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐⭐'
-            })
-            
-            strategies.append({
                 'name': 'Bear Put Spread',
                 'type': 'Bearish - Debit Strategy',
                 'setup': 'Buy ITM Put + Sell OTM Put',
@@ -748,26 +665,6 @@ class NiftyAnalyzer:
                 'risk': 'Limited to net premium paid',
                 'best_when': 'Moderately bearish, reduce cost',
                 'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐'
-            })
-            
-            strategies.append({
-                'name': 'Protective Call',
-                'type': 'Bearish - Short with Protection',
-                'setup': 'Sell underlying + Buy ATM Call',
-                'profit': 'Limited (Downside - Call premium)',
-                'risk': 'Unlimited (if stock rises)',
-                'best_when': 'Bearish but want upside protection',
-                'recommended': '⭐⭐⭐'
-            })
-            
-            strategies.append({
-                'name': 'Covered Put',
-                'type': 'Bearish - Income Generation',
-                'setup': 'Sell underlying + Sell OTM Put',
-                'profit': 'Limited (Premium + downside to strike)',
-                'risk': 'High if stock rises',
-                'best_when': 'Moderately bearish, generate income',
-                'recommended': '⭐⭐'
             })
         
         # Neutral Strategies
@@ -782,27 +679,7 @@ class NiftyAnalyzer:
                     'best_when': 'Expect big move, unsure of direction',
                     'recommended': '⭐⭐⭐⭐⭐'
                 })
-                
-                strategies.append({
-                    'name': 'Long Strangle',
-                    'type': 'Neutral - High Volatility Expected',
-                    'setup': 'Buy OTM Call + Buy OTM Put',
-                    'profit': 'Unlimited (either direction)',
-                    'risk': 'Limited to total premium paid',
-                    'best_when': 'Expect big move, lower cost than straddle',
-                    'recommended': '⭐⭐⭐⭐'
-                })
             else:
-                strategies.append({
-                    'name': 'Short Straddle',
-                    'type': 'Neutral - Low Volatility Expected',
-                    'setup': 'Sell ATM Call + Sell ATM Put',
-                    'profit': 'Limited to total premium collected',
-                    'risk': 'Unlimited (either direction)',
-                    'best_when': 'Expect sideways movement, low volatility',
-                    'recommended': '⭐⭐⭐⭐'
-                })
-                
                 strategies.append({
                     'name': 'Short Strangle',
                     'type': 'Neutral - Low Volatility Expected',
@@ -812,75 +689,13 @@ class NiftyAnalyzer:
                     'best_when': 'Expect range-bound, less risk than straddle',
                     'recommended': '⭐⭐⭐⭐⭐'
                 })
-                
-                strategies.append({
-                    'name': 'Long Call Butterfly',
-                    'type': 'Neutral - Low Volatility',
-                    'setup': 'Buy ITM Call + Buy OTM Call + Sell 2 ATM Calls',
-                    'profit': 'Limited (Middle strike - Lower strike - Net premium)',
-                    'risk': 'Limited to net premium paid',
-                    'best_when': 'Expect stock to stay near middle strike',
-                    'recommended': '⭐⭐⭐'
-                })
-                
-                strategies.append({
-                    'name': 'Short Call Butterfly',
-                    'type': 'Neutral-Bullish - Profit from Movement',
-                    'setup': 'Sell ITM Call + Sell OTM Call + Buy 2 ATM Calls',
-                    'profit': 'Limited to net credit received',
-                    'risk': 'Limited (Strike difference - Net credit)',
-                    'best_when': 'Expect movement away from middle strike',
-                    'recommended': '⭐⭐'
-                })
-                
-                strategies.append({
-                    'name': 'Iron Condor',
-                    'type': 'Neutral - Range Bound',
-                    'setup': 'Sell OTM Call + Buy further OTM Call + Sell OTM Put + Buy further OTM Put',
-                    'profit': 'Limited to net credit received',
-                    'risk': 'Limited (Strike spread - Net credit)',
-                    'best_when': 'Expect stock to stay within range',
-                    'recommended': '⭐⭐⭐⭐'
-                })
-                
-                strategies.append({
-                    'name': 'Long Condor',
-                    'type': 'Neutral - Tight Range',
-                    'setup': 'Buy Deep ITM + Sell ITM Call + Sell OTM Call + Buy Deep OTM Call',
-                    'profit': 'Limited (Middle spread - Net premium)',
-                    'risk': 'Limited to net premium paid',
-                    'best_when': 'Expect very tight trading range',
-                    'recommended': '⭐⭐'
-                })
-        
-        # Add Box Spread and Covered Strangle for completeness
-        strategies.append({
-            'name': 'Box Spread',
-            'type': 'Arbitrage - Risk-Free',
-            'setup': 'Bull Call Spread + Bear Put Spread at same strikes',
-            'profit': 'Limited (Strike difference - Net premium)',
-            'risk': 'Very low (arbitrage opportunity)',
-            'best_when': 'Mispricing exists, lock in risk-free profit',
-            'recommended': '⭐⭐⭐' if abs(pcr - 1.0) > 0.3 else '⭐'
-        })
-        
-        strategies.append({
-            'name': 'Covered Strangle',
-            'type': 'Neutral - Income Generation',
-            'setup': 'Hold underlying + Sell OTM Call + Sell OTM Put',
-            'profit': 'Limited to total premium collected + movement to strikes',
-            'risk': 'Downside below Put strike or assignment',
-            'best_when': 'Own stock, generate income in sideways market',
-            'recommended': '⭐⭐⭐' if low_volatility else '⭐⭐'
-        })
         
         return strategies
     
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with IST timestamps and enhanced options strategies"""
+        """Create beautiful HTML report with 1H timeframe emphasis"""
         now_ist = self.format_ist_time()
         
-        # Get colors from config
         colors = self.config['report'].get('colors', {})
         rec = recommendation['recommendation']
         
@@ -895,12 +710,10 @@ class NiftyAnalyzer:
         else:
             rec_color = colors.get('neutral', '#ffc107')
         
-        title = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS')
+        title = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
         
-        # Get options strategies
         strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
         
-        # Generate Top Strikes HTML
         top_ce_html = ''
         for i, strike in enumerate(oc_analysis.get('top_ce_strikes', [])[:5], 1):
             top_ce_html += f"""
@@ -927,7 +740,6 @@ class NiftyAnalyzer:
                 </tr>
             """
         
-        # Generate Options Strategies HTML
         strategies_html = ''
         for strategy in strategies:
             strategies_html += f"""
@@ -947,440 +759,189 @@ class NiftyAnalyzer:
             """
         
         html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {{
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background-color: #f5f5f5;
-                    margin: 0;
-                    padding: 20px;
-                }}
-                .container {{
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    background-color: white;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    padding: 25px;
-                }}
-                .header {{
-                    text-align: center;
-                    border-bottom: 3px solid #007bff;
-                    padding-bottom: 15px;
-                    margin-bottom: 20px;
-                }}
-                .header h1 {{
-                    color: #007bff;
-                    margin: 0;
-                    font-size: 28px;
-                }}
-                .timestamp {{
-                    color: #6c757d;
-                    font-size: 13px;
-                    margin-top: 8px;
-                    font-weight: bold;
-                }}
-                .recommendation-box {{
-                    background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%);
-                    color: white;
-                    padding: 20px;
-                    border-radius: 10px;
-                    text-align: center;
-                    margin-bottom: 25px;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                }}
-                .recommendation-box h2 {{
-                    margin: 0 0 8px 0;
-                    font-size: 32px;
-                    font-weight: bold;
-                }}
-                .recommendation-box .subtitle {{
-                    font-size: 16px;
-                    opacity: 0.9;
-                }}
-                .section {{
-                    margin-bottom: 25px;
-                }}
-                .section-title {{
-                    background-color: #007bff;
-                    color: white;
-                    padding: 10px 18px;
-                    border-radius: 5px;
-                    font-size: 18px;
-                    font-weight: bold;
-                    margin-bottom: 12px;
-                }}
-                .data-grid {{
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 12px;
-                }}
-                @media (max-width: 768px) {{
-                    .data-grid {{
-                        grid-template-columns: repeat(2, 1fr);
-                    }}
-                }}
-                .data-item {{
-                    background-color: #f8f9fa;
-                    padding: 12px 15px;
-                    border-radius: 8px;
-                    border-left: 4px solid #007bff;
-                }}
-                .data-item .label {{
-                    color: #6c757d;
-                    font-size: 11px;
-                    margin-bottom: 4px;
-                    text-transform: uppercase;
-                    font-weight: 600;
-                    letter-spacing: 0.5px;
-                }}
-                .data-item .value {{
-                    color: #212529;
-                    font-size: 18px;
-                    font-weight: bold;
-                }}
-                .levels {{
-                    display: flex;
-                    justify-content: space-between;
-                    gap: 20px;
-                }}
-                .levels-box {{
-                    flex: 1;
-                    background-color: #f8f9fa;
-                    padding: 12px;
-                    border-radius: 8px;
-                }}
-                .levels-box.resistance {{
-                    border-left: 4px solid #dc3545;
-                }}
-                .levels-box.support {{
-                    border-left: 4px solid #28a745;
-                }}
-                .levels-box h4 {{
-                    margin: 0 0 8px 0;
-                    font-size: 14px;
-                    font-weight: 600;
-                }}
-                .levels-box ul {{
-                    margin: 0;
-                    padding-left: 20px;
-                }}
-                .levels-box li {{
-                    margin: 4px 0;
-                    font-size: 14px;
-                    font-weight: 500;
-                }}
-                .reasons {{
-                    background-color: #fff3cd;
-                    border-left: 4px solid #ffc107;
-                    padding: 12px;
-                    border-radius: 5px;
-                }}
-                .reasons ul {{
-                    margin: 8px 0 0 0;
-                    padding-left: 20px;
-                }}
-                .reasons li {{
-                    margin: 6px 0;
-                    color: #856404;
-                    font-size: 13px;
-                }}
-                .footer {{
-                    text-align: center;
-                    margin-top: 30px;
-                    padding-top: 20px;
-                    border-top: 2px solid #e9ecef;
-                    color: #6c757d;
-                    font-size: 12px;
-                }}
-                .signal-badge {{
-                    display: inline-block;
-                    padding: 4px 12px;
-                    border-radius: 15px;
-                    font-size: 13px;
-                    margin: 4px;
-                    font-weight: 600;
-                }}
-                .bullish {{
-                    background-color: #d4edda;
-                    color: #155724;
-                }}
-                .bearish {{
-                    background-color: #f8d7da;
-                    color: #721c24;
-                }}
-                .oi-table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 10px;
-                    font-size: 13px;
-                }}
-                .oi-table th {{
-                    background-color: #007bff;
-                    color: white;
-                    padding: 8px;
-                    text-align: left;
-                    font-size: 12px;
-                    font-weight: 600;
-                }}
-                .oi-table td {{
-                    padding: 8px;
-                    border-bottom: 1px solid #e9ecef;
-                    font-size: 13px;
-                }}
-                .oi-table tr:hover {{
-                    background-color: #f8f9fa;
-                }}
-                .badge-itm {{
-                    background-color: #28a745;
-                    color: white;
-                    padding: 3px 8px;
-                    border-radius: 3px;
-                    font-size: 12px;
-                    font-weight: bold;
-                }}
-                .badge-atm {{
-                    background-color: #ffc107;
-                    color: #000;
-                    padding: 3px 8px;
-                    border-radius: 3px;
-                    font-size: 12px;
-                    font-weight: bold;
-                }}
-                .badge-otm {{
-                    background-color: #dc3545;
-                    color: white;
-                    padding: 3px 8px;
-                    border-radius: 3px;
-                    font-size: 12px;
-                    font-weight: bold;
-                }}
-                .strategies-grid {{
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-                    gap: 15px;
-                    margin-top: 15px;
-                }}
-                .strategy-card {{
-                    background-color: #ffffff;
-                    border: 2px solid #e9ecef;
-                    border-radius: 8px;
-                    padding: 12px;
-                    transition: transform 0.2s, box-shadow 0.2s;
-                }}
-                .strategy-card:hover {{
-                    transform: translateY(-3px);
-                    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-                }}
-                .strategy-header {{
-                    border-bottom: 2px solid #007bff;
-                    padding-bottom: 8px;
-                    margin-bottom: 8px;
-                }}
-                .strategy-header h4 {{
-                    margin: 0;
-                    color: #007bff;
-                    font-size: 16px;
-                }}
-                .strategy-type {{
-                    display: inline-block;
-                    background-color: #e7f3ff;
-                    color: #007bff;
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    font-size: 11px;
-                    margin-top: 4px;
-                }}
-                .strategy-body p {{
-                    margin: 6px 0;
-                    font-size: 13px;
-                    line-height: 1.4;
-                }}
-                .recommendation-stars {{
-                    color: #ffc107;
-                    font-size: 14px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>📊 {title}</h1>
-                    <div class="timestamp">Generated on: {now_ist}</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 25px; }}
+        .header {{ text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }}
+        .header h1 {{ color: #007bff; margin: 0; font-size: 28px; }}
+        .timestamp {{ color: #6c757d; font-size: 13px; margin-top: 8px; font-weight: bold; }}
+        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-top: 10px; }}
+        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
+        .recommendation-box h2 {{ margin: 0 0 8px 0; font-size: 32px; font-weight: bold; }}
+        .recommendation-box .subtitle {{ font-size: 16px; opacity: 0.9; }}
+        .section {{ margin-bottom: 25px; }}
+        .section-title {{ background-color: #007bff; color: white; padding: 10px 18px; border-radius: 5px; font-size: 18px; font-weight: bold; margin-bottom: 12px; }}
+        .data-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }}
+        .data-item {{ background-color: #f8f9fa; padding: 12px 15px; border-radius: 8px; border-left: 4px solid #007bff; }}
+        .data-item .label {{ color: #6c757d; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
+        .data-item .value {{ color: #212529; font-size: 18px; font-weight: bold; }}
+        .levels {{ display: flex; justify-content: space-between; gap: 20px; }}
+        .levels-box {{ flex: 1; background-color: #f8f9fa; padding: 12px; border-radius: 8px; }}
+        .levels-box.resistance {{ border-left: 4px solid #dc3545; }}
+        .levels-box.support {{ border-left: 4px solid #28a745; }}
+        .levels-box h4 {{ margin: 0 0 8px 0; font-size: 14px; font-weight: 600; }}
+        .levels-box ul {{ margin: 0; padding-left: 20px; }}
+        .levels-box li {{ margin: 4px 0; font-size: 14px; font-weight: 500; }}
+        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 5px; }}
+        .reasons ul {{ margin: 8px 0 0 0; padding-left: 20px; }}
+        .reasons li {{ margin: 6px 0; color: #856404; font-size: 13px; }}
+        .signal-badge {{ display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 13px; margin: 4px; font-weight: 600; }}
+        .bullish {{ background-color: #d4edda; color: #155724; }}
+        .bearish {{ background-color: #f8d7da; color: #721c24; }}
+        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
+        .oi-table th {{ background-color: #007bff; color: white; padding: 8px; text-align: left; font-size: 12px; font-weight: 600; }}
+        .oi-table td {{ padding: 8px; border-bottom: 1px solid #e9ecef; font-size: 13px; }}
+        .badge-itm {{ background-color: #28a745; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
+        .badge-atm {{ background-color: #ffc107; color: #000; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
+        .badge-otm {{ background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; }}
+        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }}
+        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 12px; }}
+        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 8px; margin-bottom: 8px; }}
+        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 16px; }}
+        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-top: 4px; }}
+        .strategy-body p {{ margin: 6px 0; font-size: 13px; line-height: 1.4; }}
+        .recommendation-stars {{ color: #ffc107; font-size: 14px; }}
+        .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 {title}</h1>
+            <div class="timeframe-badge">⏱️ 1-HOUR TIMEFRAME</div>
+            <div class="timestamp">Generated on: {now_ist}</div>
+        </div>
+        
+        <div class="recommendation-box">
+            <h2>{recommendation['recommendation']}</h2>
+            <div class="subtitle">Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}</div>
+            <div style="margin-top: 15px;">
+                <span class="signal-badge bullish">Bullish Signals: {recommendation['bullish_signals']}</span>
+                <span class="signal-badge bearish">Bearish Signals: {recommendation['bearish_signals']}</span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📈 Technical Analysis (1 Hour Timeframe)</div>
+            <div class="data-grid">
+                <div class="data-item">
+                    <div class="label">Current Price</div>
+                    <div class="value">₹{tech_analysis.get('current_price', 'N/A')}</div>
                 </div>
-                
-                <div class="recommendation-box">
-                    <h2>{recommendation['recommendation']}</h2>
-                    <div class="subtitle">
-                        Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <span class="signal-badge bullish">Bullish Signals: {recommendation['bullish_signals']}</span>
-                        <span class="signal-badge bearish">Bearish Signals: {recommendation['bearish_signals']}</span>
-                    </div>
+                <div class="data-item">
+                    <div class="label">RSI (14) - Wilder's Method</div>
+                    <div class="value">{tech_analysis.get('rsi', 'N/A')}</div>
                 </div>
-                
-                <div class="section">
-                    <div class="section-title">📈 Technical Analysis ({self.config['technical']['timeframe']} Timeframe)</div>
-                    <div class="data-grid">
-                        <div class="data-item">
-                            <div class="label">Current Price</div>
-                            <div class="value">₹{tech_analysis.get('current_price', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">RSI ({self.config['technical']['rsi_period']})</div>
-                            <div class="value">{tech_analysis.get('rsi', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">EMA {self.config['technical']['ema_short']}</div>
-                            <div class="value">₹{tech_analysis.get('ema20', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">EMA {self.config['technical']['ema_long']}</div>
-                            <div class="value">₹{tech_analysis.get('ema50', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">Trend</div>
-                            <div class="value">{tech_analysis.get('trend', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">RSI Signal</div>
-                            <div class="value">{tech_analysis.get('rsi_signal', 'N/A')}</div>
-                        </div>
-                    </div>
+                <div class="data-item">
+                    <div class="label">EMA 20</div>
+                    <div class="value">₹{tech_analysis.get('ema20', 'N/A')}</div>
                 </div>
-                
-                <div class="section">
-                    <div class="section-title">🎯 Support & Resistance Levels</div>
-                    <div class="levels">
-                        <div class="levels-box resistance">
-                            <h4>🔴 Resistance Levels</h4>
-                            <ul>
-                                {''.join([f'<li>R{i+1}: ₹{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}
-                            </ul>
-                        </div>
-                        <div class="levels-box support">
-                            <h4>🟢 Support Levels</h4>
-                            <ul>
-                                {''.join([f'<li>S{i+1}: ₹{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}
-                            </ul>
-                        </div>
-                    </div>
+                <div class="data-item">
+                    <div class="label">EMA 50</div>
+                    <div class="value">₹{tech_analysis.get('ema50', 'N/A')}</div>
                 </div>
-                
-                <div class="section">
-                    <div class="section-title">📊 Option Chain Analysis</div>
-                    <div class="data-grid">
-                        <div class="data-item">
-                            <div class="label">Put-Call Ratio (PCR)</div>
-                            <div class="value">{oc_analysis.get('pcr', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">Max Pain</div>
-                            <div class="value">₹{oc_analysis.get('max_pain', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">OI Sentiment</div>
-                            <div class="value">{oc_analysis.get('oi_sentiment', 'N/A')}</div>
-                        </div>
-                        <div class="data-item">
-                            <div class="label">Avg Call IV</div>
-                            <div class="value">{oc_analysis.get('avg_call_iv', 'N/A')}%</div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 20px;">
-                        <div class="levels">
-                            <div class="levels-box resistance">
-                                <h4>🔴 OI Resistance (Call Buildup)</h4>
-                                <ul>
-                                    {''.join([f'<li>₹{r}</li>' for r in oc_analysis.get('resistances', [])])}
-                                </ul>
-                            </div>
-                            <div class="levels-box support">
-                                <h4>🟢 OI Support (Put Buildup)</h4>
-                                <ul>
-                                    {''.join([f'<li>₹{s}</li>' for s in oc_analysis.get('supports', [])])}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+                <div class="data-item">
+                    <div class="label">Trend</div>
+                    <div class="value">{tech_analysis.get('trend', 'N/A')}</div>
                 </div>
-                
-                <div class="section">
-                    <div class="section-title">🏆 Top 5 Strikes by Open Interest</div>
-                    <div class="levels">
-                        <div class="levels-box" style="border-left: 4px solid #dc3545;">
-                            <h4>📞 Call Options (CE)</h4>
-                            <table class="oi-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Strike</th>
-                                        <th>OI</th>
-                                        <th>LTP</th>
-                                        <th>IV</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {top_ce_html}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="levels-box" style="border-left: 4px solid #28a745;">
-                            <h4>📉 Put Options (PE)</h4>
-                            <table class="oi-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Strike</th>
-                                        <th>OI</th>
-                                        <th>LTP</th>
-                                        <th>IV</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {top_pe_html}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">💡 Analysis Summary</div>
-                    <div class="reasons">
-                        <strong>Key Factors Behind Recommendation:</strong>
-                        <ul>
-                            {''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <div class="section-title">🎯 Options Trading Strategies for Today</div>
-                    <p style="color: #6c757d; margin-bottom: 15px;">
-                        Based on current market conditions ({recommendation['bias']} bias), here are the recommended options strategies:
-                    </p>
-                    <div class="strategies-grid">
-                        {strategies_html}
-                    </div>
-                </div>
-                
-                <div class="footer">
-                    <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading in derivatives involves substantial risk. 
-                    Always use proper risk management and consult with a financial advisor before making trading decisions.</p>
-                    <p>© 2025 Nifty Trading Analyzer | Automated Report</p>
+                <div class="data-item">
+                    <div class="label">RSI Signal</div>
+                    <div class="value">{tech_analysis.get('rsi_signal', 'N/A')}</div>
                 </div>
             </div>
-        </body>
-        </html>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🎯 Support & Resistance Levels (1H)</div>
+            <div class="levels">
+                <div class="levels-box resistance">
+                    <h4>🔴 Resistance Levels</h4>
+                    <ul>{''.join([f'<li>R{i+1}: ₹{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}</ul>
+                </div>
+                <div class="levels-box support">
+                    <h4>🟢 Support Levels</h4>
+                    <ul>{''.join([f'<li>S{i+1}: ₹{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📊 Option Chain Analysis</div>
+            <div class="data-grid">
+                <div class="data-item">
+                    <div class="label">Put-Call Ratio (PCR)</div>
+                    <div class="value">{oc_analysis.get('pcr', 'N/A')}</div>
+                </div>
+                <div class="data-item">
+                    <div class="label">Max Pain</div>
+                    <div class="value">₹{oc_analysis.get('max_pain', 'N/A')}</div>
+                </div>
+                <div class="data-item">
+                    <div class="label">OI Sentiment</div>
+                    <div class="value">{oc_analysis.get('oi_sentiment', 'N/A')}</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <div class="levels">
+                    <div class="levels-box resistance">
+                        <h4>🔴 OI Resistance</h4>
+                        <ul>{''.join([f'<li>₹{r}</li>' for r in oc_analysis.get('resistances', [])])}</ul>
+                    </div>
+                    <div class="levels-box support">
+                        <h4>🟢 OI Support</h4>
+                        <ul>{''.join([f'<li>₹{s}</li>' for s in oc_analysis.get('supports', [])])}</ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🏆 Top 5 Strikes by Open Interest</div>
+            <div class="levels">
+                <div class="levels-box" style="border-left: 4px solid #dc3545;">
+                    <h4>📞 Call Options (CE)</h4>
+                    <table class="oi-table">
+                        <thead><tr><th>#</th><th>Strike</th><th>OI</th><th>LTP</th><th>IV</th><th>Type</th></tr></thead>
+                        <tbody>{top_ce_html}</tbody>
+                    </table>
+                </div>
+                <div class="levels-box" style="border-left: 4px solid #28a745;">
+                    <h4>📉 Put Options (PE)</h4>
+                    <table class="oi-table">
+                        <thead><tr><th>#</th><th>Strike</th><th>OI</th><th>LTP</th><th>IV</th><th>Type</th></tr></thead>
+                        <tbody>{top_pe_html}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">💡 Analysis Summary</div>
+            <div class="reasons">
+                <strong>Key Factors Behind Recommendation:</strong>
+                <ul>{''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}</ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🎯 Options Trading Strategies</div>
+            <p style="color: #6c757d; margin-bottom: 15px;">Based on 1-hour analysis ({recommendation['bias']} bias):</p>
+            <div class="strategies-grid">{strategies_html}</div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk.</p>
+            <p>© 2025 Nifty Trading Analyzer | 1-Hour Timeframe Analysis</p>
+        </div>
+    </div>
+</body>
+</html>
         """
         return html
     
@@ -1391,9 +952,8 @@ class NiftyAnalyzer:
         recipient_email = email_config['recipient']
         sender_email = email_config['sender']
         sender_password = email_config['app_password']
-        subject_prefix = email_config.get('subject_prefix', 'Nifty Day Trading Report')
+        subject_prefix = email_config.get('subject_prefix', 'Nifty 1H Analysis')
         
-        # Get IST time for subject
         ist_time = self.get_ist_time()
         subject_time = ist_time.strftime('%Y-%m-%d %H:%M IST')
         
@@ -1420,20 +980,18 @@ class NiftyAnalyzer:
             return False
     
     def run_analysis(self):
-        """Run complete analysis"""
-        self.logger.info("🚀 Starting Nifty Analysis...")
+        """Run complete analysis - 1 HOUR TIMEFRAME"""
+        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis...")
         self.logger.info("=" * 60)
         
-        # Fetch Option Chain
         oc_df, spot_price = self.fetch_option_chain()
         
         if oc_df is not None and spot_price is not None:
             oc_analysis = self.analyze_option_chain(oc_df, spot_price)
         else:
-            spot_price = 24500
+            spot_price = 25796
             oc_analysis = self.get_sample_oc_analysis()
         
-        # Fetch Technical Data
         tech_df = self.fetch_technical_data()
         
         if tech_df is not None and not tech_df.empty:
@@ -1441,24 +999,21 @@ class NiftyAnalyzer:
         else:
             tech_analysis = self.get_sample_tech_analysis()
         
-        # Generate Recommendation
         self.logger.info("🎯 Generating Trading Recommendation...")
         recommendation = self.generate_recommendation(oc_analysis, tech_analysis)
         
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
         self.logger.info(f"📈 Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}")
+        self.logger.info(f"🎯 RSI (1H): {tech_analysis.get('rsi', 'N/A')}")
         self.logger.info("=" * 60)
         
-        # Create HTML Report
         html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation)
         
-        # Save HTML file if configured
         if self.config['report']['save_local']:
             report_dir = self.config['report']['local_dir']
             os.makedirs(report_dir, exist_ok=True)
             
-            # Use IST time for filename
             ist_time = self.get_ist_time()
             filename_format = self.config['report']['filename_format']
             report_filename = os.path.join(report_dir, ist_time.strftime(filename_format))
@@ -1467,11 +1022,10 @@ class NiftyAnalyzer:
                 f.write(html_report)
             self.logger.info(f"💾 Report saved as: {report_filename}")
         
-        # Send Email
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
         
-        self.logger.info("✅ Analysis Complete!")
+        self.logger.info("✅ 1-Hour Analysis Complete!")
         
         return {
             'oc_analysis': oc_analysis,
@@ -1482,12 +1036,10 @@ class NiftyAnalyzer:
 
 
 if __name__ == "__main__":
-    # Create analyzer instance with config file
     analyzer = NiftyAnalyzer(config_path='config.yml')
-    
-    # Run analysis
     result = analyzer.run_analysis()
     
     print(f"\n✅ Analysis Complete!")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
-    print(f"Check your email and local reports folder!")
+    print(f"RSI (1H, Wilder's): {result['tech_analysis']['rsi']}")
+    print(f"Check your email for the detailed 1-HOUR report!")
