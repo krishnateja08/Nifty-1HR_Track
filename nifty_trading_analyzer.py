@@ -1,7 +1,8 @@
 """
 Nifty Option Chain & Technical Analysis for Day Trading
+IMPROVED VERSION - Added Momentum Detection
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
-Enhanced with Pivot Points (Traditional Method) - Optimized & Responsive
+Enhanced with Pivot Points + Price Momentum Analysis
 """
 
 import pandas as pd
@@ -85,7 +86,9 @@ class NiftyAnalyzer:
                 'ema_short': 20,
                 'ema_long': 50,
                 'num_support_levels': 2,
-                'num_resistance_levels': 2
+                'num_resistance_levels': 2,
+                'momentum_threshold_strong': 0.5,  # NEW: 0.5% strong momentum
+                'momentum_threshold_moderate': 0.2  # NEW: 0.2% moderate momentum
             },
             'option_chain': {
                 'pcr_bullish': 1.0,
@@ -100,7 +103,8 @@ class NiftyAnalyzer:
                 'strong_buy_threshold': 3,
                 'buy_threshold': 1,
                 'sell_threshold': -1,
-                'strong_sell_threshold': -3
+                'strong_sell_threshold': -3,
+                'momentum_weight': 2  # NEW: Weight for momentum signals
             },
             'report': {
                 'title': 'NIFTY DAY TRADING ANALYSIS (1H)',
@@ -126,7 +130,8 @@ class NiftyAnalyzer:
                 'verbose': True,
                 'debug': False,
                 'validate_data': True,
-                'min_data_points': 100
+                'min_data_points': 100,
+                'use_momentum_filter': True  # NEW: Enable momentum-based filtering
             }
         }
     
@@ -492,12 +497,54 @@ class NiftyAnalyzer:
         }
     
     def technical_analysis(self, df):
-        """Perform complete technical analysis - 1 HOUR TIMEFRAME"""
+        """Perform complete technical analysis - 1 HOUR TIMEFRAME with MOMENTUM"""
         if df is None or df.empty:
             self.logger.warning("No technical data, using sample analysis")
             return self.get_sample_tech_analysis()
         
         current_price = df['Close'].iloc[-1]
+        
+        # ==================== NEW: MOMENTUM CALCULATION ====================
+        # Calculate 1-hour price change
+        if len(df) > 1:
+            price_1h_ago = df['Close'].iloc[-2]
+            price_change_1h = current_price - price_1h_ago
+            price_change_pct_1h = (price_change_1h / price_1h_ago * 100)
+        else:
+            price_change_1h = 0
+            price_change_pct_1h = 0
+        
+        # Calculate 5-hour momentum
+        if len(df) >= 5:
+            price_5h_ago = df['Close'].iloc[-5]
+            momentum_5h = current_price - price_5h_ago
+            momentum_5h_pct = (momentum_5h / price_5h_ago * 100)
+        else:
+            momentum_5h = 0
+            momentum_5h_pct = 0
+        
+        # Determine momentum direction
+        strong_threshold = self.config['technical'].get('momentum_threshold_strong', 0.5)
+        moderate_threshold = self.config['technical'].get('momentum_threshold_moderate', 0.2)
+        
+        if momentum_5h_pct > strong_threshold:
+            momentum_signal = "Strong Upward"
+            momentum_bias = "Bullish"
+        elif momentum_5h_pct > moderate_threshold:
+            momentum_signal = "Moderate Upward"
+            momentum_bias = "Bullish"
+        elif momentum_5h_pct < -strong_threshold:
+            momentum_signal = "Strong Downward"
+            momentum_bias = "Bearish"
+        elif momentum_5h_pct < -moderate_threshold:
+            momentum_signal = "Moderate Downward"
+            momentum_bias = "Bearish"
+        else:
+            momentum_signal = "Sideways/Weak"
+            momentum_bias = "Neutral"
+        
+        self.logger.info(f"📊 Momentum (5H): {momentum_5h_pct:+.2f}% - {momentum_signal}")
+        # ===================================================================
         
         df['RSI'] = self.calculate_rsi(df['Close'])
         current_rsi = df['RSI'].iloc[-1]
@@ -550,7 +597,14 @@ class NiftyAnalyzer:
             'tech_resistances': [round(r, 2) for r in sr_levels['resistances']],
             'tech_supports': [round(s, 2) for s in sr_levels['supports']],
             'pivot_points': pivot_points,
-            'timeframe': '1 Hour'
+            'timeframe': '1 Hour',
+            # NEW momentum fields
+            'price_change_1h': round(price_change_1h, 2),
+            'price_change_pct_1h': round(price_change_pct_1h, 2),
+            'momentum_5h': round(momentum_5h, 2),
+            'momentum_5h_pct': round(momentum_5h_pct, 2),
+            'momentum_signal': momentum_signal,
+            'momentum_bias': momentum_bias
         }
     
     def get_sample_tech_analysis(self):
@@ -576,11 +630,17 @@ class NiftyAnalyzer:
                 'prev_low': 24420.00,
                 'prev_close': 24500.00
             },
-            'timeframe': '1 Hour'
+            'timeframe': '1 Hour',
+            'price_change_1h': -15.50,
+            'price_change_pct_1h': -0.06,
+            'momentum_5h': -35.50,
+            'momentum_5h_pct': -0.14,
+            'momentum_signal': 'Moderate Downward',
+            'momentum_bias': 'Bearish'
         }
     
     def generate_recommendation(self, oc_analysis, tech_analysis):
-        """Generate trading recommendation"""
+        """Generate trading recommendation WITH MOMENTUM FILTER"""
         if not oc_analysis or not tech_analysis:
             return {"recommendation": "Insufficient data", "bias": "Neutral", "confidence": "Low", "reasons": []}
         
@@ -592,6 +652,32 @@ class NiftyAnalyzer:
         bearish_signals = 0
         reasons = []
         
+        # ==================== NEW: MOMENTUM SIGNALS ====================
+        use_momentum = self.config['advanced'].get('use_momentum_filter', True)
+        momentum_weight = config.get('momentum_weight', 2)
+        
+        if use_momentum:
+            momentum_bias = tech_analysis.get('momentum_bias', 'Neutral')
+            momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
+            momentum_signal = tech_analysis.get('momentum_signal', 'Sideways')
+            
+            strong_threshold = tech_config.get('momentum_threshold_strong', 0.5)
+            
+            if 'Strong Upward' in momentum_signal or momentum_5h_pct > strong_threshold:
+                bullish_signals += momentum_weight
+                reasons.append(f"🚀 Strong upward momentum: {momentum_5h_pct:+.2f}% (5H)")
+            elif 'Moderate Upward' in momentum_signal or momentum_5h_pct > 0:
+                bullish_signals += 1
+                reasons.append(f"📈 Positive momentum: {momentum_5h_pct:+.2f}% (5H)")
+            elif 'Strong Downward' in momentum_signal or momentum_5h_pct < -strong_threshold:
+                bearish_signals += momentum_weight
+                reasons.append(f"🔻 Strong downward momentum: {momentum_5h_pct:+.2f}% (5H)")
+            elif 'Moderate Downward' in momentum_signal or momentum_5h_pct < 0:
+                bearish_signals += 1
+                reasons.append(f"📉 Negative momentum: {momentum_5h_pct:+.2f}% (5H)")
+        # ================================================================
+        
+        # Option chain signals
         pcr = oc_analysis.get('pcr', 0)
         if pcr >= oc_config['pcr_very_bullish']:
             bullish_signals += 2
@@ -613,23 +699,25 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append("Call OI buildup > Put OI buildup (Bearish)")
         
+        # RSI signals
         rsi = tech_analysis.get('rsi', 50)
         rsi_os = tech_config['rsi_oversold']
         rsi_ob = tech_config['rsi_overbought']
         
         if rsi < rsi_os:
             bullish_signals += 2
-            reasons.append(f"RSI at {rsi:.1f} - Oversold (Bullish)")
+            reasons.append(f"RSI at {rsi:.1f} - Oversold (Bullish reversal)")
         elif rsi < 45:
             bullish_signals += 1
-            reasons.append(f"RSI at {rsi:.1f} - Below neutral (Bullish)")
+            reasons.append(f"RSI at {rsi:.1f} - Below neutral")
         elif rsi > rsi_ob:
             bearish_signals += 2
             reasons.append(f"RSI at {rsi:.1f} - Overbought (Bearish)")
         elif rsi > 55:
             bearish_signals += 1
-            reasons.append(f"RSI at {rsi:.1f} - Above neutral (Bearish)")
+            reasons.append(f"RSI at {rsi:.1f} - Above neutral")
         
+        # Trend signals
         trend = tech_analysis.get('trend', '')
         if 'Uptrend' in trend:
             bullish_signals += 1
@@ -638,6 +726,7 @@ class NiftyAnalyzer:
             bearish_signals += 1
             reasons.append(f"Trend: {trend}")
         
+        # EMA signals
         current_price = tech_analysis.get('current_price', 0)
         ema20 = tech_analysis.get('ema20', 0)
         if current_price > ema20:
@@ -779,7 +868,7 @@ class NiftyAnalyzer:
         }
     
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with optimized, responsive pivot points table"""
+        """Create beautiful HTML report with MOMENTUM INDICATORS"""
         now_ist = self.format_ist_time()
         
         colors = self.config['report'].get('colors', {})
@@ -804,7 +893,12 @@ class NiftyAnalyzer:
         current_price = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         
-        # Top CE/PE strikes HTML - Show top 5 each for ITM/OTM coverage
+        # Momentum display
+        momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
+        momentum_signal = tech_analysis.get('momentum_signal', 'Sideways')
+        momentum_color = '#28a745' if momentum_5h_pct > 0 else '#dc3545' if momentum_5h_pct < 0 else '#6c757d'
+        
+        # Top CE/PE strikes HTML
         top_ce_html = ''
         for i, strike in enumerate(oc_analysis.get('top_ce_strikes', [])[:5], 1):
             top_ce_html += f"""
@@ -858,7 +952,7 @@ class NiftyAnalyzer:
                 return 'nearest-support'
             return ''
         
-        # Build pivot table rows in reverse order for supports (S3, S2, S1)
+        # Build pivot table rows
         pivot_rows = f"""
                     <tr class="pivot-row resistance {get_level_class(pivot_points.get('r3'))}">
                         <td>R3</td>
@@ -905,66 +999,63 @@ class NiftyAnalyzer:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {{ box-sizing: border-box; }}
-        /* DARK MODE THEME */
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 10px; color: #e0e0e0; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background-color: #1a1a1a; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); padding: 20px; border: 1px solid #2a2a2a; }}
-        .header {{ text-align: center; border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h1 {{ color: #4dabf7; margin: 0; font-size: 24px; }}
-        .timestamp {{ color: #9ca3af; font-size: 12px; margin-top: 8px; font-weight: bold; }}
-        .timeframe-badge {{ display: inline-block; background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
-        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 10px; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }}
+        .header {{ text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }}
+        .header h1 {{ color: #007bff; margin: 0; font-size: 24px; }}
+        .timestamp {{ color: #6c757d; font-size: 12px; margin-top: 8px; font-weight: bold; }}
+        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
         .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
         .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
+        .momentum-box {{ background: linear-gradient(135deg, {momentum_color} 0%, {momentum_color}dd 100%); color: white; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px; }}
+        .momentum-box h3 {{ margin: 0 0 5px 0; font-size: 18px; }}
+        .momentum-box .value {{ font-size: 24px; font-weight: bold; }}
         .section {{ margin-bottom: 20px; }}
-        .section-title {{ background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(13,110,253,0.3); }}
+        .section-title {{ background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
-        .data-item {{ background-color: #252525; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #0d6efd; }}
-        .data-item .label {{ color: #9ca3af; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
-        .data-item .value {{ color: #f3f4f6; font-size: 16px; font-weight: bold; }}
+        .data-item {{ background-color: #f8f9fa; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #007bff; }}
+        .data-item .label {{ color: #6c757d; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
+        .data-item .value {{ color: #212529; font-size: 16px; font-weight: bold; }}
         .levels {{ display: flex; flex-wrap: wrap; gap: 15px; }}
-        .levels-box {{ flex: 1; min-width: 250px; background-color: #252525; padding: 10px; border-radius: 8px; }}
-        .levels-box.resistance {{ border-left: 4px solid #ef4444; }}
-        .levels-box.support {{ border-left: 4px solid #10b981; }}
-        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #f3f4f6; }}
+        .levels-box {{ flex: 1; min-width: 250px; background-color: #f8f9fa; padding: 10px; border-radius: 8px; }}
+        .levels-box.resistance {{ border-left: 4px solid #dc3545; }}
+        .levels-box.support {{ border-left: 4px solid #28a745; }}
+        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; }}
         .levels-box ul {{ margin: 0; padding-left: 20px; }}
-        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; color: #d1d5db; }}
-        
-        /* Optimized Pivot Table - Dark Mode */
+        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; }}
         .pivot-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-        .pivot-info {{ color: #9ca3af; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; background-color: #1f1f1f; }}
-        .pivot-table th {{ background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; position: sticky; top: 0; }}
-        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #3a3a3a; font-weight: 500; color: #d1d5db; }}
-        .pivot-row {{ background-color: #252525; }}
-        .pivot-row.resistance {{ color: #fca5a5; }}
-        .pivot-row.support {{ color: #86efac; }}
-        .pivot-row.pivot {{ background-color: #422006; color: #fbbf24; font-weight: bold; }}
-        .nearest-resistance {{ background-color: #7f1d1d !important; border: 2px solid #ef4444; color: #fca5a5 !important; }}
-        .nearest-support {{ background-color: #14532d !important; border: 2px solid #10b981; color: #86efac !important; }}
-        .highlight-badge {{ display: inline-block; background: #ef4444; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
-        
-        .reasons {{ background-color: #422006; border-left: 4px solid #fbbf24; padding: 10px; border-radius: 5px; }}
+        .pivot-info {{ color: #6c757d; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
+        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+        .pivot-table th {{ background-color: #007bff; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }}
+        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #e9ecef; font-weight: 500; }}
+        .pivot-row {{ background-color: #f8f9fa; }}
+        .pivot-row.resistance {{ color: #dc3545; }}
+        .pivot-row.support {{ color: #28a745; }}
+        .pivot-row.pivot {{ background-color: #fff3cd; color: #856404; font-weight: bold; }}
+        .nearest-resistance {{ background-color: #f8d7da !important; border: 2px solid #dc3545; }}
+        .nearest-support {{ background-color: #d4edda !important; border: 2px solid #28a745; }}
+        .highlight-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
+        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; }}
         .reasons ul {{ margin: 6px 0 0 0; padding-left: 20px; }}
-        .reasons li {{ margin: 4px 0; color: #fde68a; font-size: 12px; }}
+        .reasons li {{ margin: 4px 0; color: #856404; font-size: 12px; }}
         .signal-badge {{ display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin: 4px; font-weight: 600; }}
-        .bullish {{ background-color: #065f46; color: #86efac; }}
-        .bearish {{ background-color: #7f1d1d; color: #fca5a5; }}
-        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; background-color: #1f1f1f; }}
-        .oi-table th {{ background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; padding: 6px 4px; text-align: left; font-size: 11px; font-weight: 600; }}
-        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #3a3a3a; font-size: 12px; color: #d1d5db; }}
-        .badge-itm {{ background-color: #10b981; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
-        .badge-atm {{ background-color: #fbbf24; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
-        .badge-otm {{ background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .bullish {{ background-color: #d4edda; color: #155724; }}
+        .bearish {{ background-color: #f8d7da; color: #721c24; }}
+        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }}
+        .oi-table th {{ background-color: #007bff; color: white; padding: 6px 4px; text-align: left; font-size: 11px; font-weight: 600; }}
+        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #e9ecef; font-size: 12px; }}
+        .badge-itm {{ background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .badge-atm {{ background-color: #ffc107; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .badge-otm {{ background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }}
-        .strategy-card {{ background-color: #252525; border: 2px solid #3a3a3a; border-radius: 8px; padding: 10px; }}
-        .strategy-header {{ border-bottom: 2px solid #0d6efd; padding-bottom: 6px; margin-bottom: 6px; }}
-        .strategy-header h4 {{ margin: 0; color: #4dabf7; font-size: 14px; }}
-        .strategy-type {{ display: inline-block; background-color: #1e3a8a; color: #93c5fd; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
-        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; color: #d1d5db; }}
-        .recommendation-stars {{ color: #fbbf24; font-size: 13px; }}
-        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #3a3a3a; color: #9ca3af; font-size: 11px; }}
-        
-        /* Mobile Optimizations - Dark Mode */
+        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; }}
+        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 6px; margin-bottom: 6px; }}
+        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 14px; }}
+        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
+        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; }}
+        .recommendation-stars {{ color: #ffc107; font-size: 13px; }}
+        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 11px; }}
         @media (max-width: 768px) {{
             .container {{ padding: 12px; }}
             .header h1 {{ font-size: 20px; }}
@@ -974,25 +1065,6 @@ class NiftyAnalyzer:
             .data-item .value {{ font-size: 14px; }}
             .levels {{ flex-direction: column; }}
             .levels-box {{ min-width: 100%; }}
-            .pivot-table {{ font-size: 11px; }}
-            .pivot-table th {{ padding: 6px 4px; font-size: 10px; }}
-            .pivot-table td {{ padding: 6px 4px; }}
-            .highlight-badge {{ font-size: 8px; padding: 1px 4px; }}
-            .strategies-grid {{ grid-template-columns: 1fr; }}
-            .oi-table {{ font-size: 10px; }}
-            .oi-table th, .oi-table td {{ padding: 4px 2px; }}
-        }}
-        
-        @media (max-width: 480px) {{
-            body {{ padding: 5px; }}
-            .container {{ padding: 8px; }}
-            .header h1 {{ font-size: 18px; }}
-            .timeframe-badge {{ font-size: 10px; padding: 3px 8px; }}
-            .recommendation-box {{ padding: 10px; }}
-            .recommendation-box h2 {{ font-size: 20px; }}
-            .data-grid {{ grid-template-columns: 1fr; }}
-            .pivot-table {{ font-size: 10px; }}
-            .pivot-info {{ font-size: 10px; }}
         }}
     </style>
 </head>
@@ -1002,6 +1074,12 @@ class NiftyAnalyzer:
             <h1>📊 {title}</h1>
             <div class="timeframe-badge">⏱️ 1-HOUR TIMEFRAME</div>
             <div class="timestamp">Generated on: {now_ist}</div>
+        </div>
+        
+        <div class="momentum-box">
+            <h3>📊 Market Momentum (5H)</h3>
+            <div class="value">{momentum_5h_pct:+.2f}%</div>
+            <div style="font-size: 14px; margin-top: 5px;">{momentum_signal}</div>
         </div>
         
         <div class="recommendation-box">
@@ -1021,6 +1099,10 @@ class NiftyAnalyzer:
                     <div class="value">₹{tech_analysis.get('current_price', 'N/A')}</div>
                 </div>
                 <div class="data-item">
+                    <div class="label">1H Change</div>
+                    <div class="value" style="color: {momentum_color};">{tech_analysis.get('price_change_pct_1h', 0):+.2f}%</div>
+                </div>
+                <div class="data-item">
                     <div class="label">RSI (14)</div>
                     <div class="value">{tech_analysis.get('rsi', 'N/A')}</div>
                 </div>
@@ -1035,10 +1117,6 @@ class NiftyAnalyzer:
                 <div class="data-item">
                     <div class="label">Trend</div>
                     <div class="value">{tech_analysis.get('trend', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">RSI Signal</div>
-                    <div class="value">{tech_analysis.get('rsi_signal', 'N/A')}</div>
                 </div>
             </div>
         </div>
@@ -1110,7 +1188,7 @@ class NiftyAnalyzer:
         </div>
         
         <div class="section">
-            <div class="section-title">🏆 Top Strikes by Open Interest (5 CE + 5 PE)</div>
+            <div class="section-title">🏆 Top Strikes by Open Interest</div>
             <div class="levels">
                 <div class="levels-box" style="border-left: 4px solid #dc3545;">
                     <h4>📞 Call Options</h4>
@@ -1145,7 +1223,7 @@ class NiftyAnalyzer:
         
         <div class="footer">
             <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk.</p>
-            <p>© 2025 Nifty Trading Analyzer | 1H Analysis with Pivot Points</p>
+            <p>© 2025 Nifty Trading Analyzer | 1H Analysis with Momentum & Pivots</p>
         </div>
     </div>
 </body>
@@ -1188,8 +1266,8 @@ class NiftyAnalyzer:
             return False
     
     def run_analysis(self):
-        """Run complete analysis - 1 HOUR TIMEFRAME"""
-        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Pivot Points...")
+        """Run complete analysis with MOMENTUM DETECTION"""
+        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Momentum Detection...")
         self.logger.info("=" * 60)
         
         oc_df, spot_price = self.fetch_option_chain()
@@ -1207,13 +1285,14 @@ class NiftyAnalyzer:
         else:
             tech_analysis = self.get_sample_tech_analysis()
         
-        self.logger.info("🎯 Generating Trading Recommendation...")
+        self.logger.info("🎯 Generating Trading Recommendation with Momentum...")
         recommendation = self.generate_recommendation(oc_analysis, tech_analysis)
         
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
         self.logger.info(f"📈 Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}")
         self.logger.info(f"🎯 RSI (1H): {tech_analysis.get('rsi', 'N/A')}")
+        self.logger.info(f"📊 Momentum (5H): {tech_analysis.get('momentum_5h_pct', 0):+.2f}%")
         self.logger.info(f"📍 Pivot Point: ₹{tech_analysis.get('pivot_points', {}).get('pivot', 'N/A')}")
         self.logger.info("=" * 60)
         
@@ -1234,7 +1313,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
         
-        self.logger.info("✅ 1-Hour Analysis with Pivot Points Complete!")
+        self.logger.info("✅ 1-Hour Analysis with Momentum Detection Complete!")
         
         return {
             'oc_analysis': oc_analysis,
@@ -1250,6 +1329,6 @@ if __name__ == "__main__":
     
     print(f"\n✅ Analysis Complete!")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
-    print(f"RSI (1H, Wilder's): {result['tech_analysis']['rsi']}")
-    print(f"Pivot Point: ₹{result['tech_analysis']['pivot_points']['pivot']}")
-    print(f"Check your email for the detailed 1-HOUR report with Pivot Points!")
+    print(f"RSI (1H): {result['tech_analysis']['rsi']}")
+    print(f"Momentum (5H): {result['tech_analysis']['momentum_5h_pct']:+.2f}%")
+    print(f"Check your email for the detailed report!")
