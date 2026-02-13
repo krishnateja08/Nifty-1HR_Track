@@ -1,8 +1,8 @@
 """
 Nifty Option Chain & Technical Analysis for Day Trading
-IMPROVED VERSION - Added Momentum Detection
+COMPLETE VERSION - Both 1H and 5H Momentum Side-by-Side
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
-Enhanced with Pivot Points + Price Momentum Analysis
+Enhanced with Pivot Points + Dual Momentum Analysis
 """
 
 import pandas as pd
@@ -87,8 +87,8 @@ class NiftyAnalyzer:
                 'ema_long': 50,
                 'num_support_levels': 2,
                 'num_resistance_levels': 2,
-                'momentum_threshold_strong': 0.5,  # NEW: 0.5% strong momentum
-                'momentum_threshold_moderate': 0.2  # NEW: 0.2% moderate momentum
+                'momentum_threshold_strong': 0.5,
+                'momentum_threshold_moderate': 0.2
             },
             'option_chain': {
                 'pcr_bullish': 1.0,
@@ -104,7 +104,8 @@ class NiftyAnalyzer:
                 'buy_threshold': 1,
                 'sell_threshold': -1,
                 'strong_sell_threshold': -3,
-                'momentum_weight': 2  # NEW: Weight for momentum signals
+                'momentum_5h_weight': 2,
+                'momentum_1h_weight': 1
             },
             'report': {
                 'title': 'NIFTY DAY TRADING ANALYSIS (1H)',
@@ -131,7 +132,7 @@ class NiftyAnalyzer:
                 'debug': False,
                 'validate_data': True,
                 'min_data_points': 100,
-                'use_momentum_filter': True  # NEW: Enable momentum-based filtering
+                'use_momentum_filter': True
             }
         }
     
@@ -496,16 +497,32 @@ class NiftyAnalyzer:
             'supports': supports[:num_support] if len(supports) >= num_support else supports
         }
     
+    def get_momentum_signal(self, momentum_pct):
+        """Get momentum signal and color based on percentage"""
+        strong_threshold = self.config['technical'].get('momentum_threshold_strong', 0.5)
+        moderate_threshold = self.config['technical'].get('momentum_threshold_moderate', 0.2)
+        
+        if momentum_pct > strong_threshold:
+            return "Strong Upward", "Bullish", "#28a745"
+        elif momentum_pct > moderate_threshold:
+            return "Moderate Upward", "Bullish", "#5cb85c"
+        elif momentum_pct < -strong_threshold:
+            return "Strong Downward", "Bearish", "#dc3545"
+        elif momentum_pct < -moderate_threshold:
+            return "Moderate Downward", "Bearish", "#f0ad4e"
+        else:
+            return "Sideways/Weak", "Neutral", "#6c757d"
+    
     def technical_analysis(self, df):
-        """Perform complete technical analysis - 1 HOUR TIMEFRAME with MOMENTUM"""
+        """Perform complete technical analysis - 1 HOUR TIMEFRAME with DUAL MOMENTUM"""
         if df is None or df.empty:
             self.logger.warning("No technical data, using sample analysis")
             return self.get_sample_tech_analysis()
         
         current_price = df['Close'].iloc[-1]
         
-        # ==================== NEW: MOMENTUM CALCULATION ====================
-        # Calculate 1-hour price change
+        # ==================== DUAL MOMENTUM CALCULATION ====================
+        # 1-HOUR MOMENTUM (last candle)
         if len(df) > 1:
             price_1h_ago = df['Close'].iloc[-2]
             price_change_1h = current_price - price_1h_ago
@@ -514,7 +531,9 @@ class NiftyAnalyzer:
             price_change_1h = 0
             price_change_pct_1h = 0
         
-        # Calculate 5-hour momentum
+        momentum_1h_signal, momentum_1h_bias, momentum_1h_color = self.get_momentum_signal(price_change_pct_1h)
+        
+        # 5-HOUR MOMENTUM (last 5 candles)
         if len(df) >= 5:
             price_5h_ago = df['Close'].iloc[-5]
             momentum_5h = current_price - price_5h_ago
@@ -523,27 +542,10 @@ class NiftyAnalyzer:
             momentum_5h = 0
             momentum_5h_pct = 0
         
-        # Determine momentum direction
-        strong_threshold = self.config['technical'].get('momentum_threshold_strong', 0.5)
-        moderate_threshold = self.config['technical'].get('momentum_threshold_moderate', 0.2)
+        momentum_5h_signal, momentum_5h_bias, momentum_5h_color = self.get_momentum_signal(momentum_5h_pct)
         
-        if momentum_5h_pct > strong_threshold:
-            momentum_signal = "Strong Upward"
-            momentum_bias = "Bullish"
-        elif momentum_5h_pct > moderate_threshold:
-            momentum_signal = "Moderate Upward"
-            momentum_bias = "Bullish"
-        elif momentum_5h_pct < -strong_threshold:
-            momentum_signal = "Strong Downward"
-            momentum_bias = "Bearish"
-        elif momentum_5h_pct < -moderate_threshold:
-            momentum_signal = "Moderate Downward"
-            momentum_bias = "Bearish"
-        else:
-            momentum_signal = "Sideways/Weak"
-            momentum_bias = "Neutral"
-        
-        self.logger.info(f"📊 Momentum (5H): {momentum_5h_pct:+.2f}% - {momentum_signal}")
+        self.logger.info(f"📊 1H Momentum: {price_change_pct_1h:+.2f}% - {momentum_1h_signal}")
+        self.logger.info(f"📊 5H Momentum: {momentum_5h_pct:+.2f}% - {momentum_5h_signal}")
         # ===================================================================
         
         df['RSI'] = self.calculate_rsi(df['Close'])
@@ -598,13 +600,18 @@ class NiftyAnalyzer:
             'tech_supports': [round(s, 2) for s in sr_levels['supports']],
             'pivot_points': pivot_points,
             'timeframe': '1 Hour',
-            # NEW momentum fields
+            # 1H Momentum
             'price_change_1h': round(price_change_1h, 2),
             'price_change_pct_1h': round(price_change_pct_1h, 2),
+            'momentum_1h_signal': momentum_1h_signal,
+            'momentum_1h_bias': momentum_1h_bias,
+            'momentum_1h_color': momentum_1h_color,
+            # 5H Momentum
             'momentum_5h': round(momentum_5h, 2),
             'momentum_5h_pct': round(momentum_5h_pct, 2),
-            'momentum_signal': momentum_signal,
-            'momentum_bias': momentum_bias
+            'momentum_5h_signal': momentum_5h_signal,
+            'momentum_5h_bias': momentum_5h_bias,
+            'momentum_5h_color': momentum_5h_color
         }
     
     def get_sample_tech_analysis(self):
@@ -633,14 +640,18 @@ class NiftyAnalyzer:
             'timeframe': '1 Hour',
             'price_change_1h': -15.50,
             'price_change_pct_1h': -0.06,
+            'momentum_1h_signal': 'Sideways/Weak',
+            'momentum_1h_bias': 'Neutral',
+            'momentum_1h_color': '#6c757d',
             'momentum_5h': -35.50,
             'momentum_5h_pct': -0.14,
-            'momentum_signal': 'Moderate Downward',
-            'momentum_bias': 'Bearish'
+            'momentum_5h_signal': 'Moderate Downward',
+            'momentum_5h_bias': 'Bearish',
+            'momentum_5h_color': '#f0ad4e'
         }
     
     def generate_recommendation(self, oc_analysis, tech_analysis):
-        """Generate trading recommendation WITH MOMENTUM FILTER"""
+        """Generate trading recommendation WITH DUAL MOMENTUM FILTER"""
         if not oc_analysis or not tech_analysis:
             return {"recommendation": "Insufficient data", "bias": "Neutral", "confidence": "Low", "reasons": []}
         
@@ -652,29 +663,41 @@ class NiftyAnalyzer:
         bearish_signals = 0
         reasons = []
         
-        # ==================== NEW: MOMENTUM SIGNALS ====================
+        # ==================== DUAL MOMENTUM SIGNALS ====================
         use_momentum = self.config['advanced'].get('use_momentum_filter', True)
-        momentum_weight = config.get('momentum_weight', 2)
         
         if use_momentum:
-            momentum_bias = tech_analysis.get('momentum_bias', 'Neutral')
+            # 5H Momentum (Primary - Higher weight)
             momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
-            momentum_signal = tech_analysis.get('momentum_signal', 'Sideways')
+            momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
+            weight_5h = config.get('momentum_5h_weight', 2)
             
             strong_threshold = tech_config.get('momentum_threshold_strong', 0.5)
+            moderate_threshold = tech_config.get('momentum_threshold_moderate', 0.2)
             
-            if 'Strong Upward' in momentum_signal or momentum_5h_pct > strong_threshold:
-                bullish_signals += momentum_weight
-                reasons.append(f"🚀 Strong upward momentum: {momentum_5h_pct:+.2f}% (5H)")
-            elif 'Moderate Upward' in momentum_signal or momentum_5h_pct > 0:
+            if momentum_5h_pct > strong_threshold:
+                bullish_signals += weight_5h
+                reasons.append(f"🚀 5H Strong upward momentum: {momentum_5h_pct:+.2f}%")
+            elif momentum_5h_pct > moderate_threshold:
                 bullish_signals += 1
-                reasons.append(f"📈 Positive momentum: {momentum_5h_pct:+.2f}% (5H)")
-            elif 'Strong Downward' in momentum_signal or momentum_5h_pct < -strong_threshold:
-                bearish_signals += momentum_weight
-                reasons.append(f"🔻 Strong downward momentum: {momentum_5h_pct:+.2f}% (5H)")
-            elif 'Moderate Downward' in momentum_signal or momentum_5h_pct < 0:
+                reasons.append(f"📈 5H Positive momentum: {momentum_5h_pct:+.2f}%")
+            elif momentum_5h_pct < -strong_threshold:
+                bearish_signals += weight_5h
+                reasons.append(f"🔻 5H Strong downward momentum: {momentum_5h_pct:+.2f}%")
+            elif momentum_5h_pct < -moderate_threshold:
                 bearish_signals += 1
-                reasons.append(f"📉 Negative momentum: {momentum_5h_pct:+.2f}% (5H)")
+                reasons.append(f"📉 5H Negative momentum: {momentum_5h_pct:+.2f}%")
+            
+            # 1H Momentum (Secondary - Lower weight)
+            momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
+            weight_1h = config.get('momentum_1h_weight', 1)
+            
+            if momentum_1h_pct > strong_threshold:
+                bullish_signals += weight_1h
+                reasons.append(f"⚡ 1H Strong upward move: {momentum_1h_pct:+.2f}%")
+            elif momentum_1h_pct < -strong_threshold:
+                bearish_signals += weight_1h
+                reasons.append(f"⚡ 1H Strong downward move: {momentum_1h_pct:+.2f}%")
         # ================================================================
         
         # Option chain signals
@@ -868,7 +891,7 @@ class NiftyAnalyzer:
         }
     
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with MOMENTUM INDICATORS"""
+        """Create beautiful HTML report with DUAL MOMENTUM SIDE-BY-SIDE"""
         now_ist = self.format_ist_time()
         
         colors = self.config['report'].get('colors', {})
@@ -893,10 +916,14 @@ class NiftyAnalyzer:
         current_price = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         
-        # Momentum display
+        # Momentum values
+        momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
+        momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
+        momentum_1h_color = tech_analysis.get('momentum_1h_color', '#6c757d')
+        
         momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
-        momentum_signal = tech_analysis.get('momentum_signal', 'Sideways')
-        momentum_color = '#28a745' if momentum_5h_pct > 0 else '#dc3545' if momentum_5h_pct < 0 else '#6c757d'
+        momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
+        momentum_5h_color = tech_analysis.get('momentum_5h_color', '#6c757d')
         
         # Top CE/PE strikes HTML
         top_ce_html = ''
@@ -1005,12 +1032,17 @@ class NiftyAnalyzer:
         .header h1 {{ color: #007bff; margin: 0; font-size: 24px; }}
         .timestamp {{ color: #6c757d; font-size: 12px; margin-top: 8px; font-weight: bold; }}
         .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+        
+        /* DUAL MOMENTUM BOXES - SIDE BY SIDE */
+        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
+        .momentum-box {{ background: linear-gradient(135deg, var(--momentum-color) 0%, var(--momentum-color)dd 100%); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }}
+        .momentum-box h3 {{ margin: 0 0 5px 0; font-size: 16px; font-weight: 600; }}
+        .momentum-box .value {{ font-size: 28px; font-weight: bold; margin: 5px 0; }}
+        .momentum-box .signal {{ font-size: 13px; margin-top: 3px; opacity: 0.95; }}
+        
         .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
         .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
         .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
-        .momentum-box {{ background: linear-gradient(135deg, {momentum_color} 0%, {momentum_color}dd 100%); color: white; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px; }}
-        .momentum-box h3 {{ margin: 0 0 5px 0; font-size: 18px; }}
-        .momentum-box .value {{ font-size: 24px; font-weight: bold; }}
         .section {{ margin-bottom: 20px; }}
         .section-title {{ background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
@@ -1056,15 +1088,31 @@ class NiftyAnalyzer:
         .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; }}
         .recommendation-stars {{ color: #ffc107; font-size: 13px; }}
         .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 11px; }}
+        
+        /* Mobile Optimizations */
         @media (max-width: 768px) {{
             .container {{ padding: 12px; }}
             .header h1 {{ font-size: 20px; }}
+            .momentum-container {{ grid-template-columns: 1fr; gap: 10px; }}
+            .momentum-box .value {{ font-size: 24px; }}
             .recommendation-box h2 {{ font-size: 22px; }}
             .section-title {{ font-size: 14px; padding: 6px 12px; }}
             .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
             .data-item .value {{ font-size: 14px; }}
             .levels {{ flex-direction: column; }}
             .levels-box {{ min-width: 100%; }}
+        }}
+        
+        @media (max-width: 480px) {{
+            body {{ padding: 5px; }}
+            .container {{ padding: 8px; }}
+            .header h1 {{ font-size: 18px; }}
+            .timeframe-badge {{ font-size: 10px; padding: 3px 8px; }}
+            .momentum-box h3 {{ font-size: 14px; }}
+            .momentum-box .value {{ font-size: 20px; }}
+            .recommendation-box {{ padding: 10px; }}
+            .recommendation-box h2 {{ font-size: 20px; }}
+            .data-grid {{ grid-template-columns: 1fr; }}
         }}
     </style>
 </head>
@@ -1076,10 +1124,18 @@ class NiftyAnalyzer:
             <div class="timestamp">Generated on: {now_ist}</div>
         </div>
         
-        <div class="momentum-box">
-            <h3>📊 Market Momentum (5H)</h3>
-            <div class="value">{momentum_5h_pct:+.2f}%</div>
-            <div style="font-size: 14px; margin-top: 5px;">{momentum_signal}</div>
+        <!-- DUAL MOMENTUM DISPLAY - SIDE BY SIDE -->
+        <div class="momentum-container">
+            <div class="momentum-box" style="--momentum-color: {momentum_1h_color};">
+                <h3>⚡ 1H Momentum</h3>
+                <div class="value">{momentum_1h_pct:+.2f}%</div>
+                <div class="signal">{momentum_1h_signal}</div>
+            </div>
+            <div class="momentum-box" style="--momentum-color: {momentum_5h_color};">
+                <h3>📊 5H Momentum</h3>
+                <div class="value">{momentum_5h_pct:+.2f}%</div>
+                <div class="signal">{momentum_5h_signal}</div>
+            </div>
         </div>
         
         <div class="recommendation-box">
@@ -1099,10 +1155,6 @@ class NiftyAnalyzer:
                     <div class="value">₹{tech_analysis.get('current_price', 'N/A')}</div>
                 </div>
                 <div class="data-item">
-                    <div class="label">1H Change</div>
-                    <div class="value" style="color: {momentum_color};">{tech_analysis.get('price_change_pct_1h', 0):+.2f}%</div>
-                </div>
-                <div class="data-item">
                     <div class="label">RSI (14)</div>
                     <div class="value">{tech_analysis.get('rsi', 'N/A')}</div>
                 </div>
@@ -1117,6 +1169,10 @@ class NiftyAnalyzer:
                 <div class="data-item">
                     <div class="label">Trend</div>
                     <div class="value">{tech_analysis.get('trend', 'N/A')}</div>
+                </div>
+                <div class="data-item">
+                    <div class="label">RSI Signal</div>
+                    <div class="value">{tech_analysis.get('rsi_signal', 'N/A')}</div>
                 </div>
             </div>
         </div>
@@ -1223,7 +1279,7 @@ class NiftyAnalyzer:
         
         <div class="footer">
             <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk.</p>
-            <p>© 2025 Nifty Trading Analyzer | 1H Analysis with Momentum & Pivots</p>
+            <p>© 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H)</p>
         </div>
     </div>
 </body>
@@ -1266,8 +1322,8 @@ class NiftyAnalyzer:
             return False
     
     def run_analysis(self):
-        """Run complete analysis with MOMENTUM DETECTION"""
-        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Momentum Detection...")
+        """Run complete analysis with DUAL MOMENTUM DETECTION"""
+        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum...")
         self.logger.info("=" * 60)
         
         oc_df, spot_price = self.fetch_option_chain()
@@ -1285,14 +1341,15 @@ class NiftyAnalyzer:
         else:
             tech_analysis = self.get_sample_tech_analysis()
         
-        self.logger.info("🎯 Generating Trading Recommendation with Momentum...")
+        self.logger.info("🎯 Generating Trading Recommendation with Dual Momentum...")
         recommendation = self.generate_recommendation(oc_analysis, tech_analysis)
         
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
         self.logger.info(f"📈 Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}")
         self.logger.info(f"🎯 RSI (1H): {tech_analysis.get('rsi', 'N/A')}")
-        self.logger.info(f"📊 Momentum (5H): {tech_analysis.get('momentum_5h_pct', 0):+.2f}%")
+        self.logger.info(f"⚡ 1H Momentum: {tech_analysis.get('price_change_pct_1h', 0):+.2f}% - {tech_analysis.get('momentum_1h_signal')}")
+        self.logger.info(f"📊 5H Momentum: {tech_analysis.get('momentum_5h_pct', 0):+.2f}% - {tech_analysis.get('momentum_5h_signal')}")
         self.logger.info(f"📍 Pivot Point: ₹{tech_analysis.get('pivot_points', {}).get('pivot', 'N/A')}")
         self.logger.info("=" * 60)
         
@@ -1313,7 +1370,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
         
-        self.logger.info("✅ 1-Hour Analysis with Momentum Detection Complete!")
+        self.logger.info("✅ Dual Momentum Analysis Complete!")
         
         return {
             'oc_analysis': oc_analysis,
@@ -1330,5 +1387,6 @@ if __name__ == "__main__":
     print(f"\n✅ Analysis Complete!")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H): {result['tech_analysis']['rsi']}")
-    print(f"Momentum (5H): {result['tech_analysis']['momentum_5h_pct']:+.2f}%")
+    print(f"1H Momentum: {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
+    print(f"5H Momentum: {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
     print(f"Check your email for the detailed report!")
