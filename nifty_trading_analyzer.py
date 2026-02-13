@@ -498,20 +498,45 @@ class NiftyAnalyzer:
         }
     
     def get_momentum_signal(self, momentum_pct):
-        """Get momentum signal and color based on percentage"""
+        """Get momentum signal, bias, and CSS color variables based on percentage"""
         strong_threshold = self.config['technical'].get('momentum_threshold_strong', 0.5)
         moderate_threshold = self.config['technical'].get('momentum_threshold_moderate', 0.2)
         
         if momentum_pct > strong_threshold:
-            return "Strong Upward", "Bullish", "#28a745"
+            return "Strong Upward", "Bullish", {
+                'bg': '#1e7e34',      # Dark green background
+                'bg_dark': '#155724', # Darker green
+                'text': '#ffffff',    # White text
+                'border': '#28a745'   # Green border
+            }
         elif momentum_pct > moderate_threshold:
-            return "Moderate Upward", "Bullish", "#5cb85c"
+            return "Moderate Upward", "Bullish", {
+                'bg': '#28a745',      # Green background
+                'bg_dark': '#218838', # Darker green
+                'text': '#ffffff',    # White text
+                'border': '#1e7e34'   # Dark green border
+            }
         elif momentum_pct < -strong_threshold:
-            return "Strong Downward", "Bearish", "#dc3545"
+            return "Strong Downward", "Bearish", {
+                'bg': '#c82333',      # Dark red background
+                'bg_dark': '#bd2130', # Darker red
+                'text': '#ffffff',    # White text
+                'border': '#dc3545'   # Red border
+            }
         elif momentum_pct < -moderate_threshold:
-            return "Moderate Downward", "Bearish", "#f0ad4e"
+            return "Moderate Downward", "Bearish", {
+                'bg': '#fd7e14',      # Orange background
+                'bg_dark': '#e8590c', # Darker orange
+                'text': '#ffffff',    # White text
+                'border': '#dc3545'   # Red border
+            }
         else:
-            return "Sideways/Weak", "Neutral", "#6c757d"
+            return "Sideways/Weak", "Neutral", {
+                'bg': '#6c757d',      # Gray background
+                'bg_dark': '#5a6268', # Darker gray
+                'text': '#ffffff',    # White text
+                'border': '#495057'   # Dark gray border
+            }
     
     def technical_analysis(self, df):
         """Perform complete technical analysis - 1 HOUR TIMEFRAME with DUAL MOMENTUM"""
@@ -531,7 +556,7 @@ class NiftyAnalyzer:
             price_change_1h = 0
             price_change_pct_1h = 0
         
-        momentum_1h_signal, momentum_1h_bias, momentum_1h_color = self.get_momentum_signal(price_change_pct_1h)
+        momentum_1h_signal, momentum_1h_bias, momentum_1h_colors = self.get_momentum_signal(price_change_pct_1h)
         
         # 5-HOUR MOMENTUM (last 5 candles)
         if len(df) >= 5:
@@ -542,7 +567,7 @@ class NiftyAnalyzer:
             momentum_5h = 0
             momentum_5h_pct = 0
         
-        momentum_5h_signal, momentum_5h_bias, momentum_5h_color = self.get_momentum_signal(momentum_5h_pct)
+        momentum_5h_signal, momentum_5h_bias, momentum_5h_colors = self.get_momentum_signal(momentum_5h_pct)
         
         self.logger.info(f"📊 1H Momentum: {price_change_pct_1h:+.2f}% - {momentum_1h_signal}")
         self.logger.info(f"📊 5H Momentum: {momentum_5h_pct:+.2f}% - {momentum_5h_signal}")
@@ -605,13 +630,13 @@ class NiftyAnalyzer:
             'price_change_pct_1h': round(price_change_pct_1h, 2),
             'momentum_1h_signal': momentum_1h_signal,
             'momentum_1h_bias': momentum_1h_bias,
-            'momentum_1h_color': momentum_1h_color,
+            'momentum_1h_colors': momentum_1h_colors,
             # 5H Momentum
             'momentum_5h': round(momentum_5h, 2),
             'momentum_5h_pct': round(momentum_5h_pct, 2),
             'momentum_5h_signal': momentum_5h_signal,
             'momentum_5h_bias': momentum_5h_bias,
-            'momentum_5h_color': momentum_5h_color
+            'momentum_5h_colors': momentum_5h_colors
         }
     
     def get_sample_tech_analysis(self):
@@ -642,12 +667,22 @@ class NiftyAnalyzer:
             'price_change_pct_1h': -0.06,
             'momentum_1h_signal': 'Sideways/Weak',
             'momentum_1h_bias': 'Neutral',
-            'momentum_1h_color': '#6c757d',
+            'momentum_1h_colors': {
+                'bg': '#6c757d',
+                'bg_dark': '#5a6268',
+                'text': '#ffffff',
+                'border': '#495057'
+            },
             'momentum_5h': -35.50,
             'momentum_5h_pct': -0.14,
             'momentum_5h_signal': 'Moderate Downward',
             'momentum_5h_bias': 'Bearish',
-            'momentum_5h_color': '#f0ad4e'
+            'momentum_5h_colors': {
+                'bg': '#fd7e14',
+                'bg_dark': '#e8590c',
+                'text': '#ffffff',
+                'border': '#dc3545'
+            }
         }
     
     def generate_recommendation(self, oc_analysis, tech_analysis):
@@ -916,14 +951,18 @@ class NiftyAnalyzer:
         current_price = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         
-        # Momentum values
+        # Momentum values with color dicts
         momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
-        momentum_1h_color = tech_analysis.get('momentum_1h_color', '#6c757d')
+        momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
+            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+        })
         
         momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
         momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
-        momentum_5h_color = tech_analysis.get('momentum_5h_color', '#6c757d')
+        momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
+            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+        })
         
         # Top CE/PE strikes HTML
         top_ce_html = ''
@@ -1035,10 +1074,18 @@ class NiftyAnalyzer:
         
         /* DUAL MOMENTUM BOXES - SIDE BY SIDE */
         .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-        .momentum-box {{ background: linear-gradient(135deg, var(--momentum-color) 0%, var(--momentum-color)dd 100%); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }}
-        .momentum-box h3 {{ margin: 0 0 5px 0; font-size: 16px; font-weight: 600; }}
-        .momentum-box .value {{ font-size: 28px; font-weight: bold; margin: 5px 0; }}
-        .momentum-box .signal {{ font-size: 13px; margin-top: 3px; opacity: 0.95; }}
+        .momentum-box {{ 
+            background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%); 
+            color: var(--momentum-text); 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: 2px solid var(--momentum-border);
+        }}
+        .momentum-box h3 {{ margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: var(--momentum-text); text-transform: uppercase; letter-spacing: 0.5px; }}
+        .momentum-box .value {{ font-size: 32px; font-weight: 900; margin: 8px 0; color: var(--momentum-text); text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }}
+        .momentum-box .signal {{ font-size: 14px; margin-top: 5px; font-weight: 600; color: var(--momentum-text); }}
         
         .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
         .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
@@ -1126,12 +1173,12 @@ class NiftyAnalyzer:
         
         <!-- DUAL MOMENTUM DISPLAY - SIDE BY SIDE -->
         <div class="momentum-container">
-            <div class="momentum-box" style="--momentum-color: {momentum_1h_color};">
+            <div class="momentum-box" style="--momentum-bg: {momentum_1h_colors['bg']}; --momentum-bg-dark: {momentum_1h_colors['bg_dark']}; --momentum-text: {momentum_1h_colors['text']}; --momentum-border: {momentum_1h_colors['border']};">
                 <h3>⚡ 1H Momentum</h3>
                 <div class="value">{momentum_1h_pct:+.2f}%</div>
                 <div class="signal">{momentum_1h_signal}</div>
             </div>
-            <div class="momentum-box" style="--momentum-color: {momentum_5h_color};">
+            <div class="momentum-box" style="--momentum-bg: {momentum_5h_colors['bg']}; --momentum-bg-dark: {momentum_5h_colors['bg_dark']}; --momentum-text: {momentum_5h_colors['text']}; --momentum-border: {momentum_5h_colors['border']};">
                 <h3>📊 5H Momentum</h3>
                 <div class="value">{momentum_5h_pct:+.2f}%</div>
                 <div class="signal">{momentum_5h_signal}</div>
