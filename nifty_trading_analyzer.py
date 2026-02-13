@@ -905,65 +905,66 @@ class NiftyAnalyzer:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {{ box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 10px; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }}
-        .header {{ text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h1 {{ color: #007bff; margin: 0; font-size: 24px; }}
-        .timestamp {{ color: #6c757d; font-size: 12px; margin-top: 8px; font-weight: bold; }}
-        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
-        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
+        /* DARK MODE THEME */
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; margin: 0; padding: 10px; color: #e0e0e0; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background-color: #1a1a1a; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); padding: 20px; border: 1px solid #2a2a2a; }}
+        .header {{ text-align: center; border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 20px; }}
+        .header h1 {{ color: #4dabf7; margin: 0; font-size: 24px; }}
+        .timestamp {{ color: #9ca3af; font-size: 12px; margin-top: 8px; font-weight: bold; }}
+        .timeframe-badge {{ display: inline-block; background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }}
         .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
         .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
         .section {{ margin-bottom: 20px; }}
-        .section-title {{ background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
+        .section-title {{ background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(13,110,253,0.3); }}
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
-        .data-item {{ background-color: #f8f9fa; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #007bff; }}
-        .data-item .label {{ color: #6c757d; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
-        .data-item .value {{ color: #212529; font-size: 16px; font-weight: bold; }}
+        .data-item {{ background-color: #252525; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #0d6efd; }}
+        .data-item .label {{ color: #9ca3af; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
+        .data-item .value {{ color: #f3f4f6; font-size: 16px; font-weight: bold; }}
         .levels {{ display: flex; flex-wrap: wrap; gap: 15px; }}
-        .levels-box {{ flex: 1; min-width: 250px; background-color: #f8f9fa; padding: 10px; border-radius: 8px; }}
-        .levels-box.resistance {{ border-left: 4px solid #dc3545; }}
-        .levels-box.support {{ border-left: 4px solid #28a745; }}
-        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; }}
+        .levels-box {{ flex: 1; min-width: 250px; background-color: #252525; padding: 10px; border-radius: 8px; }}
+        .levels-box.resistance {{ border-left: 4px solid #ef4444; }}
+        .levels-box.support {{ border-left: 4px solid #10b981; }}
+        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #f3f4f6; }}
         .levels-box ul {{ margin: 0; padding-left: 20px; }}
-        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; }}
+        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; color: #d1d5db; }}
         
-        /* Optimized Pivot Table - Responsive */
+        /* Optimized Pivot Table - Dark Mode */
         .pivot-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-        .pivot-info {{ color: #6c757d; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-        .pivot-table th {{ background-color: #007bff; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; position: sticky; top: 0; }}
-        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #e9ecef; font-weight: 500; }}
-        .pivot-row {{ background-color: #f8f9fa; }}
-        .pivot-row.resistance {{ color: #dc3545; }}
-        .pivot-row.support {{ color: #28a745; }}
-        .pivot-row.pivot {{ background-color: #fff3cd; color: #856404; font-weight: bold; }}
-        .nearest-resistance {{ background-color: #f8d7da !important; border: 2px solid #dc3545; }}
-        .nearest-support {{ background-color: #d4edda !important; border: 2px solid #28a745; }}
-        .highlight-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
+        .pivot-info {{ color: #9ca3af; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
+        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; background-color: #1f1f1f; }}
+        .pivot-table th {{ background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; position: sticky; top: 0; }}
+        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #3a3a3a; font-weight: 500; color: #d1d5db; }}
+        .pivot-row {{ background-color: #252525; }}
+        .pivot-row.resistance {{ color: #fca5a5; }}
+        .pivot-row.support {{ color: #86efac; }}
+        .pivot-row.pivot {{ background-color: #422006; color: #fbbf24; font-weight: bold; }}
+        .nearest-resistance {{ background-color: #7f1d1d !important; border: 2px solid #ef4444; color: #fca5a5 !important; }}
+        .nearest-support {{ background-color: #14532d !important; border: 2px solid #10b981; color: #86efac !important; }}
+        .highlight-badge {{ display: inline-block; background: #ef4444; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
         
-        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; }}
+        .reasons {{ background-color: #422006; border-left: 4px solid #fbbf24; padding: 10px; border-radius: 5px; }}
         .reasons ul {{ margin: 6px 0 0 0; padding-left: 20px; }}
-        .reasons li {{ margin: 4px 0; color: #856404; font-size: 12px; }}
+        .reasons li {{ margin: 4px 0; color: #fde68a; font-size: 12px; }}
         .signal-badge {{ display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin: 4px; font-weight: 600; }}
-        .bullish {{ background-color: #d4edda; color: #155724; }}
-        .bearish {{ background-color: #f8d7da; color: #721c24; }}
-        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }}
-        .oi-table th {{ background-color: #007bff; color: white; padding: 6px 4px; text-align: left; font-size: 11px; font-weight: 600; }}
-        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #e9ecef; font-size: 12px; }}
-        .badge-itm {{ background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
-        .badge-atm {{ background-color: #ffc107; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
-        .badge-otm {{ background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .bullish {{ background-color: #065f46; color: #86efac; }}
+        .bearish {{ background-color: #7f1d1d; color: #fca5a5; }}
+        .oi-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; background-color: #1f1f1f; }}
+        .oi-table th {{ background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; padding: 6px 4px; text-align: left; font-size: 11px; font-weight: 600; }}
+        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #3a3a3a; font-size: 12px; color: #d1d5db; }}
+        .badge-itm {{ background-color: #10b981; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .badge-atm {{ background-color: #fbbf24; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
+        .badge-otm {{ background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }}
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }}
-        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; }}
-        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 6px; margin-bottom: 6px; }}
-        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 14px; }}
-        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
-        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; }}
-        .recommendation-stars {{ color: #ffc107; font-size: 13px; }}
-        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 11px; }}
+        .strategy-card {{ background-color: #252525; border: 2px solid #3a3a3a; border-radius: 8px; padding: 10px; }}
+        .strategy-header {{ border-bottom: 2px solid #0d6efd; padding-bottom: 6px; margin-bottom: 6px; }}
+        .strategy-header h4 {{ margin: 0; color: #4dabf7; font-size: 14px; }}
+        .strategy-type {{ display: inline-block; background-color: #1e3a8a; color: #93c5fd; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
+        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; color: #d1d5db; }}
+        .recommendation-stars {{ color: #fbbf24; font-size: 13px; }}
+        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #3a3a3a; color: #9ca3af; font-size: 11px; }}
         
-        /* Mobile Optimizations */
+        /* Mobile Optimizations - Dark Mode */
         @media (max-width: 768px) {{
             .container {{ padding: 12px; }}
             .header h1 {{ font-size: 20px; }}
