@@ -334,10 +334,16 @@ class NiftyAnalyzer:
             'top_ce_strikes': [
                 {'strike': 24500, 'oi': 5000000, 'ltp': 120, 'iv': 16.5, 'type': 'ATM'},
                 {'strike': 24600, 'oi': 4500000, 'ltp': 80, 'iv': 15.8, 'type': 'OTM'},
+                {'strike': 24550, 'oi': 4200000, 'ltp': 95, 'iv': 16.0, 'type': 'OTM'},
+                {'strike': 24450, 'oi': 3800000, 'ltp': 145, 'iv': 16.8, 'type': 'ITM'},
+                {'strike': 24400, 'oi': 3500000, 'ltp': 170, 'iv': 17.0, 'type': 'ITM'},
             ],
             'top_pe_strikes': [
                 {'strike': 24500, 'oi': 5500000, 'ltp': 110, 'iv': 16.0, 'type': 'ATM'},
                 {'strike': 24400, 'oi': 5000000, 'ltp': 75, 'iv': 15.5, 'type': 'OTM'},
+                {'strike': 24450, 'oi': 4700000, 'ltp': 90, 'iv': 15.7, 'type': 'OTM'},
+                {'strike': 24550, 'oi': 4300000, 'ltp': 135, 'iv': 16.5, 'type': 'ITM'},
+                {'strike': 24600, 'oi': 4000000, 'ltp': 160, 'iv': 16.8, 'type': 'ITM'},
             ]
         }
     
@@ -791,7 +797,7 @@ class NiftyAnalyzer:
         current_price = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         
-        # Top CE/PE strikes HTML
+        # Top CE/PE strikes HTML - Show top 5 each for ITM/OTM coverage
         top_ce_html = ''
         for i, strike in enumerate(oc_analysis.get('top_ce_strikes', [])[:5], 1):
             top_ce_html += f"""
@@ -1096,7 +1102,7 @@ class NiftyAnalyzer:
         </div>
         
         <div class="section">
-            <div class="section-title">🏆 Top 5 Strikes by OI</div>
+            <div class="section-title">🏆 Top Strikes by Open Interest (5 CE + 5 PE)</div>
             <div class="levels">
                 <div class="levels-box" style="border-left: 4px solid #dc3545;">
                     <h4>📞 Call Options</h4>
