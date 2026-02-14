@@ -1006,31 +1006,6 @@ class NiftyAnalyzer:
             'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
         })
         
-        # Top CE/PE strikes HTML
-        top_ce_html = ''
-        for i, strike in enumerate(oc_analysis.get('top_ce_strikes', [])[:5], 1):
-            top_ce_html += f"""
-                <tr>
-                    <td>{i}</td>
-                    <td>₹{strike['strike']}</td>
-                    <td>{strike['oi']:,}</td>
-                    <td>₹{strike['ltp']}</td>
-                    <td><span class="badge-{strike['type'].lower()}">{strike['type']}</span></td>
-                </tr>
-            """
-        
-        top_pe_html = ''
-        for i, strike in enumerate(oc_analysis.get('top_pe_strikes', [])[:5], 1):
-            top_pe_html += f"""
-                <tr>
-                    <td>{i}</td>
-                    <td>₹{strike['strike']}</td>
-                    <td>{strike['oi']:,}</td>
-                    <td>₹{strike['ltp']}</td>
-                    <td><span class="badge-{strike['type'].lower()}">{strike['type']}</span></td>
-                </tr>
-            """
-        
         # Strategies HTML
         strategies_html = ''
         for strategy in strategies:
@@ -1326,26 +1301,6 @@ class NiftyAnalyzer:
                         <h4>🟢 OI Support</h4>
                         <ul>{''.join([f'<li>₹{s}</li>' for s in oc_analysis.get('supports', [])])}</ul>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">🏆 Top Strikes by Open Interest</div>
-            <div class="levels">
-                <div class="levels-box" style="border-left: 4px solid #dc3545;">
-                    <h4>📞 Call Options</h4>
-                    <table class="oi-table">
-                        <thead><tr><th>#</th><th>Strike</th><th>OI</th><th>LTP</th><th>Type</th></tr></thead>
-                        <tbody>{top_ce_html}</tbody>
-                    </table>
-                </div>
-                <div class="levels-box" style="border-left: 4px solid #28a745;">
-                    <h4>📉 Put Options</h4>
-                    <table class="oi-table">
-                        <thead><tr><th>#</th><th>Strike</th><th>OI</th><th>LTP</th><th>Type</th></tr></thead>
-                        <tbody>{top_pe_html}</tbody>
-                    </table>
                 </div>
             </div>
         </div>
