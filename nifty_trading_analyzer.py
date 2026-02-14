@@ -999,24 +999,33 @@ class NiftyAnalyzer:
         top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
         top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
         
-        # Find ATM, ITM, OTM strikes with their LTPs
+        # Helper function to find closest strike
+        def find_closest_strike(target_strike, strike_list):
+            if not strike_list:
+                return None
+            closest = min(strike_list, key=lambda x: abs(x['strike'] - target_strike))
+            return closest
+        
+        # Find strikes with tolerance
         strike_recommendations = []
         
         if bias == 'Bullish':
             # For bullish: Recommend Call options
+            
             # ATM Call
-            atm_ce = next((s for s in top_ce_strikes if s['strike'] == atm_strike), None)
+            atm_ce = find_closest_strike(atm_strike, top_ce_strikes)
             if atm_ce:
+                actual_strike = atm_ce['strike']
                 strike_recommendations.append({
                     'strategy': 'Long Call (ATM)',
                     'action': 'BUY',
-                    'strike': atm_strike,
+                    'strike': actual_strike,
                     'type': 'CE',
                     'ltp': atm_ce['ltp'],
                     'option_type': 'ATM',
-                    'target_1': atm_strike + 100,  # 100 points profit
-                    'target_2': atm_strike + 200,  # 200 points profit
-                    'stop_loss': atm_ce['ltp'] * 0.3,  # 30% of premium
+                    'target_1': actual_strike + 100,
+                    'target_2': actual_strike + 200,
+                    'stop_loss': atm_ce['ltp'] * 0.3,
                     'max_loss': atm_ce['ltp'],
                     'profit_at_target_1': 100 - atm_ce['ltp'],
                     'profit_at_target_2': 200 - atm_ce['ltp'],
@@ -1024,19 +1033,20 @@ class NiftyAnalyzer:
                     'volume': atm_ce['volume']
                 })
             
-            # OTM Call (50 points above ATM)
-            otm_strike = atm_strike + 50
-            otm_ce = next((s for s in top_ce_strikes if s['strike'] == otm_strike), None)
-            if otm_ce:
+            # OTM Call (50-100 points above ATM)
+            otm_target = atm_strike + 50
+            otm_ce = find_closest_strike(otm_target, top_ce_strikes)
+            if otm_ce and otm_ce['strike'] != (atm_ce['strike'] if atm_ce else None):
+                actual_strike = otm_ce['strike']
                 strike_recommendations.append({
                     'strategy': 'Long Call (OTM)',
                     'action': 'BUY',
-                    'strike': otm_strike,
+                    'strike': actual_strike,
                     'type': 'CE',
                     'ltp': otm_ce['ltp'],
                     'option_type': 'OTM',
-                    'target_1': otm_strike + 100,
-                    'target_2': otm_strike + 150,
+                    'target_1': actual_strike + 100,
+                    'target_2': actual_strike + 150,
                     'stop_loss': otm_ce['ltp'] * 0.3,
                     'max_loss': otm_ce['ltp'],
                     'profit_at_target_1': 100 - otm_ce['ltp'],
@@ -1046,9 +1056,11 @@ class NiftyAnalyzer:
                 })
             
             # Bull Call Spread
-            itm_strike = atm_strike - 50
-            itm_ce = next((s for s in top_ce_strikes if s['strike'] == itm_strike), None)
-            if itm_ce and otm_ce:
+            itm_target = atm_strike - 50
+            itm_ce = find_closest_strike(itm_target, top_ce_strikes)
+            if itm_ce and otm_ce and len(strike_recommendations) >= 1:
+                itm_strike = itm_ce['strike']
+                otm_strike = otm_ce['strike']
                 net_premium = itm_ce['ltp'] - otm_ce['ltp']
                 max_profit = (otm_strike - itm_strike) - net_premium
                 strike_recommendations.append({
@@ -1070,18 +1082,20 @@ class NiftyAnalyzer:
         
         elif bias == 'Bearish':
             # For bearish: Recommend Put options
+            
             # ATM Put
-            atm_pe = next((s for s in top_pe_strikes if s['strike'] == atm_strike), None)
+            atm_pe = find_closest_strike(atm_strike, top_pe_strikes)
             if atm_pe:
+                actual_strike = atm_pe['strike']
                 strike_recommendations.append({
                     'strategy': 'Long Put (ATM)',
                     'action': 'BUY',
-                    'strike': atm_strike,
+                    'strike': actual_strike,
                     'type': 'PE',
                     'ltp': atm_pe['ltp'],
                     'option_type': 'ATM',
-                    'target_1': atm_strike - 100,
-                    'target_2': atm_strike - 200,
+                    'target_1': actual_strike - 100,
+                    'target_2': actual_strike - 200,
                     'stop_loss': atm_pe['ltp'] * 0.3,
                     'max_loss': atm_pe['ltp'],
                     'profit_at_target_1': 100 - atm_pe['ltp'],
@@ -1090,19 +1104,20 @@ class NiftyAnalyzer:
                     'volume': atm_pe['volume']
                 })
             
-            # OTM Put (50 points below ATM)
-            otm_strike = atm_strike - 50
-            otm_pe = next((s for s in top_pe_strikes if s['strike'] == otm_strike), None)
-            if otm_pe:
+            # OTM Put (50-100 points below ATM)
+            otm_target = atm_strike - 50
+            otm_pe = find_closest_strike(otm_target, top_pe_strikes)
+            if otm_pe and otm_pe['strike'] != (atm_pe['strike'] if atm_pe else None):
+                actual_strike = otm_pe['strike']
                 strike_recommendations.append({
                     'strategy': 'Long Put (OTM)',
                     'action': 'BUY',
-                    'strike': otm_strike,
+                    'strike': actual_strike,
                     'type': 'PE',
                     'ltp': otm_pe['ltp'],
                     'option_type': 'OTM',
-                    'target_1': otm_strike - 100,
-                    'target_2': otm_strike - 150,
+                    'target_1': actual_strike - 100,
+                    'target_2': actual_strike - 150,
                     'stop_loss': otm_pe['ltp'] * 0.3,
                     'max_loss': otm_pe['ltp'],
                     'profit_at_target_1': 100 - otm_pe['ltp'],
@@ -1112,9 +1127,11 @@ class NiftyAnalyzer:
                 })
             
             # Bear Put Spread
-            itm_strike = atm_strike + 50
-            itm_pe = next((s for s in top_pe_strikes if s['strike'] == itm_strike), None)
-            if itm_pe and otm_pe:
+            itm_target = atm_strike + 50
+            itm_pe = find_closest_strike(itm_target, top_pe_strikes)
+            if itm_pe and otm_pe and len(strike_recommendations) >= 1:
+                itm_strike = itm_pe['strike']
+                otm_strike = otm_pe['strike']
                 net_premium = itm_pe['ltp'] - otm_pe['ltp']
                 max_profit = (itm_strike - otm_strike) - net_premium
                 strike_recommendations.append({
@@ -1136,20 +1153,21 @@ class NiftyAnalyzer:
         
         else:  # Neutral
             # Iron Condor or Straddle
-            atm_ce = next((s for s in top_ce_strikes if s['strike'] == atm_strike), None)
-            atm_pe = next((s for s in top_pe_strikes if s['strike'] == atm_strike), None)
+            atm_ce = find_closest_strike(atm_strike, top_ce_strikes)
+            atm_pe = find_closest_strike(atm_strike, top_pe_strikes)
             
             if atm_ce and atm_pe:
+                actual_strike = atm_ce['strike']  # Use CE strike as reference
                 total_premium = atm_ce['ltp'] + atm_pe['ltp']
                 strike_recommendations.append({
                     'strategy': 'Long Straddle (ATM)',
-                    'action': f"BUY {atm_strike} CE + BUY {atm_strike} PE",
-                    'strike': atm_strike,
+                    'action': f"BUY {actual_strike} CE + BUY {actual_strike} PE",
+                    'strike': actual_strike,
                     'type': 'Straddle',
                     'ltp': total_premium,
                     'option_type': 'ATM/ATM',
-                    'target_1': atm_strike + total_premium,
-                    'target_2': atm_strike - total_premium,
+                    'target_1': actual_strike + total_premium,
+                    'target_2': actual_strike - total_premium,
                     'stop_loss': total_premium * 0.5,
                     'max_loss': total_premium,
                     'profit_at_target_1': f"Profit if moves ±{total_premium:.0f} points",
@@ -1157,6 +1175,12 @@ class NiftyAnalyzer:
                     'oi': f"{atm_ce['oi']:,} / {atm_pe['oi']:,}",
                     'volume': f"{atm_ce['volume']:,} / {atm_pe['volume']:,}"
                 })
+        
+        # Log what we found
+        if strike_recommendations:
+            self.logger.info(f"✅ Generated {len(strike_recommendations)} strike recommendations")
+        else:
+            self.logger.warning(f"⚠️ No strike recommendations generated. ATM={atm_strike}, Available CE strikes={[s['strike'] for s in top_ce_strikes[:3]]}, Available PE strikes={[s['strike'] for s in top_pe_strikes[:3]]}")
         
         return strike_recommendations
     
@@ -1757,7 +1781,7 @@ class NiftyAnalyzer:
                 </div>
             """
         
-        html += """
+        html += f"""
             </div>
         </div>
         
