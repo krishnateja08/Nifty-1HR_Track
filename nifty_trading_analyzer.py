@@ -18,7 +18,6 @@ import warnings
 import yaml
 import os
 import logging
-import pickle
 
 warnings.filterwarnings('ignore')
 
@@ -39,9 +38,7 @@ class NiftyAnalyzer:
             'Accept-Encoding': 'gzip, deflate, br'
         }
         
-        # OI storage file
-        self.oi_storage_file = './data/previous_oi.pkl'
-        os.makedirs('./data', exist_ok=True)
+        # No need for OI storage - NSE API provides changeinOpenInterest directly
         
     def get_ist_time(self):
         """Get current time in IST"""
@@ -163,48 +160,19 @@ class NiftyAnalyzer:
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
     
-    def save_previous_oi(self, oc_df):
-        """Save today's OI data for next day comparison"""
-        try:
-            oi_data = {
-                'date': self.get_ist_time().strftime('%Y-%m-%d'),
-                'timestamp': self.get_ist_time(),
-                'data': oc_df[['Strike', 'Call_OI', 'Put_OI']].copy()
-            }
-            with open(self.oi_storage_file, 'wb') as f:
-                pickle.dump(oi_data, f)
-            self.logger.info("💾 Today's OI data saved for future comparison")
-        except Exception as e:
-            self.logger.warning(f"⚠️ Could not save OI data: {e}")
+    # OI Change is directly available from NSE API via changeinOpenInterest field
+    # No need to store previous day data - NSE updates this field automatically
     
-    def load_previous_oi(self):
-        """Load previous day's OI data"""
-        try:
-            if os.path.exists(self.oi_storage_file):
-                with open(self.oi_storage_file, 'rb') as f:
-                    prev_data = pickle.load(f)
-                
-                # Check if data is from a different day
-                prev_date = prev_data['date']
-                current_date = self.get_ist_time().strftime('%Y-%m-%d')
-                
-                if prev_date != current_date:
-                    self.logger.info(f"📂 Loaded OI data from previous day: {prev_date}")
-                    return prev_data['data']
-                else:
-                    self.logger.info("ℹ️ No previous day data (same day)")
-                    return None
-            else:
-                self.logger.info("ℹ️ No previous OI data file found")
-                return None
-        except Exception as e:
-            self.logger.warning(f"⚠️ Could not load previous OI data: {e}")
-            return None
+    # No longer needed - NSE API provides changeinOpenInterest directly
     
-    def analyze_oi_change(self, current_oc_df, previous_oc_df):
-        """Analyze OI changes compared to previous day"""
-        if previous_oc_df is None:
-            self.logger.warning("⚠️ No previous OI data for comparison")
+    def analyze_oi_change(self, oc_df):
+        """
+        Analyze OI changes using NSE's built-in changeinOpenInterest field
+        NSE provides change in OI compared to previous day automatically
+        This field is 0 on weekends/holidays (no trading)
+        """
+        if oc_df is None or oc_df.empty:
+            self.logger.warning("⚠️ No option chain data for OI change analysis")
             return {
                 'total_call_oi_change': 0,
                 'total_put_oi_change': 0,
@@ -218,34 +186,42 @@ class NiftyAnalyzer:
             }
         
         try:
-            # Merge current and previous data
-            merged = current_oc_df.merge(
-                previous_oc_df, 
-                on='Strike', 
-                how='inner',
-                suffixes=('_current', '_prev')
-            )
+            # NSE provides changeinOpenInterest - sum across all strikes
+            total_call_oi_change = oc_df['Call_Chng_OI'].sum()
+            total_put_oi_change = oc_df['Put_Chng_OI'].sum()
             
-            # Calculate total OI changes
-            total_call_oi_current = current_oc_df['Call_OI'].sum()
-            total_put_oi_current = current_oc_df['Put_OI'].sum()
+            # Current total OI
+            total_call_oi = oc_df['Call_OI'].sum()
+            total_put_oi = oc_df['Put_OI'].sum()
             
-            total_call_oi_prev = merged['Call_OI_prev'].sum()
-            total_put_oi_prev = merged['Put_OI_prev'].sum()
-            
-            call_oi_change = total_call_oi_current - total_call_oi_prev
-            put_oi_change = total_put_oi_current - total_put_oi_prev
-            
-            # Calculate percentage changes
-            call_oi_pct = (call_oi_change / total_call_oi_prev * 100) if total_call_oi_prev > 0 else 0
-            put_oi_pct = (put_oi_change / total_put_oi_prev * 100) if total_put_oi_prev > 0 else 0
+            # Calculate percentage change (based on current OI)
+            # If change is positive, previous OI = current - change
+            call_oi_pct = (total_call_oi_change / (total_call_oi - total_call_oi_change) * 100) if (total_call_oi - total_call_oi_change) > 0 else 0
+            put_oi_pct = (total_put_oi_change / (total_put_oi - total_put_oi_change) * 100) if (total_put_oi - total_put_oi_change) > 0 else 0
             
             # Net OI change (Put - Call)
-            net_oi_change = put_oi_change - call_oi_change
+            net_oi_change = total_put_oi_change - total_call_oi_change
+            
+            # Check if there's actual change (not a holiday/weekend)
+            is_trading_day = abs(total_call_oi_change) > 0 or abs(total_put_oi_change) > 0
+            
+            if not is_trading_day:
+                return {
+                    'total_call_oi_change': 0,
+                    'total_put_oi_change': 0,
+                    'call_oi_pct_change': 0,
+                    'put_oi_pct_change': 0,
+                    'net_oi_change': 0,
+                    'oi_sentiment': 'No Trading',
+                    'market_direction': 'Weekend/Holiday - No OI Change',
+                    'confidence_level': 'N/A',
+                    'has_data': False,
+                    'is_trading_day': False
+                }
             
             # Determine sentiment and market direction
-            if put_oi_change > call_oi_change:
-                if put_oi_change > call_oi_change * 1.5:
+            if total_put_oi_change > total_call_oi_change:
+                if total_put_oi_change > total_call_oi_change * 1.5:
                     oi_sentiment = 'Strong Bullish'
                     market_direction = 'UP (Strong Put Addition - Bullish Support)'
                     confidence_level = 'High'
@@ -253,8 +229,8 @@ class NiftyAnalyzer:
                     oi_sentiment = 'Bullish'
                     market_direction = 'UP (Put Addition > Call Addition)'
                     confidence_level = 'Medium'
-            elif call_oi_change > put_oi_change:
-                if call_oi_change > put_oi_change * 1.5:
+            elif total_call_oi_change > total_put_oi_change:
+                if total_call_oi_change > total_put_oi_change * 1.5:
                     oi_sentiment = 'Strong Bearish'
                     market_direction = 'DOWN (Strong Call Addition - Bearish Resistance)'
                     confidence_level = 'High'
@@ -268,9 +244,9 @@ class NiftyAnalyzer:
                 confidence_level = 'Low'
             
             self.logger.info("=" * 60)
-            self.logger.info("📊 OI CHANGE ANALYSIS (vs Previous Day)")
-            self.logger.info(f"📞 Call OI Change: {call_oi_change:+,.0f} ({call_oi_pct:+.2f}%)")
-            self.logger.info(f"📉 Put OI Change: {put_oi_change:+,.0f} ({put_oi_pct:+.2f}%)")
+            self.logger.info("📊 OI CHANGE ANALYSIS (from NSE changeinOpenInterest)")
+            self.logger.info(f"📞 Call OI Change: {total_call_oi_change:+,.0f} ({call_oi_pct:+.2f}%)")
+            self.logger.info(f"📉 Put OI Change: {total_put_oi_change:+,.0f} ({put_oi_pct:+.2f}%)")
             self.logger.info(f"🎯 Net OI Change: {net_oi_change:+,.0f}")
             self.logger.info(f"💡 OI Sentiment: {oi_sentiment}")
             self.logger.info(f"📈 Market Direction: {market_direction}")
@@ -278,19 +254,18 @@ class NiftyAnalyzer:
             self.logger.info("=" * 60)
             
             return {
-                'total_call_oi_change': call_oi_change,
-                'total_put_oi_change': put_oi_change,
+                'total_call_oi_change': total_call_oi_change,
+                'total_put_oi_change': total_put_oi_change,
                 'call_oi_pct_change': call_oi_pct,
                 'put_oi_pct_change': put_oi_pct,
                 'net_oi_change': net_oi_change,
                 'oi_sentiment': oi_sentiment,
                 'market_direction': market_direction,
                 'confidence_level': confidence_level,
-                'total_call_oi_current': total_call_oi_current,
-                'total_put_oi_current': total_put_oi_current,
-                'total_call_oi_prev': total_call_oi_prev,
-                'total_put_oi_prev': total_put_oi_prev,
-                'has_data': True
+                'total_call_oi': total_call_oi,
+                'total_put_oi': total_put_oi,
+                'has_data': True,
+                'is_trading_day': True
             }
             
         except Exception as e:
@@ -367,9 +342,6 @@ class NiftyAnalyzer:
                     oc_df = oc_df.sort_values('Strike')
                     
                     self.logger.info(f"✅ Option chain data fetched successfully | Spot: ₹{current_price}")
-                    
-                    # Save today's OI for next day comparison
-                    self.save_previous_oi(oc_df)
                     
                     return oc_df, current_price
                 
@@ -1161,7 +1133,7 @@ class NiftyAnalyzer:
             
             oi_change_html = f"""
         <div class="section">
-            <div class="section-title">📊 Open Interest Change Analysis (vs Previous Day)</div>
+            <div class="section-title">📊 Open Interest Change Analysis (from NSE API)</div>
             <div class="oi-change-box" style="background: linear-gradient(135deg, {oi_color} 0%, {oi_color}dd 100%);">
                 <div class="oi-change-header">
                     <h3>Market Direction: {market_direction}</h3>
@@ -1186,6 +1158,20 @@ class NiftyAnalyzer:
                     <strong>Interpretation:</strong><br>
                     {'📈 <strong>Bullish Signal:</strong> Put OI addition suggests traders are buying protection on downside, indicating confidence in upward movement.' if 'Bullish' in oi_sentiment else '📉 <strong>Bearish Signal:</strong> Call OI addition suggests traders are hedging upside, indicating expectation of downward movement.' if 'Bearish' in oi_sentiment else '⚖️ Balanced OI changes indicate neutral market sentiment.'}
                 </div>
+                <div class="oi-interpretation" style="margin-top: 10px; font-size: 11px; opacity: 0.9;">
+                    <strong>📝 Data Source:</strong> NSE's changeinOpenInterest field (updated daily during trading hours)
+                </div>
+            </div>
+        </div>
+            """
+        elif oi_change_analysis.get('is_trading_day', None) == False:
+            oi_change_html = f"""
+        <div class="section">
+            <div class="section-title">📊 Open Interest Change Analysis</div>
+            <div class="info-box" style="background-color: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460;">
+                <p>📅 <strong>Weekend/Holiday Detected</strong></p>
+                <p>No OI change data available as markets are closed.</p>
+                <p>OI change analysis will be available on next trading day.</p>
             </div>
         </div>
             """
@@ -1194,8 +1180,8 @@ class NiftyAnalyzer:
         <div class="section">
             <div class="section-title">📊 Open Interest Change Analysis</div>
             <div class="info-box">
-                <p>⚠️ No previous day OI data available for comparison.</p>
-                <p>Today's OI data will be saved for tomorrow's analysis.</p>
+                <p>⚠️ No OI change data available from NSE API.</p>
+                <p>This could be due to API connectivity issues or market closure.</p>
             </div>
         </div>
             """
@@ -1628,20 +1614,17 @@ class NiftyAnalyzer:
             return False
     
     def run_analysis(self):
-        """Run complete analysis with DUAL MOMENTUM + OI CHANGE DETECTION"""
+        """Run complete analysis with DUAL MOMENTUM + OI CHANGE from NSE API"""
         self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum + OI Change...")
         self.logger.info("=" * 60)
         
-        # Load previous day's OI data
-        previous_oi_df = self.load_previous_oi()
-        
-        # Fetch current option chain
+        # Fetch current option chain (includes changeinOpenInterest from NSE)
         oc_df, spot_price = self.fetch_option_chain()
         
         if oc_df is not None and spot_price is not None:
             oc_analysis = self.analyze_option_chain(oc_df, spot_price)
-            # Analyze OI change
-            oi_change_analysis = self.analyze_oi_change(oc_df, previous_oi_df)
+            # Analyze OI change using NSE's built-in changeinOpenInterest
+            oi_change_analysis = self.analyze_oi_change(oc_df)
         else:
             spot_price = 25796
             oc_analysis = self.get_sample_oc_analysis()
@@ -1707,12 +1690,14 @@ if __name__ == "__main__":
     print(f"5H Momentum: {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
     
     if result['oi_change_analysis'].get('has_data'):
-        print(f"\n📊 OI CHANGE INSIGHTS:")
+        print(f"\n📊 OI CHANGE INSIGHTS (from NSE API):")
         print(f"Call OI Change: {result['oi_change_analysis']['total_call_oi_change']:+,.0f} ({result['oi_change_analysis']['call_oi_pct_change']:+.2f}%)")
         print(f"Put OI Change: {result['oi_change_analysis']['total_put_oi_change']:+,.0f} ({result['oi_change_analysis']['put_oi_pct_change']:+.2f}%)")
         print(f"Market Direction: {result['oi_change_analysis']['market_direction']}")
         print(f"Confidence: {result['oi_change_analysis']['confidence_level']}")
+    elif result['oi_change_analysis'].get('is_trading_day', None) == False:
+        print(f"\n📅 Weekend/Holiday - No OI change (markets closed)")
     else:
-        print(f"\n⚠️ No previous OI data for comparison. Data will be saved for tomorrow's analysis.")
+        print(f"\n⚠️ No OI change data available from NSE API")
     
     print(f"\nCheck your email for the detailed report!")
