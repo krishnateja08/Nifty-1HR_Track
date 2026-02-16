@@ -5,6 +5,7 @@ COMPLETE VERSION - Both 1H and 5H Momentum Side-by-Side
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
 FIXED: Using curl-cffi for NSE API to bypass anti-scraping
+UPDATED: Grey theme for better readability
 """
 
 import pandas as pd
@@ -1201,7 +1202,7 @@ class NiftyAnalyzer:
         }
     
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with DUAL MOMENTUM SIDE-BY-SIDE"""
+        """Create beautiful HTML report with DUAL MOMENTUM SIDE-BY-SIDE and GREY THEME"""
         now_ist = self.format_ist_time()
         
         colors = self.config['report'].get('colors', {})
@@ -1355,12 +1356,12 @@ class NiftyAnalyzer:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {{ box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 10px; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }}
-        .header {{ text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h1 {{ color: #007bff; margin: 0; font-size: 24px; }}
-        .timestamp {{ color: #6c757d; font-size: 12px; margin-top: 8px; font-weight: bold; }}
-        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2b2d31; margin: 0; padding: 10px; color: #dcddde; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background-color: #36393f; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); padding: 20px; }}
+        .header {{ text-align: center; border-bottom: 3px solid #5865f2; padding-bottom: 15px; margin-bottom: 20px; }}
+        .header h1 {{ color: #5865f2; margin: 0; font-size: 24px; }}
+        .timestamp {{ color: #b9bbbe; font-size: 12px; margin-top: 8px; font-weight: bold; }}
+        .timeframe-badge {{ display: inline-block; background: #ed4245; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
         
         /* DUAL MOMENTUM BOXES - SIDE BY SIDE */
         .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
@@ -1370,105 +1371,105 @@ class NiftyAnalyzer:
             padding: 15px; 
             border-radius: 10px; 
             text-align: center; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             border: 2px solid var(--momentum-border);
         }}
         .momentum-box h3 {{ margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: var(--momentum-text); text-transform: uppercase; letter-spacing: 0.5px; }}
-        .momentum-box .value {{ font-size: 32px; font-weight: 900; margin: 8px 0; color: var(--momentum-text); text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }}
+        .momentum-box .value {{ font-size: 32px; font-weight: 900; margin: 8px 0; color: var(--momentum-text); text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }}
         .momentum-box .signal {{ font-size: 14px; margin-top: 5px; font-weight: 600; color: var(--momentum-text); }}
         
-        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
+        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }}
         .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
         .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
         .section {{ margin-bottom: 20px; }}
-        .section-title {{ background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
+        .section-title {{ background-color: #5865f2; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
-        .data-item {{ background-color: #f8f9fa; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #007bff; }}
-        .data-item .label {{ color: #6c757d; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
-        .data-item .value {{ color: #212529; font-size: 16px; font-weight: bold; }}
+        .data-item {{ background-color: #2f3136; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #5865f2; }}
+        .data-item .label {{ color: #b9bbbe; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
+        .data-item .value {{ color: #dcddde; font-size: 16px; font-weight: bold; }}
         .levels {{ display: flex; flex-wrap: wrap; gap: 15px; }}
-        .levels-box {{ flex: 1; min-width: 250px; background-color: #f8f9fa; padding: 10px; border-radius: 8px; }}
-        .levels-box.resistance {{ border-left: 4px solid #dc3545; }}
-        .levels-box.support {{ border-left: 4px solid #28a745; }}
-        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; }}
+        .levels-box {{ flex: 1; min-width: 250px; background-color: #2f3136; padding: 10px; border-radius: 8px; }}
+        .levels-box.resistance {{ border-left: 4px solid #ed4245; }}
+        .levels-box.support {{ border-left: 4px solid #3ba55d; }}
+        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #dcddde; }}
         .levels-box ul {{ margin: 0; padding-left: 20px; }}
-        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; }}
+        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; color: #b9bbbe; }}
         .pivot-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-        .pivot-info {{ color: #6c757d; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-        .pivot-table th {{ background-color: #007bff; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }}
-        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #e9ecef; font-weight: 500; }}
-        .pivot-row {{ background-color: #f8f9fa; }}
-        .pivot-row.resistance {{ color: #dc3545; }}
-        .pivot-row.support {{ color: #28a745; }}
-        .pivot-row.pivot {{ background-color: #fff3cd; color: #856404; font-weight: bold; }}
-        .nearest-resistance {{ background-color: #f8d7da !important; border: 2px solid #dc3545; }}
-        .nearest-support {{ background-color: #d4edda !important; border: 2px solid #28a745; }}
-        .highlight-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
-        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; }}
+        .pivot-info {{ color: #b9bbbe; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
+        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; background-color: #2f3136; }}
+        .pivot-table th {{ background-color: #5865f2; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }}
+        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #40444b; font-weight: 500; color: #dcddde; }}
+        .pivot-row {{ background-color: #2f3136; }}
+        .pivot-row.resistance {{ color: #ed4245; }}
+        .pivot-row.support {{ color: #3ba55d; }}
+        .pivot-row.pivot {{ background-color: #faa81a; color: #2b2d31; font-weight: bold; }}
+        .nearest-resistance {{ background-color: #5c2a2a !important; border: 2px solid #ed4245; }}
+        .nearest-support {{ background-color: #2a4c34 !important; border: 2px solid #3ba55d; }}
+        .highlight-badge {{ display: inline-block; background: #ed4245; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
+        .reasons {{ background-color: #3d3106; border-left: 4px solid #faa81a; padding: 10px; border-radius: 5px; }}
         .reasons ul {{ margin: 6px 0 0 0; padding-left: 20px; }}
-        .reasons li {{ margin: 4px 0; color: #856404; font-size: 12px; }}
+        .reasons li {{ margin: 4px 0; color: #f1c40f; font-size: 12px; }}
         .signal-badge {{ display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin: 4px; font-weight: 600; }}
-        .bullish {{ background-color: #d4edda; color: #155724; }}
-        .bearish {{ background-color: #f8d7da; color: #721c24; }}
+        .bullish {{ background-color: #2a4c34; color: #3ba55d; }}
+        .bearish {{ background-color: #5c2a2a; color: #ed4245; }}
         
         /* TOP 10 OI TABLE STYLES */
         .oi-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 15px; }}
         .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 12px; }}
-        .oi-section {{ background-color: #f8f9fa; padding: 12px; border-radius: 8px; }}
-        .oi-section h4 {{ margin: 0 0 10px 0; font-size: 14px; font-weight: 700; text-align: center; }}
-        .oi-section.calls {{ border-top: 4px solid #28a745; }}
-        .oi-section.puts {{ border-top: 4px solid #dc3545; }}
+        .oi-section {{ background-color: #2f3136; padding: 12px; border-radius: 8px; }}
+        .oi-section h4 {{ margin: 0 0 10px 0; font-size: 14px; font-weight: 700; text-align: center; color: #dcddde; }}
+        .oi-section.calls {{ border-top: 4px solid #3ba55d; }}
+        .oi-section.puts {{ border-top: 4px solid #ed4245; }}
         .oi-table {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
-        .oi-table th {{ background-color: #007bff; color: white; padding: 6px 4px; text-align: center; font-size: 10px; font-weight: 600; white-space: nowrap; }}
-        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #e9ecef; text-align: center; font-size: 11px; }}
-        .oi-table tbody tr:hover {{ background-color: #e7f3ff; }}
-        .badge-itm {{ background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
-        .badge-atm {{ background-color: #ffc107; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
+        .oi-table th {{ background-color: #5865f2; color: white; padding: 6px 4px; text-align: center; font-size: 10px; font-weight: 600; white-space: nowrap; }}
+        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #40444b; text-align: center; font-size: 11px; color: #dcddde; }}
+        .oi-table tbody tr:hover {{ background-color: #40444b; }}
+        .badge-itm {{ background-color: #3ba55d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
+        .badge-atm {{ background-color: #faa81a; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
         .badge-otm {{ background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
         
         /* STRIKE RECOMMENDATIONS STYLES */
         .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }}
-        .strike-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s; }}
-        .strike-card:hover {{ transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
-        .strike-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 8px; margin-bottom: 12px; }}
-        .strike-header h4 {{ margin: 0; color: #007bff; font-size: 16px; font-weight: 700; }}
+        .strike-card {{ background-color: #2f3136; border: 2px solid #40444b; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: transform 0.2s; }}
+        .strike-card:hover {{ transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.4); }}
+        .strike-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #5865f2; padding-bottom: 8px; margin-bottom: 12px; }}
+        .strike-header h4 {{ margin: 0; color: #5865f2; font-size: 16px; font-weight: 700; }}
         .strike-badge {{ display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; }}
-        .strike-badge.atm {{ background-color: #ffc107; color: #000; }}
-        .strike-badge.itm {{ background-color: #28a745; color: white; }}
+        .strike-badge.atm {{ background-color: #faa81a; color: #000; }}
+        .strike-badge.itm {{ background-color: #3ba55d; color: white; }}
         .strike-badge.otm {{ background-color: #6c757d; color: white; }}
-        .strike-badge.itm-otm {{ background: linear-gradient(90deg, #28a745 50%, #6c757d 50%); color: white; }}
-        .strike-badge.atm-atm {{ background-color: #ff6b6b; color: white; }}
-        .strike-badge.spread {{ background: linear-gradient(135deg, #007bff, #6610f2); color: white; }}
+        .strike-badge.itm-otm {{ background: linear-gradient(90deg, #3ba55d 50%, #6c757d 50%); color: white; }}
+        .strike-badge.atm-atm {{ background-color: #ed4245; color: white; }}
+        .strike-badge.spread {{ background: linear-gradient(135deg, #5865f2, #7289da); color: white; }}
         .strike-badge.straddle {{ background: linear-gradient(135deg, #fd7e14, #e83e8c); color: white; }}
-        .strike-details {{ background-color: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 12px; }}
-        .strike-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #dee2e6; }}
+        .strike-details {{ background-color: #40444b; padding: 10px; border-radius: 6px; margin-bottom: 12px; }}
+        .strike-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #4f545c; }}
         .strike-row:last-child {{ border-bottom: none; }}
-        .strike-row .label {{ color: #6c757d; font-size: 12px; font-weight: 500; }}
-        .strike-row .value {{ color: #212529; font-size: 13px; font-weight: 600; }}
-        .strike-row .premium {{ color: #007bff; font-size: 14px; font-weight: 700; }}
-        .profit-targets {{ background: linear-gradient(135deg, #e7f3ff 0%, #f8f9fa 100%); padding: 12px; border-radius: 6px; margin-bottom: 10px; }}
-        .profit-targets h5 {{ margin: 0 0 10px 0; color: #007bff; font-size: 13px; font-weight: 700; }}
+        .strike-row .label {{ color: #b9bbbe; font-size: 12px; font-weight: 500; }}
+        .strike-row .value {{ color: #dcddde; font-size: 13px; font-weight: 600; }}
+        .strike-row .premium {{ color: #5865f2; font-size: 14px; font-weight: 700; }}
+        .profit-targets {{ background: linear-gradient(135deg, #2a3f5f 0%, #2f3136 100%); padding: 12px; border-radius: 6px; margin-bottom: 10px; }}
+        .profit-targets h5 {{ margin: 0 0 10px 0; color: #5865f2; font-size: 13px; font-weight: 700; }}
         .target-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }}
-        .target-box {{ background-color: white; padding: 8px; border-radius: 6px; text-align: center; border: 2px solid #e9ecef; }}
-        .target-box.target-1 {{ border-color: #28a745; }}
-        .target-box.target-2 {{ border-color: #17a2b8; }}
-        .target-box.stop-loss-box {{ border-color: #dc3545; }}
-        .target-label {{ font-size: 10px; color: #6c757d; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }}
-        .target-price {{ font-size: 14px; color: #212529; font-weight: 700; margin-bottom: 4px; }}
-        .target-profit {{ font-size: 11px; color: #28a745; font-weight: 600; }}
-        .target-box.stop-loss-box .target-profit {{ color: #dc3545; }}
-        .trade-example {{ background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 10px; font-size: 11px; line-height: 1.5; color: #856404; }}
-        .no-recommendations {{ background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 20px; text-align: center; color: #721c24; }}
+        .target-box {{ background-color: #36393f; padding: 8px; border-radius: 6px; text-align: center; border: 2px solid #40444b; }}
+        .target-box.target-1 {{ border-color: #3ba55d; }}
+        .target-box.target-2 {{ border-color: #5bc0de; }}
+        .target-box.stop-loss-box {{ border-color: #ed4245; }}
+        .target-label {{ font-size: 10px; color: #b9bbbe; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }}
+        .target-price {{ font-size: 14px; color: #dcddde; font-weight: 700; margin-bottom: 4px; }}
+        .target-profit {{ font-size: 11px; color: #3ba55d; font-weight: 600; }}
+        .target-box.stop-loss-box .target-profit {{ color: #ed4245; }}
+        .trade-example {{ background-color: #3d3106; border: 1px solid #faa81a; border-radius: 5px; padding: 10px; font-size: 11px; line-height: 1.5; color: #f1c40f; }}
+        .no-recommendations {{ background-color: #5c2a2a; border: 1px solid #ed4245; border-radius: 5px; padding: 20px; text-align: center; color: #ed4245; }}
         
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }}
-        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; }}
-        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 6px; margin-bottom: 6px; }}
-        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 14px; }}
-        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
-        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; }}
-        .recommendation-stars {{ color: #ffc107; font-size: 13px; }}
-        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 11px; }}
+        .strategy-card {{ background-color: #2f3136; border: 2px solid #40444b; border-radius: 8px; padding: 10px; }}
+        .strategy-header {{ border-bottom: 2px solid #5865f2; padding-bottom: 6px; margin-bottom: 6px; }}
+        .strategy-header h4 {{ margin: 0; color: #5865f2; font-size: 14px; }}
+        .strategy-type {{ display: inline-block; background-color: #2a3f5f; color: #5865f2; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
+        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; color: #b9bbbe; }}
+        .recommendation-stars {{ color: #faa81a; font-size: 13px; }}
+        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #40444b; color: #b9bbbe; font-size: 11px; }}
         
         /* Mobile Optimizations */
         @media (max-width: 768px) {{
@@ -1695,7 +1696,7 @@ class NiftyAnalyzer:
         <!-- DETAILED STRIKE RECOMMENDATIONS WITH PROFIT CALCULATIONS -->
         <div class="section">
             <div class="section-title">💰 Detailed Strike Recommendations with Profit Targets</div>
-            <p style="color: #6c757d; margin-bottom: 15px; font-size: 13px;">
+            <p style="color: #b9bbbe; margin-bottom: 15px; font-size: 13px;">
                 <strong>Based on {recommendation['bias']} bias with current Nifty at ₹{tech_analysis.get('current_price', 0):.2f}</strong><br>
                 These are actionable trades with specific strike prices, LTP, and profit calculations.
             </p>
@@ -1709,13 +1710,13 @@ class NiftyAnalyzer:
                 # Determine color based on profit potential
                 if isinstance(rec.get('profit_at_target_2'), (int, float)):
                     if rec['profit_at_target_2'] > 100:
-                        profit_color = '#28a745'  # Green for good profit
+                        profit_color = '#3ba55d'  # Green for good profit
                     elif rec['profit_at_target_2'] > 50:
-                        profit_color = '#ffc107'  # Yellow for moderate
+                        profit_color = '#faa81a'  # Yellow for moderate
                     else:
-                        profit_color = '#dc3545'  # Red for low profit
+                        profit_color = '#ed4245'  # Red for low profit
                 else:
-                    profit_color = '#007bff'  # Blue for special cases
+                    profit_color = '#5865f2'  # Blue for special cases
                 
                 html += f"""
                 <div class="strike-card" style="border-left: 4px solid {profit_color};">
@@ -1787,7 +1788,7 @@ class NiftyAnalyzer:
         
         <div class="section">
             <div class="section-title">🎯 Options Strategies</div>
-            <p style="color: #6c757d; margin-bottom: 12px; font-size: 12px;">Based on {recommendation['bias']} bias:</p>
+            <p style="color: #b9bbbe; margin-bottom: 12px; font-size: 12px;">Based on {recommendation['bias']} bias:</p>
             <div class="strategies-grid">{strategies_html}</div>
         </div>
         
