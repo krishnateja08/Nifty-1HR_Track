@@ -22,6 +22,7 @@ import yaml
 import os
 import logging
 import time
+import json
 
 warnings.filterwarnings('ignore')
 
@@ -45,8 +46,119 @@ class NiftyAnalyzer:
             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             "referer": "https://www.nseindia.com/option-chain",
             "accept-language": "en-US,en;q=0.9",
-        }
+        }        
+        # OI Change tracking
+        self.oi_history_file = './data/oi_history.json'
+        self.ensure_data_dir()
     
+
+    
+    def ensure_data_dir(self):
+        """Ensure data directory exists for OI history"""
+        os.makedirs('./data', exist_ok=True)
+    
+    def save_oi_snapshot(self, oc_df, spot_price):
+        """Save current OI snapshot for future comparison"""
+        try:
+            timestamp = self.get_ist_time().isoformat()
+            total_call_oi = int(oc_df['Call_OI'].sum())
+            total_put_oi = int(oc_df['Put_OI'].sum())
+            
+            snapshot = {
+                'timestamp': timestamp,
+                'spot_price': float(spot_price),
+                'total_call_oi': total_call_oi,
+                'total_put_oi': total_put_oi
+            }
+            
+            history = []
+            if os.path.exists(self.oi_history_file):
+                with open(self.oi_history_file, 'r') as f:
+                    history = json.load(f)
+            
+            history.append(snapshot)
+            history = history[-10:]
+            
+            with open(self.oi_history_file, 'w') as f:
+                json.dump(history, f, indent=2)
+            
+            self.logger.info(f"💾 OI snapshot saved")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error saving OI snapshot: {e}")
+    
+    def analyze_oi_change(self):
+        """Analyze OI changes to predict market direction"""
+        try:
+            if not os.path.exists(self.oi_history_file):
+                return {
+                    'call_oi_change_pct': 0.0,
+                    'put_oi_change_pct': 0.0,
+                    'direction': 'No Historical Data',
+                    'signal': 'First run - building history'
+                }
+            
+            with open(self.oi_history_file, 'r') as f:
+                history = json.load(f)
+            
+            if len(history) < 2:
+                return {
+                    'call_oi_change_pct': 0.0,
+                    'put_oi_change_pct': 0.0,
+                    'direction': 'No Historical Data',
+                    'signal': 'Need more data'
+                }
+            
+            prev = history[-2]
+            curr = history[-1]
+            
+            call_change = curr['total_call_oi'] - prev['total_call_oi']
+            put_change = curr['total_put_oi'] - prev['total_put_oi']
+            
+            call_pct = (call_change / prev['total_call_oi'] * 100) if prev['total_call_oi'] > 0 else 0
+            put_pct = (put_change / prev['total_put_oi'] * 100) if prev['total_put_oi'] > 0 else 0
+            
+            # Determine direction
+            if call_pct > 1.0 and put_pct < -1.0:
+                direction = "Strong Bullish"
+                signal = "Call buildup + Put unwinding"
+            elif call_pct < -1.0 and put_pct > 1.0:
+                direction = "Strong Bearish"
+                signal = "Put buildup + Call unwinding"
+            elif call_pct > 0.5 and put_pct < 0:
+                direction = "Bullish"
+                signal = "Moderate Call buildup"
+            elif call_pct < 0 and put_pct > 0.5:
+                direction = "Bearish"
+                signal = "Moderate Put buildup"
+            elif call_pct > 0 and put_pct > 0:
+                direction = "Neutral - High Activity"
+                signal = "Both OI increasing"
+            elif call_pct < 0 and put_pct < 0:
+                direction = "Neutral - Unwinding"
+                signal = "Position unwinding"
+            else:
+                direction = "Neutral"
+                signal = "Minimal changes"
+            
+            self.logger.info(f"📊 OI Change: Call {call_pct:+.2f}%, Put {put_pct:+.2f}% → {direction}")
+            
+            return {
+                'call_oi_change_pct': round(call_pct, 2),
+                'put_oi_change_pct': round(put_pct, 2),
+                'direction': direction,
+                'signal': signal
+            }
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error analyzing OI change: {e}")
+            return {
+                'call_oi_change_pct': 0.0,
+                'put_oi_change_pct': 0.0,
+                'direction': 'Error',
+                'signal': str(e)
+            }
+
     def get_next_expiry_date(self):
         """
         Calculate the next NIFTY expiry date (Weekly Tuesday)
@@ -290,6 +402,7 @@ class NiftyAnalyzer:
                         
                         self.logger.info(f"✅ Option chain data fetched successfully | Spot: ₹{current_price} | Expiry: {expiry_date}")
                         self.logger.info(f"✅ Total strikes fetched: {len(oc_df)}")
+                        self.save_oi_snapshot(oc_df, current_price)
                         return oc_df, current_price
                     else:
                         self.logger.warning("Invalid response structure from NSE API")
@@ -764,7 +877,7 @@ class NiftyAnalyzer:
             }
         }
     
-    def generate_recommendation(self, oc_analysis, tech_analysis):
+    def generate_recommendation(self, oc_analysis, tech_analysis, oi_change_analysis):
         """Generate trading recommendation WITH DUAL MOMENTUM FILTER"""
         if not oc_analysis or not tech_analysis:
             return {"recommendation": "Insufficient data", "bias": "Neutral", "confidence": "Low", "reasons": []}
@@ -1201,7 +1314,7 @@ class NiftyAnalyzer:
             'nearest_support': nearest_support
         }
     
-    def create_html_report(self, oc_analysis, tech_analysis, recommendation):
+    def create_html_report(self, oc_analysis, tech_analysis, recommendation, oi_change_analysis):
         """Create professional HTML report with improved contrast and readability"""
         now_ist = self.format_ist_time()
         
@@ -2100,6 +2213,28 @@ class NiftyAnalyzer:
                     <h4>🟢 Support</h4>
                     <ul>{''.join([f'<li>S{i+1}: ₹{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
                 </div>
+            
+        
+        <!-- OI CHANGE ANALYSIS (NEW) -->
+        <div class="section">
+            <div class="section-title">🔥 OI Change Analysis (Market Direction)</div>
+            <div class="data-grid">
+                <div class="data-item">
+                    <div class="label">Call OI Change</div>
+                    <div class="value">{oi_change_analysis.get('call_oi_change_pct', 0):+.2f}%</div>
+                </div>
+                <div class="data-item">
+                    <div class="label">Put OI Change</div>
+                    <div class="value">{oi_change_analysis.get('put_oi_change_pct', 0):+.2f}%</div>
+                </div>
+                <div class="data-item">
+                    <div class="label">Market Direction</div>
+                    <div class="value">{oi_change_analysis.get('direction', 'N/A')}</div>
+                </div>
+                <div class="data-item">
+                    <div class="label">Signal</div>
+                    <div class="value">{oi_change_analysis.get('signal', 'N/A')}</div>
+                </div>
             </div>
         </div>
         
@@ -2373,6 +2508,9 @@ class NiftyAnalyzer:
             spot_price = 25796
             oc_analysis = self.get_sample_oc_analysis()
         
+        # Analyze OI Change
+        oi_change_analysis = self.analyze_oi_change()
+        
         tech_df = self.fetch_technical_data()
         
         if tech_df is not None and not tech_df.empty:
@@ -2381,7 +2519,7 @@ class NiftyAnalyzer:
             tech_analysis = self.get_sample_tech_analysis()
         
         self.logger.info("🎯 Generating Trading Recommendation with Dual Momentum...")
-        recommendation = self.generate_recommendation(oc_analysis, tech_analysis)
+        recommendation = self.generate_recommendation(oc_analysis, tech_analysis, oi_change_analysis)
         
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
@@ -2392,7 +2530,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📍 Pivot Point: ₹{tech_analysis.get('pivot_points', {}).get('pivot', 'N/A')}")
         self.logger.info("=" * 60)
         
-        html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation)
+        html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation, oi_change_analysis)
         
         if self.config['report']['save_local']:
             report_dir = self.config['report']['local_dir']
@@ -2415,6 +2553,7 @@ class NiftyAnalyzer:
             'oc_analysis': oc_analysis,
             'tech_analysis': tech_analysis,
             'recommendation': recommendation,
+            'oi_change_analysis': oi_change_analysis,
             'html_report': html_report
         }
 
@@ -2428,4 +2567,5 @@ if __name__ == "__main__":
     print(f"RSI (1H): {result['tech_analysis']['rsi']}")
     print(f"1H Momentum: {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
     print(f"5H Momentum: {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
+    print(f"OI Change Direction: {result['oi_change_analysis']['direction']}")
     print(f"Check your email for the detailed report!")
