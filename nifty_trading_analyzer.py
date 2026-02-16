@@ -1200,606 +1200,1220 @@ class NiftyAnalyzer:
             'nearest_support': nearest_support
         }
     
-    def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with DUAL MOMENTUM SIDE-BY-SIDE"""
-        now_ist = self.format_ist_time()
+	def create_html_report(self, oc_analysis, tech_analysis, recommendation):
+	    """Create beautiful HTML report with modern gradient design"""
+	    now_ist = self.format_ist_time()
+    
+	    colors = self.config['report'].get('colors', {})
+	    rec = recommendation['recommendation']
+    
+	    if 'STRONG BUY' in rec:
+	        rec_color = '#10b981'
+	        rec_gradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+	    elif 'BUY' in rec:
+	        rec_color = '#3b82f6'
+	        rec_gradient = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+	    elif 'STRONG SELL' in rec:
+	        rec_color = '#ef4444'
+	        rec_gradient = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+	    elif 'SELL' in rec:
+	        rec_color = '#f59e0b'
+	        rec_gradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+	    else:
+	        rec_color = '#8b5cf6'
+	        rec_gradient = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+    
+	    title = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
+    
+	    strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
+	    strike_recommendations = self.get_detailed_strike_recommendations(oc_analysis, tech_analysis, recommendation)
+    
+	    pivot_points = tech_analysis.get('pivot_points', {})
+	    current_price = tech_analysis.get('current_price', 0)
+	    nearest_levels = self.find_nearest_levels(current_price, pivot_points)
+    
+	    # Momentum values
+	    momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
+	    momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
+	    momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
+	        'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+	    })
+    
+	    momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
+	    momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
+	    momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
+	        'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+	    })
+    
+	    # Top OI strikes
+	    top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
+	    top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
+    
+	    # Build CE rows
+	    ce_rows_html = ''
+	    for idx, strike in enumerate(top_ce_strikes, 1):
+	        type_badge_color = '#10b981' if strike['type'] == 'ITM' else ('#f59e0b' if strike['type'] == 'ATM' else '#6366f1')
+	        ce_rows_html += f"""
+	        <tr class="data-row">
+	            <td><span class="rank-badge">{idx}</span></td>
+	            <td><strong class="strike-price">₹{strike['strike']}</strong></td>
+	            <td><span class="type-badge" style="background: {type_badge_color};">{strike['type']}</span></td>
+	            <td class="number-cell">{strike['oi']:,}</td>
+	            <td class="number-cell {'positive' if strike['chng_oi'] > 0 else 'negative'}">{strike['chng_oi']:+,}</td>
+	            <td class="number-cell">₹{strike['ltp']:.2f}</td>
+	            <td class="number-cell">{strike['iv']:.2f}%</td>
+	            <td class="number-cell">{strike['volume']:,}</td>
+	        </tr>
+	        """
+    
+	    # Build PE rows
+	    pe_rows_html = ''
+	    for idx, strike in enumerate(top_pe_strikes, 1):
+	        type_badge_color = '#10b981' if strike['type'] == 'ITM' else ('#f59e0b' if strike['type'] == 'ATM' else '#6366f1')
+	        pe_rows_html += f"""
+	        <tr class="data-row">
+	            <td><span class="rank-badge">{idx}</span></td>
+	            <td><strong class="strike-price">₹{strike['strike']}</strong></td>
+	            <td><span class="type-badge" style="background: {type_badge_color};">{strike['type']}</span></td>
+	            <td class="number-cell">{strike['oi']:,}</td>
+	            <td class="number-cell {'positive' if strike['chng_oi'] > 0 else 'negative'}">{strike['chng_oi']:+,}</td>
+	            <td class="number-cell">₹{strike['ltp']:.2f}</td>
+	            <td class="number-cell">{strike['iv']:.2f}%</td>
+	            <td class="number-cell">{strike['volume']:,}</td>
+	        </tr>
+	        """
+    
+	    # Build strategies HTML
+	    strategies_html = ''
+	    for strategy in strategies:
+	        strategies_html += f"""
+	        <div class="strategy-card">
+	            <div class="strategy-header">
+	                <h4>{strategy['name']}</h4>
+	                <span class="strategy-badge">{strategy['type']}</span>
+	            </div>
+	            <div class="strategy-content">
+	                <div class="strategy-row"><span class="label">Setup:</span> <span>{strategy['setup']}</span></div>
+	                <div class="strategy-row"><span class="label">Profit:</span> <span class="highlight">{strategy['profit']}</span></div>
+	                <div class="strategy-row"><span class="label">Risk:</span> <span>{strategy['risk']}</span></div>
+	                <div class="strategy-row"><span class="label">Best When:</span> <span>{strategy['best_when']}</span></div>
+	                <div class="strategy-stars">{strategy['recommended']}</div>
+	            </div>
+	        </div>
+	        """
+    
+	    # Build pivot table
+	    def get_level_highlight(level_value):
+	        if level_value == nearest_levels.get('nearest_resistance'):
+	            return 'level-highlight resistance-highlight'
+	        elif level_value == nearest_levels.get('nearest_support'):
+	            return 'level-highlight support-highlight'
+	        return ''
+    
+	    pivot_rows = f"""
+	        <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r3'))}">
+	            <td><span class="level-label resistance">R3</span></td>
+	            <td class="level-value">₹{pivot_points.get('r3', 'N/A')}</td>
+	            <td class="distance-value">{f'+{pivot_points.get("r3", 0) - current_price:.2f}' if pivot_points.get('r3') else 'N/A'}</td>
+	        </tr>
+	        <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r2'))}">
+	            <td><span class="level-label resistance">R2</span></td>
+	            <td class="level-value">₹{pivot_points.get('r2', 'N/A')}</td>
+	            <td class="distance-value">{f'+{pivot_points.get("r2", 0) - current_price:.2f}' if pivot_points.get('r2') else 'N/A'}</td>
+	        </tr>
+	        <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r1'))}">
+	            <td><span class="level-label resistance">R1</span></td>
+	            <td class="level-value">₹{pivot_points.get('r1', 'N/A')}</td>
+	            <td class="distance-value">{f'+{pivot_points.get("r1", 0) - current_price:.2f}' if pivot_points.get('r1') else 'N/A'}</td>
+	        </tr>
+	        <tr class="pivot-row pivot-center">
+	            <td><span class="level-label pivot">PP</span></td>
+	            <td class="level-value pivot-value">₹{pivot_points.get('pivot', 'N/A')}</td>
+	            <td class="distance-value">{f'{pivot_points.get("pivot", 0) - current_price:+.2f}' if pivot_points.get('pivot') else 'N/A'}</td>
+	        </tr>
+	        <tr class="pivot-row support {get_level_highlight(pivot_points.get('s1'))}">
+	            <td><span class="level-label support">S1</span></td>
+	            <td class="level-value">₹{pivot_points.get('s1', 'N/A')}</td>
+	            <td class="distance-value">{f'{pivot_points.get("s1", 0) - current_price:.2f}' if pivot_points.get('s1') else 'N/A'}</td>
+	        </tr>
+	        <tr class="pivot-row support {get_level_highlight(pivot_points.get('s2'))}">
+	            <td><span class="level-label support">S2</span></td>
+	            <td class="level-value">₹{pivot_points.get('s2', 'N/A')}</td>
+	            <td class="distance-value">{f'{pivot_points.get("s2", 0) - current_price:.2f}' if pivot_points.get('s2') else 'N/A'}</td>
+	        </tr>
+	        <tr class="pivot-row support {get_level_highlight(pivot_points.get('s3'))}">
+	            <td><span class="level-label support">S3</span></td>
+	            <td class="level-value">₹{pivot_points.get('s3', 'N/A')}</td>
+	            <td class="distance-value">{f'{pivot_points.get("s3", 0) - current_price:.2f}' if pivot_points.get('s3') else 'N/A'}</td>
+	        </tr>
+	    """
+    
+	    html = f"""
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <title>{title}</title>
+	    <style>
+	        * {{
+	            margin: 0;
+	            padding: 0;
+	            box-sizing: border-box;
+	        }}
         
-        colors = self.config['report'].get('colors', {})
-        rec = recommendation['recommendation']
+	        body {{
+	            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+	            color: #e2e8f0;
+	            padding: 20px;
+	            min-height: 100vh;
+	        }}
         
-        if 'STRONG BUY' in rec:
-            rec_color = colors.get('strong_buy', '#28a745')
-        elif 'BUY' in rec:
-            rec_color = colors.get('buy', '#5cb85c')
-        elif 'STRONG SELL' in rec:
-            rec_color = colors.get('strong_sell', '#dc3545')
-        elif 'SELL' in rec:
-            rec_color = colors.get('sell', '#f0ad4e')
-        else:
-            rec_color = colors.get('neutral', '#ffc107')
+	        .container {{
+	            max-width: 1400px;
+	            margin: 0 auto;
+	        }}
         
-        title = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
+	        /* Header */
+	        .header {{
+	            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+	            border-radius: 20px;
+	            padding: 30px;
+	            text-align: center;
+	            margin-bottom: 30px;
+	            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.3);
+	            border: 1px solid rgba(96, 165, 250, 0.2);
+	        }}
         
-        strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
+	        .header h1 {{
+	            font-size: 32px;
+	            font-weight: 800;
+	            color: #ffffff;
+	            margin-bottom: 10px;
+	            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+	        }}
         
-        # Get detailed strike recommendations with profit calculations
-        strike_recommendations = self.get_detailed_strike_recommendations(oc_analysis, tech_analysis, recommendation)
+	        .timeframe-badge {{
+	            display: inline-block;
+	            background: rgba(255, 255, 255, 0.2);
+	            color: #ffffff;
+	            padding: 8px 20px;
+	            border-radius: 20px;
+	            font-size: 14px;
+	            font-weight: 600;
+	            margin: 10px 0;
+	            backdrop-filter: blur(10px);
+	        }}
         
-        pivot_points = tech_analysis.get('pivot_points', {})
-        current_price = tech_analysis.get('current_price', 0)
-        nearest_levels = self.find_nearest_levels(current_price, pivot_points)
+	        .timestamp {{
+	            color: rgba(255, 255, 255, 0.8);
+	            font-size: 14px;
+	            margin-top: 10px;
+	        }}
         
-        # Momentum values with color dicts
-        momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
-        momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
-        momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
-            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
-        })
+	        /* Momentum Cards */
+	        .momentum-grid {{
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	            gap: 20px;
+	            margin-bottom: 30px;
+	        }}
         
-        momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
-        momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
-        momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
-            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
-        })
+	        .momentum-card {{
+	            background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
+	            border-radius: 16px;
+	            padding: 25px;
+	            text-align: center;
+	            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+	            border: 1px solid var(--momentum-border);
+	            position: relative;
+	            overflow: hidden;
+	        }}
         
-        # ==================== TOP 10 OI TABLE HTML ====================
-        top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
-        top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
+	        .momentum-card::before {{
+	            content: '';
+	            position: absolute;
+	            top: -50%;
+	            left: -50%;
+	            width: 200%;
+	            height: 200%;
+	            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+	            pointer-events: none;
+	        }}
         
-        # Build Call Options (CE) rows
-        ce_rows_html = ''
-        for idx, strike in enumerate(top_ce_strikes, 1):
-            badge_class = f"badge-{strike['type'].lower()}"
-            ce_rows_html += f"""
-                    <tr>
-                        <td>{idx}</td>
-                        <td><strong>₹{strike['strike']}</strong></td>
-                        <td><span class="{badge_class}">{strike['type']}</span></td>
-                        <td>{strike['oi']:,}</td>
-                        <td>{strike['chng_oi']:,}</td>
-                        <td>₹{strike['ltp']:.2f}</td>
-                        <td>{strike['iv']:.2f}%</td>
-                        <td>{strike['volume']:,}</td>
-                    </tr>
-            """
+	        .momentum-card h3 {{
+	            font-size: 16px;
+	            font-weight: 700;
+	            color: var(--momentum-text);
+	            margin-bottom: 15px;
+	            text-transform: uppercase;
+	            letter-spacing: 1px;
+	        }}
         
-        # Build Put Options (PE) rows
-        pe_rows_html = ''
-        for idx, strike in enumerate(top_pe_strikes, 1):
-            badge_class = f"badge-{strike['type'].lower()}"
-            pe_rows_html += f"""
-                    <tr>
-                        <td>{idx}</td>
-                        <td><strong>₹{strike['strike']}</strong></td>
-                        <td><span class="{badge_class}">{strike['type']}</span></td>
-                        <td>{strike['oi']:,}</td>
-                        <td>{strike['chng_oi']:,}</td>
-                        <td>₹{strike['ltp']:.2f}</td>
-                        <td>{strike['iv']:.2f}%</td>
-                        <td>{strike['volume']:,}</td>
-                    </tr>
-            """
-        # ==============================================================
+	        .momentum-value {{
+	            font-size: 48px;
+	            font-weight: 900;
+	            color: var(--momentum-text);
+	            margin: 10px 0;
+	            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+	        }}
         
-        # Strategies HTML
-        strategies_html = ''
-        for strategy in strategies:
-            strategies_html += f"""
-                <div class="strategy-card">
-                    <div class="strategy-header">
-                        <h4>{strategy['name']}</h4>
-                        <span class="strategy-type">{strategy['type']}</span>
-                    </div>
-                    <div class="strategy-body">
-                        <p><strong>Setup:</strong> {strategy['setup']}</p>
-                        <p><strong>Profit Potential:</strong> {strategy['profit']}</p>
-                        <p><strong>Risk:</strong> {strategy['risk']}</p>
-                        <p><strong>Best When:</strong> {strategy['best_when']}</p>
-                        <p class="recommendation-stars"><strong>Recommended:</strong> {strategy['recommended']}</p>
-                    </div>
-                </div>
-            """
+	        .momentum-signal {{
+	            font-size: 16px;
+	            font-weight: 600;
+	            color: var(--momentum-text);
+	            opacity: 0.9;
+	        }}
         
-        # Helper function for highlighting
-        def get_level_class(level_value):
-            if level_value == nearest_levels.get('nearest_resistance'):
-                return 'nearest-resistance'
-            elif level_value == nearest_levels.get('nearest_support'):
-                return 'nearest-support'
-            return ''
+	        /* Recommendation Box */
+	        .recommendation-box {{
+	            background: {rec_gradient};
+	            border-radius: 16px;
+	            padding: 30px;
+	            text-align: center;
+	            margin-bottom: 30px;
+	            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+	            border: 1px solid rgba(255, 255, 255, 0.1);
+	        }}
         
-        # Build pivot table rows
-        pivot_rows = f"""
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r3'))}">
-                        <td>R3</td>
-                        <td>₹{pivot_points.get('r3', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r3') == nearest_levels.get('nearest_resistance') else ''}</td>
-                        <td>{f'+{pivot_points.get("r3", 0) - current_price:.2f}' if pivot_points.get('r3') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r2'))}">
-                        <td>R2</td>
-                        <td>₹{pivot_points.get('r2', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r2') == nearest_levels.get('nearest_resistance') else ''}</td>
-                        <td>{f'+{pivot_points.get("r2", 0) - current_price:.2f}' if pivot_points.get('r2') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r1'))}">
-                        <td>R1</td>
-                        <td>₹{pivot_points.get('r1', 'N/A')}{' <span class="highlight-badge">NEAREST R</span>' if pivot_points.get('r1') == nearest_levels.get('nearest_resistance') else ''}</td>
-                        <td>{f'+{pivot_points.get("r1", 0) - current_price:.2f}' if pivot_points.get('r1') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row pivot">
-                        <td>PP</td>
-                        <td>₹{pivot_points.get('pivot', 'N/A')}</td>
-                        <td>{f'{pivot_points.get("pivot", 0) - current_price:+.2f}' if pivot_points.get('pivot') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s1'))}">
-                        <td>S1</td>
-                        <td>₹{pivot_points.get('s1', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s1') == nearest_levels.get('nearest_support') else ''}</td>
-                        <td>{f'{pivot_points.get("s1", 0) - current_price:.2f}' if pivot_points.get('s1') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s2'))}">
-                        <td>S2</td>
-                        <td>₹{pivot_points.get('s2', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s2') == nearest_levels.get('nearest_support') else ''}</td>
-                        <td>{f'{pivot_points.get("s2", 0) - current_price:.2f}' if pivot_points.get('s2') else 'N/A'}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s3'))}">
-                        <td>S3</td>
-                        <td>₹{pivot_points.get('s3', 'N/A')}{' <span class="highlight-badge">NEAREST S</span>' if pivot_points.get('s3') == nearest_levels.get('nearest_support') else ''}</td>
-                        <td>{f'{pivot_points.get("s3", 0) - current_price:.2f}' if pivot_points.get('s3') else 'N/A'}</td>
-                    </tr>
-        """
+	        .recommendation-box h2 {{
+	            font-size: 36px;
+	            font-weight: 900;
+	            color: #ffffff;
+	            margin-bottom: 10px;
+	            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+	        }}
         
-        html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        * {{ box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 10px; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }}
-        .header {{ text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h1 {{ color: #007bff; margin: 0; font-size: 24px; }}
-        .timestamp {{ color: #6c757d; font-size: 12px; margin-top: 8px; font-weight: bold; }}
-        .timeframe-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+	        .recommendation-subtitle {{
+	            font-size: 16px;
+	            color: rgba(255, 255, 255, 0.9);
+	            margin-bottom: 15px;
+	        }}
         
-        /* DUAL MOMENTUM BOXES - SIDE BY SIDE */
-        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-        .momentum-box {{ 
-            background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%); 
-            color: var(--momentum-text); 
-            padding: 15px; 
-            border-radius: 10px; 
-            text-align: center; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            border: 2px solid var(--momentum-border);
-        }}
-        .momentum-box h3 {{ margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: var(--momentum-text); text-transform: uppercase; letter-spacing: 0.5px; }}
-        .momentum-box .value {{ font-size: 32px; font-weight: 900; margin: 8px 0; color: var(--momentum-text); text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }}
-        .momentum-box .signal {{ font-size: 14px; margin-top: 5px; font-weight: 600; color: var(--momentum-text); }}
+	        .signal-badges {{
+	            display: flex;
+	            justify-content: center;
+	            gap: 15px;
+	            flex-wrap: wrap;
+	        }}
         
-        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }}
-        .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
-        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
-        .section {{ margin-bottom: 20px; }}
-        .section-title {{ background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
-        .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
-        .data-item {{ background-color: #f8f9fa; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #007bff; }}
-        .data-item .label {{ color: #6c757d; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
-        .data-item .value {{ color: #212529; font-size: 16px; font-weight: bold; }}
-        .levels {{ display: flex; flex-wrap: wrap; gap: 15px; }}
-        .levels-box {{ flex: 1; min-width: 250px; background-color: #f8f9fa; padding: 10px; border-radius: 8px; }}
-        .levels-box.resistance {{ border-left: 4px solid #dc3545; }}
-        .levels-box.support {{ border-left: 4px solid #28a745; }}
-        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; }}
-        .levels-box ul {{ margin: 0; padding-left: 20px; }}
-        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; }}
-        .pivot-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-        .pivot-info {{ color: #6c757d; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-        .pivot-table th {{ background-color: #007bff; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }}
-        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #e9ecef; font-weight: 500; }}
-        .pivot-row {{ background-color: #f8f9fa; }}
-        .pivot-row.resistance {{ color: #dc3545; }}
-        .pivot-row.support {{ color: #28a745; }}
-        .pivot-row.pivot {{ background-color: #fff3cd; color: #856404; font-weight: bold; }}
-        .nearest-resistance {{ background-color: #f8d7da !important; border: 2px solid #dc3545; }}
-        .nearest-support {{ background-color: #d4edda !important; border: 2px solid #28a745; }}
-        .highlight-badge {{ display: inline-block; background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
-        .reasons {{ background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; border-radius: 5px; }}
-        .reasons ul {{ margin: 6px 0 0 0; padding-left: 20px; }}
-        .reasons li {{ margin: 4px 0; color: #856404; font-size: 12px; }}
-        .signal-badge {{ display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin: 4px; font-weight: 600; }}
-        .bullish {{ background-color: #d4edda; color: #155724; }}
-        .bearish {{ background-color: #f8d7da; color: #721c24; }}
+	        .signal-badge {{
+	            background: rgba(255, 255, 255, 0.2);
+	            color: #ffffff;
+	            padding: 8px 20px;
+	            border-radius: 20px;
+	            font-size: 14px;
+	            font-weight: 600;
+	            backdrop-filter: blur(10px);
+	        }}
         
-        /* TOP 10 OI TABLE STYLES */
-        .oi-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 15px; }}
-        .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 12px; }}
-        .oi-section {{ background-color: #f8f9fa; padding: 12px; border-radius: 8px; }}
-        .oi-section h4 {{ margin: 0 0 10px 0; font-size: 14px; font-weight: 700; text-align: center; }}
-        .oi-section.calls {{ border-top: 4px solid #28a745; }}
-        .oi-section.puts {{ border-top: 4px solid #dc3545; }}
-        .oi-table {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
-        .oi-table th {{ background-color: #007bff; color: white; padding: 6px 4px; text-align: center; font-size: 10px; font-weight: 600; white-space: nowrap; }}
-        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #e9ecef; text-align: center; font-size: 11px; }}
-        .oi-table tbody tr:hover {{ background-color: #e7f3ff; }}
-        .badge-itm {{ background-color: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
-        .badge-atm {{ background-color: #ffc107; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
-        .badge-otm {{ background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
+	        /* Section Cards */
+	        .section-grid {{
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+	            gap: 25px;
+	            margin-bottom: 30px;
+	        }}
         
-        /* STRIKE RECOMMENDATIONS STYLES */
-        .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }}
-        .strike-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s; }}
-        .strike-card:hover {{ transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }}
-        .strike-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; padding-bottom: 8px; margin-bottom: 12px; }}
-        .strike-header h4 {{ margin: 0; color: #007bff; font-size: 16px; font-weight: 700; }}
-        .strike-badge {{ display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; }}
-        .strike-badge.atm {{ background-color: #ffc107; color: #000; }}
-        .strike-badge.itm {{ background-color: #28a745; color: white; }}
-        .strike-badge.otm {{ background-color: #6c757d; color: white; }}
-        .strike-badge.itm-otm {{ background: linear-gradient(90deg, #28a745 50%, #6c757d 50%); color: white; }}
-        .strike-badge.atm-atm {{ background-color: #ff6b6b; color: white; }}
-        .strike-badge.spread {{ background: linear-gradient(135deg, #007bff, #6610f2); color: white; }}
-        .strike-badge.straddle {{ background: linear-gradient(135deg, #fd7e14, #e83e8c); color: white; }}
-        .strike-details {{ background-color: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 12px; }}
-        .strike-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #dee2e6; }}
-        .strike-row:last-child {{ border-bottom: none; }}
-        .strike-row .label {{ color: #6c757d; font-size: 12px; font-weight: 500; }}
-        .strike-row .value {{ color: #212529; font-size: 13px; font-weight: 600; }}
-        .strike-row .premium {{ color: #007bff; font-size: 14px; font-weight: 700; }}
-        .profit-targets {{ background: linear-gradient(135deg, #e7f3ff 0%, #f8f9fa 100%); padding: 12px; border-radius: 6px; margin-bottom: 10px; }}
-        .profit-targets h5 {{ margin: 0 0 10px 0; color: #007bff; font-size: 13px; font-weight: 700; }}
-        .target-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }}
-        .target-box {{ background-color: white; padding: 8px; border-radius: 6px; text-align: center; border: 2px solid #e9ecef; }}
-        .target-box.target-1 {{ border-color: #28a745; }}
-        .target-box.target-2 {{ border-color: #17a2b8; }}
-        .target-box.stop-loss-box {{ border-color: #dc3545; }}
-        .target-label {{ font-size: 10px; color: #6c757d; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }}
-        .target-price {{ font-size: 14px; color: #212529; font-weight: 700; margin-bottom: 4px; }}
-        .target-profit {{ font-size: 11px; color: #28a745; font-weight: 600; }}
-        .target-box.stop-loss-box .target-profit {{ color: #dc3545; }}
-        .trade-example {{ background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 10px; font-size: 11px; line-height: 1.5; color: #856404; }}
-        .no-recommendations {{ background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 20px; text-align: center; color: #721c24; }}
+	        .section-card {{
+	            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+	            border-radius: 16px;
+	            padding: 25px;
+	            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+	            border: 1px solid rgba(96, 165, 250, 0.2);
+	        }}
         
-        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }}
-        .strategy-card {{ background-color: #ffffff; border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; }}
-        .strategy-header {{ border-bottom: 2px solid #007bff; padding-bottom: 6px; margin-bottom: 6px; }}
-        .strategy-header h4 {{ margin: 0; color: #007bff; font-size: 14px; }}
-        .strategy-type {{ display: inline-block; background-color: #e7f3ff; color: #007bff; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
-        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; }}
-        .recommendation-stars {{ color: #ffc107; font-size: 13px; }}
-        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 11px; }}
+	        .section-header {{
+	            display: flex;
+	            align-items: center;
+	            gap: 10px;
+	            margin-bottom: 20px;
+	            padding-bottom: 15px;
+	            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+	        }}
         
-        /* Mobile Optimizations */
-        @media (max-width: 768px) {{
-            .container {{ padding: 12px; }}
-            .header h1 {{ font-size: 20px; }}
-            .momentum-container {{ grid-template-columns: 1fr; gap: 10px; }}
-            .momentum-box .value {{ font-size: 24px; }}
-            .recommendation-box h2 {{ font-size: 22px; }}
-            .section-title {{ font-size: 14px; padding: 6px 12px; }}
-            .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
-            .data-item .value {{ font-size: 14px; }}
-            .levels {{ flex-direction: column; }}
-            .levels-box {{ min-width: 100%; }}
-            .oi-grid {{ grid-template-columns: 1fr; }}
-            .strike-recommendations {{ grid-template-columns: 1fr; }}
-            .target-grid {{ grid-template-columns: 1fr; }}
-        }}
+	        .section-icon {{
+	            font-size: 24px;
+	        }}
         
-        @media (max-width: 480px) {{
-            body {{ padding: 5px; }}
-            .container {{ padding: 8px; }}
-            .header h1 {{ font-size: 18px; }}
-            .timeframe-badge {{ font-size: 10px; padding: 3px 8px; }}
-            .momentum-box h3 {{ font-size: 14px; }}
-            .momentum-box .value {{ font-size: 20px; }}
-            .recommendation-box {{ padding: 10px; }}
-            .recommendation-box h2 {{ font-size: 20px; }}
-            .data-grid {{ grid-template-columns: 1fr; }}
-            .oi-table {{ font-size: 9px; }}
-            .oi-table th {{ font-size: 9px; padding: 4px 2px; }}
-            .oi-table td {{ font-size: 9px; padding: 4px 2px; }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 {title}</h1>
-            <div class="timeframe-badge">⏱️ 1-HOUR TIMEFRAME</div>
-            <div class="timestamp">Generated on: {now_ist}</div>
-        </div>
+	        .section-title {{
+	            font-size: 20px;
+	            font-weight: 700;
+	            color: #60a5fa;
+	        }}
         
-        <!-- DUAL MOMENTUM DISPLAY - SIDE BY SIDE -->
-        <div class="momentum-container">
-            <div class="momentum-box" style="--momentum-bg: {momentum_1h_colors['bg']}; --momentum-bg-dark: {momentum_1h_colors['bg_dark']}; --momentum-text: {momentum_1h_colors['text']}; --momentum-border: {momentum_1h_colors['border']};">
-                <h3>⚡ 1H Momentum</h3>
-                <div class="value">{momentum_1h_pct:+.2f}%</div>
-                <div class="signal">{momentum_1h_signal}</div>
-            </div>
-            <div class="momentum-box" style="--momentum-bg: {momentum_5h_colors['bg']}; --momentum-bg-dark: {momentum_5h_colors['bg_dark']}; --momentum-text: {momentum_5h_colors['text']}; --momentum-border: {momentum_5h_colors['border']};">
-                <h3>📊 5H Momentum</h3>
-                <div class="value">{momentum_5h_pct:+.2f}%</div>
-                <div class="signal">{momentum_5h_signal}</div>
-            </div>
-        </div>
+	        /* Data Grid */
+	        .data-grid {{
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	            gap: 15px;
+	        }}
         
-        <div class="recommendation-box">
-            <h2>{recommendation['recommendation']}</h2>
-            <div class="subtitle">Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}</div>
-            <div style="margin-top: 12px;">
-                <span class="signal-badge bullish">Bullish: {recommendation['bullish_signals']}</span>
-                <span class="signal-badge bearish">Bearish: {recommendation['bearish_signals']}</span>
-            </div>
-        </div>
+	        .data-item {{
+	            background: rgba(30, 41, 59, 0.5);
+	            border-radius: 12px;
+	            padding: 15px;
+	            border-left: 3px solid #3b82f6;
+	            transition: all 0.3s ease;
+	        }}
         
-        <div class="section">
-            <div class="section-title">📈 Technical Analysis (1H)</div>
-            <div class="data-grid">
-                <div class="data-item">
-                    <div class="label">Current Price</div>
-                    <div class="value">₹{tech_analysis.get('current_price', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">RSI (14)</div>
-                    <div class="value">{tech_analysis.get('rsi', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">EMA 20</div>
-                    <div class="value">₹{tech_analysis.get('ema20', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">EMA 50</div>
-                    <div class="value">₹{tech_analysis.get('ema50', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">Trend</div>
-                    <div class="value">{tech_analysis.get('trend', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">RSI Signal</div>
-                    <div class="value">{tech_analysis.get('rsi_signal', 'N/A')}</div>
-                </div>
-            </div>
-        </div>
+	        .data-item:hover {{
+	            transform: translateY(-2px);
+	            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+	        }}
         
-        <div class="section">
-            <div class="section-title">🎯 Support & Resistance (1H)</div>
-            <div class="levels">
-                <div class="levels-box resistance">
-                    <h4>🔴 Resistance</h4>
-                    <ul>{''.join([f'<li>R{i+1}: ₹{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}</ul>
-                </div>
-                <div class="levels-box support">
-                    <h4>🟢 Support</h4>
-                    <ul>{''.join([f'<li>S{i+1}: ₹{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
-                </div>
-            </div>
-        </div>
+	        .data-label {{
+	            font-size: 12px;
+	            color: #94a3b8;
+	            text-transform: uppercase;
+	            letter-spacing: 0.5px;
+	            margin-bottom: 8px;
+	            font-weight: 600;
+	        }}
         
-        <div class="section">
-            <div class="section-title">📍 Pivot Points (Traditional - 30 Min)</div>
-            <p class="pivot-info">
-                Previous 30-min Candle: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
-            </p>
-            <div class="pivot-container">
-                <table class="pivot-table">
-                    <thead>
-                        <tr>
-                            <th>Level</th>
-                            <th>Value</th>
-                            <th>Distance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-{pivot_rows}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+	        .data-value {{
+	            font-size: 20px;
+	            font-weight: 700;
+	            color: #ffffff;
+	        }}
         
-        <div class="section">
-            <div class="section-title">📊 Option Chain Analysis</div>
-            <div class="data-grid">
-                <div class="data-item">
-                    <div class="label">Put-Call Ratio</div>
-                    <div class="value">{oc_analysis.get('pcr', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">Max Pain</div>
-                    <div class="value">₹{oc_analysis.get('max_pain', 'N/A')}</div>
-                </div>
-                <div class="data-item">
-                    <div class="label">OI Sentiment</div>
-                    <div class="value">{oc_analysis.get('oi_sentiment', 'N/A')}</div>
-                </div>
-            </div>
+	        /* Levels Box */
+	        .levels-container {{
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	            gap: 20px;
+	            margin-top: 20px;
+	        }}
+        
+	        .levels-box {{
+	            background: rgba(30, 41, 59, 0.5);
+	            border-radius: 12px;
+	            padding: 20px;
+	            border-left: 4px solid #3b82f6;
+	        }}
+        
+	        .levels-box.resistance {{
+	            border-left-color: #ef4444;
+	        }}
+        
+	        .levels-box.support {{
+	            border-left-color: #10b981;
+	        }}
+        
+	        .levels-box h4 {{
+	            font-size: 16px;
+	            font-weight: 700;
+	            margin-bottom: 15px;
+	            color: #e2e8f0;
+	        }}
+        
+	        .levels-box ul {{
+	            list-style: none;
+	        }}
+        
+	        .levels-box li {{
+	            padding: 8px 0;
+	            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+	            font-size: 15px;
+	            color: #cbd5e1;
+	        }}
+        
+	        .levels-box li:last-child {{
+	            border-bottom: none;
+	        }}
+        
+	        /* Pivot Table */
+	        .table-container {{
+	            overflow-x: auto;
+	            margin-top: 15px;
+	        }}
+        
+	        .data-table {{
+	            width: 100%;
+	            border-collapse: collapse;
+	            background: rgba(30, 41, 59, 0.3);
+	            border-radius: 12px;
+	            overflow: hidden;
+	        }}
+        
+	        .data-table th {{
+	            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+	            color: #ffffff;
+	            padding: 15px 12px;
+	            text-align: center;
+	            font-size: 13px;
+	            font-weight: 700;
+	            text-transform: uppercase;
+	            letter-spacing: 0.5px;
+	        }}
+        
+	        .data-table td {{
+	            padding: 12px;
+	            text-align: center;
+	            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+	            font-size: 14px;
+	        }}
+        
+	        .data-row:hover {{
+	            background: rgba(59, 130, 246, 0.1);
+	        }}
+        
+	        .pivot-row {{
+	            transition: all 0.3s ease;
+	        }}
+        
+	        .pivot-row:hover {{
+	            background: rgba(59, 130, 246, 0.15);
+	        }}
+        
+	        .pivot-row.resistance .level-label {{
+	            background: #ef4444;
+	        }}
+        
+	        .pivot-row.support .level-label {{
+	            background: #10b981;
+	        }}
+        
+	        .pivot-row.pivot-center {{
+	            background: rgba(245, 158, 11, 0.15);
+	        }}
+        
+	        .level-highlight {{
+	            background: rgba(59, 130, 246, 0.2) !important;
+	            border: 2px solid #3b82f6;
+	        }}
+        
+	        .resistance-highlight {{
+	            border-color: #ef4444 !important;
+	        }}
+        
+	        .support-highlight {{
+	            border-color: #10b981 !important;
+	        }}
+        
+	        .level-label {{
+	            display: inline-block;
+	            padding: 4px 12px;
+	            border-radius: 12px;
+	            font-weight: 700;
+	            font-size: 12px;
+	            color: #ffffff;
+	        }}
+        
+	        .level-label.pivot {{
+	            background: #f59e0b;
+	        }}
+        
+	        .level-value {{
+	            font-weight: 700;
+	            color: #ffffff;
+	            font-size: 16px;
+	        }}
+        
+	        .pivot-value {{
+	            color: #fbbf24 !important;
+	        }}
+        
+	        .distance-value {{
+	            color: #94a3b8;
+	            font-size: 14px;
+	        }}
+        
+	        .rank-badge {{
+	            display: inline-flex;
+	            align-items: center;
+	            justify-content: center;
+	            width: 28px;
+	            height: 28px;
+	            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	            color: #ffffff;
+	            border-radius: 50%;
+	            font-weight: 700;
+	            font-size: 12px;
+	        }}
+        
+	        .strike-price {{
+	            color: #60a5fa;
+	            font-size: 16px;
+	        }}
+        
+	        .type-badge {{
+	            display: inline-block;
+	            padding: 4px 10px;
+	            border-radius: 12px;
+	            font-size: 11px;
+	            font-weight: 700;
+	            color: #ffffff;
+	        }}
+        
+	        .number-cell {{
+	            font-weight: 600;
+	            color: #cbd5e1;
+	        }}
+        
+	        .number-cell.positive {{
+	            color: #10b981;
+	        }}
+        
+	        .number-cell.negative {{
+	            color: #ef4444;
+	        }}
+        
+	        /* Strike Recommendations */
+	        .strike-grid {{
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+	            gap: 20px;
+	            margin-top: 20px;
+	        }}
+        
+	        .strike-card {{
+	            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+	            border-radius: 16px;
+	            padding: 20px;
+	            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+	            border: 2px solid rgba(96, 165, 250, 0.2);
+	            transition: all 0.3s ease;
+	        }}
+        
+	        .strike-card:hover {{
+	            transform: translateY(-5px);
+	            box-shadow: 0 12px 48px rgba(59, 130, 246, 0.4);
+	        }}
+        
+	        .strike-header {{
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            margin-bottom: 20px;
+	            padding-bottom: 15px;
+	            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+	        }}
+        
+	        .strike-header h4 {{
+	            font-size: 18px;
+	            font-weight: 700;
+	            color: #60a5fa;
+	        }}
+        
+	        .strike-type-badge {{
+	            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	            color: #ffffff;
+	            padding: 6px 14px;
+	            border-radius: 15px;
+	            font-size: 12px;
+	            font-weight: 700;
+	        }}
+        
+	        .strike-details {{
+	            background: rgba(30, 41, 59, 0.5);
+	            border-radius: 12px;
+	            padding: 15px;
+	            margin-bottom: 15px;
+	        }}
+        
+	        .detail-row {{
+	            display: flex;
+	            justify-content: space-between;
+	            padding: 10px 0;
+	            border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
+	        }}
+        
+	        .detail-row:last-child {{
+	            border-bottom: none;
+	        }}
+        
+	        .detail-label {{
+	            color: #94a3b8;
+	            font-size: 13px;
+	            font-weight: 600;
+	        }}
+        
+	        .detail-value {{
+	            color: #ffffff;
+	            font-size: 14px;
+	            font-weight: 700;
+	        }}
+        
+	        .premium-value {{
+	            color: #3b82f6;
+	            font-size: 16px;
+	            font-weight: 900;
+	        }}
+        
+	        .profit-section {{
+	            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+	            border-radius: 12px;
+	            padding: 15px;
+	            margin-bottom: 15px;
+	            border: 1px solid rgba(16, 185, 129, 0.3);
+	        }}
+        
+	        .profit-section h5 {{
+	            color: #10b981;
+	            font-size: 14px;
+	            font-weight: 700;
+	            margin-bottom: 12px;
+	        }}
+        
+	        .targets-grid {{
+	            display: grid;
+	            grid-template-columns: repeat(3, 1fr);
+	            gap: 10px;
+	        }}
+        
+	        .target-box {{
+	            background: rgba(30, 41, 59, 0.8);
+	            border-radius: 10px;
+	            padding: 12px;
+	            text-align: center;
+	            border: 2px solid;
+	        }}
+        
+	        .target-box.target-1 {{
+	            border-color: #10b981;
+	        }}
+        
+	        .target-box.target-2 {{
+	            border-color: #06b6d4;
+	        }}
+        
+	        .target-box.stop-loss {{
+	            border-color: #ef4444;
+	        }}
+        
+	        .target-label {{
+	            font-size: 11px;
+	            color: #94a3b8;
+	            text-transform: uppercase;
+	            font-weight: 700;
+	            margin-bottom: 6px;
+	        }}
+        
+	        .target-price {{
+	            font-size: 16px;
+	            color: #ffffff;
+	            font-weight: 900;
+	            margin-bottom: 4px;
+	        }}
+        
+	        .target-profit {{
+	            font-size: 12px;
+	            font-weight: 700;
+	        }}
+        
+	        .target-box.target-1 .target-profit,
+	        .target-box.target-2 .target-profit {{
+	            color: #10b981;
+	        }}
+        
+	        .target-box.stop-loss .target-profit {{
+	            color: #ef4444;
+	        }}
+        
+	        .trade-example {{
+	            background: rgba(245, 158, 11, 0.1);
+	            border: 1px solid rgba(245, 158, 11, 0.3);
+	            border-radius: 10px;
+	            padding: 12px;
+	            font-size: 12px;
+	            line-height: 1.6;
+	            color: #fbbf24;
+	        }}
+        
+	        /* Strategy Cards */
+	        .strategy-card {{
+	            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+	            border-radius: 16px;
+	            padding: 20px;
+	            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+	            border: 1px solid rgba(96, 165, 250, 0.2);
+	        }}
+        
+	        .strategy-header {{
+	            margin-bottom: 15px;
+	            padding-bottom: 12px;
+	            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+	        }}
+        
+	        .strategy-header h4 {{
+	            font-size: 18px;
+	            font-weight: 700;
+	            color: #60a5fa;
+	            margin-bottom: 8px;
+	        }}
+        
+	        .strategy-badge {{
+	            display: inline-block;
+	            background: rgba(59, 130, 246, 0.2);
+	            color: #60a5fa;
+	            padding: 4px 12px;
+	            border-radius: 12px;
+	            font-size: 11px;
+	            font-weight: 700;
+	            text-transform: uppercase;
+	        }}
+        
+	        .strategy-content {{
+	            color: #cbd5e1;
+	        }}
+        
+	        .strategy-row {{
+	            padding: 8px 0;
+	            font-size: 14px;
+	            line-height: 1.6;
+	        }}
+        
+	        .strategy-row .label {{
+	            color: #94a3b8;
+	            font-weight: 700;
+	        }}
+        
+	        .strategy-row .highlight {{
+	            color: #10b981;
+	            font-weight: 700;
+	        }}
+        
+	        .strategy-stars {{
+	            color: #fbbf24;
+	            font-size: 16px;
+	            margin-top: 10px;
+	            padding-top: 10px;
+	            border-top: 1px solid rgba(148, 163, 184, 0.2);
+	        }}
+        
+	        /* Analysis Summary */
+	        .analysis-summary {{
+	            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+	            border-radius: 16px;
+	            padding: 20px;
+	            margin-bottom: 30px;
+	            border: 1px solid rgba(245, 158, 11, 0.3);
+	        }}
+        
+	        .analysis-summary h3 {{
+	            color: #fbbf24;
+	            font-size: 18px;
+	            font-weight: 700;
+	            margin-bottom: 15px;
+	        }}
+        
+	        .analysis-summary ul {{
+	            list-style: none;
+	            color: #fbbf24;
+	        }}
+        
+	        .analysis-summary li {{
+	            padding: 8px 0;
+	            padding-left: 25px;
+	            position: relative;
+	            font-size: 14px;
+	            line-height: 1.6;
+	        }}
+        
+	        .analysis-summary li::before {{
+	            content: '▸';
+	            position: absolute;
+	            left: 0;
+	            color: #f59e0b;
+	            font-weight: 700;
+	        }}
+        
+	        /* Footer */
+	        .footer {{
+	            text-align: center;
+	            margin-top: 40px;
+	            padding-top: 25px;
+	            border-top: 2px solid rgba(96, 165, 250, 0.2);
+	            color: #94a3b8;
+	            font-size: 13px;
+	        }}
+        
+	        .footer p {{
+	            margin: 8px 0;
+	        }}
+        
+	        /* Responsive */
+	        @media (max-width: 768px) {{
+	            .container {{
+	                padding: 10px;
+	            }}
             
-            <div style="margin-top: 15px;">
-                <div class="levels">
-                    <div class="levels-box resistance">
-                        <h4>🔴 OI Resistance</h4>
-                        <ul>{''.join([f'<li>₹{r}</li>' for r in oc_analysis.get('resistances', [])])}</ul>
-                    </div>
-                    <div class="levels-box support">
-                        <h4>🟢 OI Support</h4>
-                        <ul>{''.join([f'<li>₹{s}</li>' for s in oc_analysis.get('supports', [])])}</ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- TOP 10 OPEN INTEREST SECTION -->
-        <div class="section">
-            <div class="section-title">🔥 Top 10 Open Interest (5 CE + 5 PE)</div>
-            <div class="oi-grid">
-                <!-- Call Options (CE) -->
-                <div class="oi-section calls">
-                    <h4>📞 Top 5 Call Options (CE)</h4>
-                    <div class="oi-container">
-                        <table class="oi-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Strike</th>
-                                    <th>Type</th>
-                                    <th>OI</th>
-                                    <th>Chng OI</th>
-                                    <th>LTP</th>
-                                    <th>IV</th>
-                                    <th>Volume</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-{ce_rows_html}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- Put Options (PE) -->
-                <div class="oi-section puts">
-                    <h4>📉 Top 5 Put Options (PE)</h4>
-                    <div class="oi-container">
-                        <table class="oi-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Strike</th>
-                                    <th>Type</th>
-                                    <th>OI</th>
-                                    <th>Chng OI</th>
-                                    <th>LTP</th>
-                                    <th>IV</th>
-                                    <th>Volume</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-{pe_rows_html}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">💡 Analysis Summary</div>
-            <div class="reasons">
-                <strong>Key Factors:</strong>
-                <ul>{''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}</ul>
-            </div>
-        </div>
-        
-        <!-- DETAILED STRIKE RECOMMENDATIONS WITH PROFIT CALCULATIONS -->
-        <div class="section">
-            <div class="section-title">💰 Detailed Strike Recommendations with Profit Targets</div>
-            <p style="color: #6c757d; margin-bottom: 15px; font-size: 13px;">
-                <strong>Based on {recommendation['bias']} bias with current Nifty at ₹{tech_analysis.get('current_price', 0):.2f}</strong><br>
-                These are actionable trades with specific strike prices, LTP, and profit calculations.
-            </p>
+	            .header h1 {{
+	                font-size: 24px;
+	            }}
             
-            <div class="strike-recommendations">
-"""
+	            .momentum-grid,
+	            .section-grid,
+	            .strike-grid,
+	            .levels-container {{
+	                grid-template-columns: 1fr;
+	            }}
+            
+	            .data-grid {{
+	                grid-template-columns: repeat(2, 1fr);
+	            }}
+            
+	            .targets-grid {{
+	                grid-template-columns: 1fr;
+	            }}
+            
+	            .recommendation-box h2 {{
+	                font-size: 28px;
+	            }}
+            
+	            .momentum-value {{
+	                font-size: 36px;
+	            }}
+	        }}
         
-        # Build strike recommendations table
-        if strike_recommendations:
-            for rec in strike_recommendations:
-                # Determine color based on profit potential
-                if isinstance(rec.get('profit_at_target_2'), (int, float)):
-                    if rec['profit_at_target_2'] > 100:
-                        profit_color = '#28a745'  # Green for good profit
-                    elif rec['profit_at_target_2'] > 50:
-                        profit_color = '#ffc107'  # Yellow for moderate
-                    else:
-                        profit_color = '#dc3545'  # Red for low profit
-                else:
-                    profit_color = '#007bff'  # Blue for special cases
-                
-                html += f"""
-                <div class="strike-card" style="border-left: 4px solid {profit_color};">
-                    <div class="strike-header">
-                        <h4>{rec['strategy']}</h4>
-                        <span class="strike-badge {rec['option_type'].lower().replace('/', '-')}">{rec['option_type']}</span>
-                    </div>
-                    
-                    <div class="strike-details">
-                        <div class="strike-row">
-                            <span class="label">Action:</span>
-                            <span class="value"><strong>{rec['action']}</strong></span>
-                        </div>
-                        <div class="strike-row">
-                            <span class="label">Strike Price:</span>
-                            <span class="value"><strong>₹{rec['strike']}</strong></span>
-                        </div>
-                        <div class="strike-row">
-                            <span class="label">Current LTP:</span>
-                            <span class="value premium">₹{rec['ltp']:.2f}</span>
-                        </div>
-                        <div class="strike-row">
-                            <span class="label">Open Interest:</span>
-                            <span class="value">{rec['oi']}</span>
-                        </div>
-                        <div class="strike-row">
-                            <span class="label">Volume:</span>
-                            <span class="value">{rec['volume']}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="profit-targets">
-                        <h5>📊 Profit Targets & Risk</h5>
-                        <div class="target-grid">
-                            <div class="target-box target-1">
-                                <div class="target-label">Target 1</div>
-                                <div class="target-price">₹{rec['target_1']}</div>
-                                <div class="target-profit">Profit: ₹{rec['profit_at_target_1']:.2f}</div>
-                            </div>
-                            <div class="target-box target-2">
-                                <div class="target-label">Target 2</div>
-                                <div class="target-price">₹{rec['target_2']}</div>
-                                <div class="target-profit">{f"Profit: ₹{rec['profit_at_target_2']:.2f}" if isinstance(rec['profit_at_target_2'], (int, float)) else rec['profit_at_target_2']}</div>
-                            </div>
-                            <div class="target-box stop-loss-box">
-                                <div class="target-label">Stop Loss</div>
-                                <div class="target-price">₹{rec['stop_loss']:.2f}</div>
-                                <div class="target-profit">Max Loss: ₹{rec['max_loss']:.2f}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="trade-example">
-                        <strong>Example:</strong> If you buy 1 lot (50 qty) at LTP ₹{rec['ltp']:.2f}, your investment = ₹{rec['ltp'] * 50:.0f}<br>
-                        At Target 1: Profit = ₹{rec['profit_at_target_1'] * 50 if isinstance(rec['profit_at_target_1'], (int, float)) else 'Variable':.0f} | At Target 2: Profit = ₹{rec['profit_at_target_2'] * 50 if isinstance(rec['profit_at_target_2'], (int, float)) else 'Variable':.0f}
-                    </div>
-                </div>
-                """
-        else:
-            html += """
-                <div class="no-recommendations">
-                    <p>No specific strike recommendations available at this time. Check the general strategies below.</p>
-                </div>
-            """
+	        @media (max-width: 480px) {{
+	            body {{
+	                padding: 10px;
+	            }}
+            
+	            .header {{
+	                padding: 20px 15px;
+	            }}
+            
+	            .header h1 {{
+	                font-size: 20px;
+	            }}
+            
+	            .data-grid {{
+	                grid-template-columns: 1fr;
+	            }}
+            
+	            .data-table {{
+	                font-size: 11px;
+	            }}
+            
+	            .data-table th,
+	            .data-table td {{
+	                padding: 8px 4px;
+	            }}
+	        }}
+	    </style>
+	</head>
+	<body>
+	    <div class="container">
+	        <!-- Header -->
+	        <div class="header">
+	            <h1>📊 {title}</h1>
+	            <div class="timeframe-badge">⏱️ 1-HOUR TIMEFRAME ANALYSIS</div>
+	            <div class="timestamp">Generated: {now_ist}</div>
+	        </div>
         
-        html += f"""
-            </div>
-        </div>
+	        <!-- Momentum Cards -->
+	        <div class="momentum-grid">
+	            <div class="momentum-card" style="--momentum-bg: {momentum_1h_colors['bg']}; --momentum-bg-dark: {momentum_1h_colors['bg_dark']}; --momentum-text: {momentum_1h_colors['text']}; --momentum-border: {momentum_1h_colors['border']};">
+	                <h3>⚡ 1H Momentum</h3>
+	                <div class="momentum-value">{momentum_1h_pct:+.2f}%</div>
+	                <div class="momentum-signal">{momentum_1h_signal}</div>
+	            </div>
+	            <div class="momentum-card" style="--momentum-bg: {momentum_5h_colors['bg']}; --momentum-bg-dark: {momentum_5h_colors['bg_dark']}; --momentum-text: {momentum_5h_colors['text']}; --momentum-border: {momentum_5h_colors['border']};">
+	                <h3>📊 5H Momentum</h3>
+	                <div class="momentum-value">{momentum_5h_pct:+.2f}%</div>
+	                <div class="momentum-signal">{momentum_5h_signal}</div>
+	            </div>
+	        </div>
         
-        <div class="section">
-            <div class="section-title">🎯 Options Strategies</div>
-            <p style="color: #6c757d; margin-bottom: 12px; font-size: 12px;">Based on {recommendation['bias']} bias:</p>
-            <div class="strategies-grid">{strategies_html}</div>
-        </div>
+	        <!-- Recommendation -->
+	        <div class="recommendation-box">
+	            <h2>{recommendation['recommendation']}</h2>
+	            <div class="recommendation-subtitle">
+	                Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}
+	            </div>
+	            <div class="signal-badges">
+	                <span class="signal-badge">🟢 Bullish Signals: {recommendation['bullish_signals']}</span>
+	                <span class="signal-badge">🔴 Bearish Signals: {recommendation['bearish_signals']}</span>
+	            </div>
+	        </div>
         
-        <div class="footer">
-            <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk.</p>
-            <p>© 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H) with Top OI Display</p>
-        </div>
-    </div>
-</body>
-</html>
-        """
-        return html
+	        <!-- Technical Analysis & Option Chain -->
+	        <div class="section-grid">
+	            <!-- Technical Analysis -->
+	            <div class="section-card">
+	                <div class="section-header">
+	                    <span class="section-icon">📈</span>
+	                    <h3 class="section-title">Technical Analysis (1H)</h3>
+	                </div>
+	                <div class="data-grid">
+	                    <div class="data-item">
+	                        <div class="data-label">Current Price</div>
+	                        <div class="data-value">₹{tech_analysis.get('current_price', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">RSI (14)</div>
+	                        <div class="data-value">{tech_analysis.get('rsi', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">EMA 20</div>
+	                        <div class="data-value">₹{tech_analysis.get('ema20', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">EMA 50</div>
+	                        <div class="data-value">₹{tech_analysis.get('ema50', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">Trend</div>
+	                        <div class="data-value">{tech_analysis.get('trend', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">RSI Signal</div>
+	                        <div class="data-value">{tech_analysis.get('rsi_signal', 'N/A')}</div>
+	                    </div>
+	                </div>
+	            </div>
+            
+	            <!-- Option Chain Analysis -->
+	            <div class="section-card">
+	                <div class="section-header">
+	                    <span class="section-icon">📊</span>
+	                    <h3 class="section-title">Option Chain Analysis</h3>
+	                </div>
+	                <div class="data-grid">
+	                    <div class="data-item">
+	                        <div class="data-label">Put-Call Ratio</div>
+	                        <div class="data-value">{oc_analysis.get('pcr', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">Max Pain</div>
+	                        <div class="data-value">₹{oc_analysis.get('max_pain', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">OI Sentiment</div>
+	                        <div class="data-value">{oc_analysis.get('oi_sentiment', 'N/A')}</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">Avg Call IV</div>
+	                        <div class="data-value">{oc_analysis.get('avg_call_iv', 'N/A')}%</div>
+	                    </div>
+	                    <div class="data-item">
+	                        <div class="data-label">Avg Put IV</div>
+	                        <div class="data-value">{oc_analysis.get('avg_put_iv', 'N/A')}%</div>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+        
+	        <!-- Support & Resistance -->
+	        <div class="section-card">
+	            <div class="section-header">
+	                <span class="section-icon">🎯</span>
+	                <h3 class="section-title">Support & Resistance Levels</h3>
+	            </div>
+	            <div class="levels-container">
+	                <div class="levels-box resistance">
+	                    <h4>🔴 Resistance Levels</h4>
+	                    <ul>
+	                        {''.join([f'<li>R{i+1}: ₹{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}
+	                        {''.join([f'<li>OI R{i+1}: ₹{r}</li>' for i, r in enumerate(oc_analysis.get('resistances', []))])}
+	                    </ul>
+	                </div>
+	                <div class="levels-box support">
+	                    <h4>🟢 Support Levels</h4>
+	                    <ul>
+	                        {''.join([f'<li>S{i+1}: ₹{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}
+	                        {''.join([f'<li>OI S{i+1}: ₹{s}</li>' for i, s in enumerate(oc_analysis.get('supports', []))])}
+	                    </ul>
+	                </div>
+	            </div>
+	        </div>
+        
+	        <!-- Pivot Points -->
+	        <div class="section-card">
+	            <div class="section-header">
+	                <span class="section-icon">📍</span>
+	                <h3 class="section-title">Pivot Points (Traditional - 30 Min)</h3>
+	            </div>
+	            <p style="color: #94a3b8; margin-bottom: 15px; font-size: 13px;">
+	                Previous 30-min: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
+	            </p>
+	            <div class="table-container">
+	                <table class="data-table">
+	                    <thead>
+	                        <tr>
+	                            <th>Level</th>
+	                            <th>Value</th>
+	                            <th>Distance</th>
+	                        </tr>
+	                    </thead>
+	                    <tbody>
+	                        {pivot_rows}
+	                    </tbody>
+	                </table>
+	            </div>
+	        </div>
+        
+	        <!-- Top 10 OI -->
+	        <div class="section-card">
+	            <div class="section-header">
+	                <span class="section-icon">🔥</span>
+	                <h3 class="section-title">Top 5 Open Interest Strikes</h3>
+	            </div>
+	            <div class="section-grid">
+	                <div>
+	                    <h4 style="color: #10b981; margin-bottom: 15px; text-align: center; font-size: 16px;">📞 Call Options (CE)</h4>
+	                    <div class="table-container">
+	                        <table class="data-table">
+	                            <thead>
+	                                <tr>
+	                                    <th>#</th>
+	                                    <th>Strike</th>
+	                                    <th>Type</th>
+	                                    <th>OI</th>
+	                                    <th>Chng OI</th>
+	                                    <th>LTP</th>
+	                                    <th>IV</th>
+	                                    <th>Volume</th>
+	                                </tr>
+	                            </thead>
+	                            <tbody>
+	                                {ce_rows_html}
+	                            </tbody>
+	                        </table>
+	                    </div>
+	                </div>
+	                <div>
+	                    <h4 style="color: #ef4444; margin-bottom: 15px; text-align: center; font-size: 16px;">📉 Put Options (PE)</h4>
+	                    <div class="table-container">
+	                        <table class="data-table">
+	                            <thead>
+	                                <tr>
+	                                    <th>#</th>
+	                                    <th>Strike</th>
+	                                    <th>Type</th>
+	                                    <th>OI</th>
+	                                    <th>Chng OI</th>
+	                                    <th>LTP</th>
+	                                    <th>IV</th>
+	                                    <th>Volume</th>
+	                                </tr>
+	                            </thead>
+	                            <tbody>
+	                                {pe_rows_html}
+	                            </tbody>
+	                        </table>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+        
+	        <!-- Analysis Summary -->
+	        <div class="analysis-summary">
+	            <h3>💡 Key Analysis Factors</h3>
+	            <ul>
+	                {''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}
+	            </ul>
+	        </div>
+        
+	        <!-- Strike Recommendations -->
+	        <div class="section-card">
+	            <div class="section-header">
+	                <span class="section-icon">💰</span>
+	                <h3 class="section-title">Detailed Strike Recommendations</h3>
+	            </div>
+	            <p style="color: #94a3b8; margin-bottom: 20px; font-size: 14px;">
+	                Based on <strong style="color: #60a5fa;">{recommendation['bias']}</strong> bias with Nifty at <strong style="color: #60a5fa;">₹{tech_analysis.get('current_price', 0):.2f}</strong>
+	            </p>
+	            <div class="strike-grid">
+	    """
+    
+	    # Add strike recommendations
+	    if strike_recommendations:
+	        for rec in strike_recommendations:
+	            profit_color = '#10b981' if isinstance(rec.get('profit_at_target_2'), (int, float)) and rec['profit_at_target_2'] > 100 else '#3b82f6'
+            
+	            html += f"""
+	                <div class="strike-card" style="border-left: 4px solid {profit_color};">
+	                    <div class="strike-header">
+	                        <h4>{rec['strategy']}</h4>
+	                        <span class="strike-type-badge">{rec['option_type']}</span>
+	                    </div>
+	                    <div class="strike-details">
+	                        <div class="detail-row">
+	                            <span class="detail-label">Action:</span>
+	                            <span class="detail-value">{rec['action']}</span>
+	                        </div>
+	                        <div class="detail-row">
+	                            <span class="detail-label">Strike Price:</span>
+	                            <span class="detail-value">₹{rec['strike']}</span>
+	                        </div>
+	                        <div class="detail-row">
+	                            <span class="detail-label">Current LTP:</span>
+	                            <span class="premium-value">₹{rec['ltp']:.2f}</span>
+	                        </div>
+	                        <div class="detail-row">
+	                            <span class="detail-label">Open Interest:</span>
+	                            <span class="detail-value">{rec['oi']}</span>
+	                        </div>
+	                        <div class="detail-row">
+	                            <span class="detail-label">Volume:</span>
+	                            <span class="detail-value">{rec['volume']}</span>
+	                        </div>
+	                    </div>
+	                    <div class="profit-section">
+	                        <h5>📊 Profit Targets & Risk</h5>
+	                        <div class="targets-grid">
+	                            <div class="target-box target-1">
+	                                <div class="target-label">Target 1</div>
+	                                <div class="target-price">₹{rec['target_1']}</div>
+	                                <div class="target-profit">+₹{rec['profit_at_target_1']:.2f}</div>
+	                            </div>
+	                            <div class="target-box target-2">
+	                                <div class="target-label">Target 2</div>
+	                                <div class="target-price">₹{rec['target_2']}</div>
+	                                <div class="target-profit">{f"+₹{rec['profit_at_target_2']:.2f}" if isinstance(rec['profit_at_target_2'], (int, float)) else rec['profit_at_target_2']}</div>
+	                            </div>
+	                            <div class="target-box stop-loss">
+	                                <div class="target-label">Stop Loss</div>
+	                                <div class="target-price">₹{rec['stop_loss']:.2f}</div>
+	                                <div class="target-profit">-₹{rec['max_loss']:.2f}</div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="trade-example">
+	                        <strong>Example Trade:</strong> 1 lot (50 qty) at ₹{rec['ltp']:.2f} = ₹{rec['ltp'] * 50:.0f} investment<br>
+	                        Target 1 Profit: ₹{rec['profit_at_target_1'] * 50 if isinstance(rec['profit_at_target_1'], (int, float)) else 'Variable':.0f} | Target 2 Profit: ₹{rec['profit_at_target_2'] * 50 if isinstance(rec['profit_at_target_2'], (int, float)) else 'Variable':.0f}
+	                    </div>
+	                </div>
+	            """
+	    else:
+	        html += """
+	                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 30px; text-align: center; color: #fca5a5;">
+	                    <p style="font-size: 16px; font-weight: 600;">No specific strike recommendations available at this time.</p>
+	                    <p style="font-size: 14px; margin-top: 10px;">Please check the general strategies below.</p>
+	                </div>
+	        """
+    
+	    html += f"""
+	            </div>
+	        </div>
+        
+	        <!-- Options Strategies -->
+	        <div class="section-card">
+	            <div class="section-header">
+	                <span class="section-icon">🎯</span>
+	                <h3 class="section-title">Options Strategies for {recommendation['bias']} Market</h3>
+	            </div>
+	            <div class="section-grid">
+	                {strategies_html}
+	            </div>
+	        </div>
+        
+	        <!-- Footer -->
+	        <div class="footer">
+	            <p><strong>⚠️ Disclaimer:</strong> This analysis is for educational purposes only. Trading involves significant risk of loss.</p>
+	            <p style="margin-top: 10px;">© 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H)</p>
+	        </div>
+	    </div>
+	</body>
+	</html>
+	    """
+    
+	    return html
     
     def send_email(self, html_content):
         """Send email with HTML report"""
