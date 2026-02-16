@@ -1201,154 +1201,154 @@ class NiftyAnalyzer:
         }
     
 	def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-	    """Create beautiful HTML report with modern gradient design"""
-	    now_ist = self.format_ist_time()
-    
-	    colors = self.config['report'].get('colors', {})
-	    rec = recommendation['recommendation']
-    
-	    if 'STRONG BUY' in rec:
-	        rec_color = '#10b981'
-	        rec_gradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-	    elif 'BUY' in rec:
-	        rec_color = '#3b82f6'
-	        rec_gradient = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
-	    elif 'STRONG SELL' in rec:
-	        rec_color = '#ef4444'
-	        rec_gradient = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-	    elif 'SELL' in rec:
-	        rec_color = '#f59e0b'
-	        rec_gradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-	    else:
-	        rec_color = '#8b5cf6'
-	        rec_gradient = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-    
-	    title = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
-    
-	    strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
-	    strike_recommendations = self.get_detailed_strike_recommendations(oc_analysis, tech_analysis, recommendation)
-    
-	    pivot_points = tech_analysis.get('pivot_points', {})
-	    current_price = tech_analysis.get('current_price', 0)
-	    nearest_levels = self.find_nearest_levels(current_price, pivot_points)
-    
-	    # Momentum values
-	    momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
-	    momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
-	    momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
-	        'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
-	    })
-    
-	    momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
-	    momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
-	    momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
-	        'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
-	    })
-    
-	    # Top OI strikes
-	    top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
-	    top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
-    
-	    # Build CE rows
-	    ce_rows_html = ''
-	    for idx, strike in enumerate(top_ce_strikes, 1):
-	        type_badge_color = '#10b981' if strike['type'] == 'ITM' else ('#f59e0b' if strike['type'] == 'ATM' else '#6366f1')
-	        ce_rows_html += f"""
-	        <tr class="data-row">
-	            <td><span class="rank-badge">{idx}</span></td>
-	            <td><strong class="strike-price">₹{strike['strike']}</strong></td>
-	            <td><span class="type-badge" style="background: {type_badge_color};">{strike['type']}</span></td>
-	            <td class="number-cell">{strike['oi']:,}</td>
-	            <td class="number-cell {'positive' if strike['chng_oi'] > 0 else 'negative'}">{strike['chng_oi']:+,}</td>
-	            <td class="number-cell">₹{strike['ltp']:.2f}</td>
-	            <td class="number-cell">{strike['iv']:.2f}%</td>
-	            <td class="number-cell">{strike['volume']:,}</td>
-	        </tr>
-	        """
-    
-	    # Build PE rows
-	    pe_rows_html = ''
-	    for idx, strike in enumerate(top_pe_strikes, 1):
-	        type_badge_color = '#10b981' if strike['type'] == 'ITM' else ('#f59e0b' if strike['type'] == 'ATM' else '#6366f1')
-	        pe_rows_html += f"""
-	        <tr class="data-row">
-	            <td><span class="rank-badge">{idx}</span></td>
-	            <td><strong class="strike-price">₹{strike['strike']}</strong></td>
-	            <td><span class="type-badge" style="background: {type_badge_color};">{strike['type']}</span></td>
-	            <td class="number-cell">{strike['oi']:,}</td>
-	            <td class="number-cell {'positive' if strike['chng_oi'] > 0 else 'negative'}">{strike['chng_oi']:+,}</td>
-	            <td class="number-cell">₹{strike['ltp']:.2f}</td>
-	            <td class="number-cell">{strike['iv']:.2f}%</td>
-	            <td class="number-cell">{strike['volume']:,}</td>
-	        </tr>
-	        """
-    
-	    # Build strategies HTML
-	    strategies_html = ''
-	    for strategy in strategies:
-	        strategies_html += f"""
-	        <div class="strategy-card">
-	            <div class="strategy-header">
-	                <h4>{strategy['name']}</h4>
-	                <span class="strategy-badge">{strategy['type']}</span>
+	        """Create beautiful HTML report with modern gradient design"""
+	        now_ist = self.format_ist_time()
+        
+	        colors = self.config['report'].get('colors', {})
+	        rec = recommendation['recommendation']
+        
+	        if 'STRONG BUY' in rec:
+	            rec_color = '#10b981'
+	            rec_gradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+	        elif 'BUY' in rec:
+	            rec_color = '#3b82f6'
+	            rec_gradient = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+	        elif 'STRONG SELL' in rec:
+	            rec_color = '#ef4444'
+	            rec_gradient = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+	        elif 'SELL' in rec:
+	            rec_color = '#f59e0b'
+	            rec_gradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+	        else:
+	            rec_color = '#8b5cf6'
+	            rec_gradient = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+        
+	        title = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
+        
+	        strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
+	        strike_recommendations = self.get_detailed_strike_recommendations(oc_analysis, tech_analysis, recommendation)
+        
+	        pivot_points = tech_analysis.get('pivot_points', {})
+	        current_price = tech_analysis.get('current_price', 0)
+	        nearest_levels = self.find_nearest_levels(current_price, pivot_points)
+        
+	        # Momentum values
+	        momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
+	        momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
+	        momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
+	            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+	        })
+        
+	        momentum_5h_pct = tech_analysis.get('momentum_5h_pct', 0)
+	        momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
+	        momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
+	            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+	        })
+        
+	        # Top OI strikes
+	        top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
+	        top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
+        
+	        # Build CE rows
+	        ce_rows_html = ''
+	        for idx, strike in enumerate(top_ce_strikes, 1):
+	            type_badge_color = '#10b981' if strike['type'] == 'ITM' else ('#f59e0b' if strike['type'] == 'ATM' else '#6366f1')
+	            ce_rows_html += f"""
+	            <tr class="data-row">
+	                <td><span class="rank-badge">{idx}</span></td>
+	                <td><strong class="strike-price">₹{strike['strike']}</strong></td>
+	                <td><span class="type-badge" style="background: {type_badge_color};">{strike['type']}</span></td>
+	                <td class="number-cell">{strike['oi']:,}</td>
+	                <td class="number-cell {'positive' if strike['chng_oi'] > 0 else 'negative'}">{strike['chng_oi']:+,}</td>
+	                <td class="number-cell">₹{strike['ltp']:.2f}</td>
+	                <td class="number-cell">{strike['iv']:.2f}%</td>
+	                <td class="number-cell">{strike['volume']:,}</td>
+	            </tr>
+	            """
+        
+	        # Build PE rows
+	        pe_rows_html = ''
+	        for idx, strike in enumerate(top_pe_strikes, 1):
+	            type_badge_color = '#10b981' if strike['type'] == 'ITM' else ('#f59e0b' if strike['type'] == 'ATM' else '#6366f1')
+	            pe_rows_html += f"""
+	            <tr class="data-row">
+	                <td><span class="rank-badge">{idx}</span></td>
+	                <td><strong class="strike-price">₹{strike['strike']}</strong></td>
+	                <td><span class="type-badge" style="background: {type_badge_color};">{strike['type']}</span></td>
+	                <td class="number-cell">{strike['oi']:,}</td>
+	                <td class="number-cell {'positive' if strike['chng_oi'] > 0 else 'negative'}">{strike['chng_oi']:+,}</td>
+	                <td class="number-cell">₹{strike['ltp']:.2f}</td>
+	                <td class="number-cell">{strike['iv']:.2f}%</td>
+	                <td class="number-cell">{strike['volume']:,}</td>
+	            </tr>
+	            """
+        
+	        # Build strategies HTML
+	        strategies_html = ''
+	        for strategy in strategies:
+	            strategies_html += f"""
+	            <div class="strategy-card">
+	                <div class="strategy-header">
+	                    <h4>{strategy['name']}</h4>
+	                    <span class="strategy-badge">{strategy['type']}</span>
+	                </div>
+	                <div class="strategy-content">
+	                    <div class="strategy-row"><span class="label">Setup:</span> <span>{strategy['setup']}</span></div>
+	                    <div class="strategy-row"><span class="label">Profit:</span> <span class="highlight">{strategy['profit']}</span></div>
+	                    <div class="strategy-row"><span class="label">Risk:</span> <span>{strategy['risk']}</span></div>
+	                    <div class="strategy-row"><span class="label">Best When:</span> <span>{strategy['best_when']}</span></div>
+	                    <div class="strategy-stars">{strategy['recommended']}</div>
+	                </div>
 	            </div>
-	            <div class="strategy-content">
-	                <div class="strategy-row"><span class="label">Setup:</span> <span>{strategy['setup']}</span></div>
-	                <div class="strategy-row"><span class="label">Profit:</span> <span class="highlight">{strategy['profit']}</span></div>
-	                <div class="strategy-row"><span class="label">Risk:</span> <span>{strategy['risk']}</span></div>
-	                <div class="strategy-row"><span class="label">Best When:</span> <span>{strategy['best_when']}</span></div>
-	                <div class="strategy-stars">{strategy['recommended']}</div>
-	            </div>
-	        </div>
+	            """
+        
+	        # Build pivot table
+	        def get_level_highlight(level_value):
+	            if level_value == nearest_levels.get('nearest_resistance'):
+	                return 'level-highlight resistance-highlight'
+	            elif level_value == nearest_levels.get('nearest_support'):
+	                return 'level-highlight support-highlight'
+	            return ''
+        
+	        pivot_rows = f"""
+	            <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r3'))}">
+	                <td><span class="level-label resistance">R3</span></td>
+	                <td class="level-value">₹{pivot_points.get('r3', 'N/A')}</td>
+	                <td class="distance-value">{f'+{pivot_points.get("r3", 0) - current_price:.2f}' if pivot_points.get('r3') else 'N/A'}</td>
+	            </tr>
+	            <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r2'))}">
+	                <td><span class="level-label resistance">R2</span></td>
+	                <td class="level-value">₹{pivot_points.get('r2', 'N/A')}</td>
+	                <td class="distance-value">{f'+{pivot_points.get("r2", 0) - current_price:.2f}' if pivot_points.get('r2') else 'N/A'}</td>
+	            </tr>
+	            <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r1'))}">
+	                <td><span class="level-label resistance">R1</span></td>
+	                <td class="level-value">₹{pivot_points.get('r1', 'N/A')}</td>
+	                <td class="distance-value">{f'+{pivot_points.get("r1", 0) - current_price:.2f}' if pivot_points.get('r1') else 'N/A'}</td>
+	            </tr>
+	            <tr class="pivot-row pivot-center">
+	                <td><span class="level-label pivot">PP</span></td>
+	                <td class="level-value pivot-value">₹{pivot_points.get('pivot', 'N/A')}</td>
+	                <td class="distance-value">{f'{pivot_points.get("pivot", 0) - current_price:+.2f}' if pivot_points.get('pivot') else 'N/A'}</td>
+	            </tr>
+	            <tr class="pivot-row support {get_level_highlight(pivot_points.get('s1'))}">
+	                <td><span class="level-label support">S1</span></td>
+	                <td class="level-value">₹{pivot_points.get('s1', 'N/A')}</td>
+	                <td class="distance-value">{f'{pivot_points.get("s1", 0) - current_price:.2f}' if pivot_points.get('s1') else 'N/A'}</td>
+	            </tr>
+	            <tr class="pivot-row support {get_level_highlight(pivot_points.get('s2'))}">
+	                <td><span class="level-label support">S2</span></td>
+	                <td class="level-value">₹{pivot_points.get('s2', 'N/A')}</td>
+	                <td class="distance-value">{f'{pivot_points.get("s2", 0) - current_price:.2f}' if pivot_points.get('s2') else 'N/A'}</td>
+	            </tr>
+	            <tr class="pivot-row support {get_level_highlight(pivot_points.get('s3'))}">
+	                <td><span class="level-label support">S3</span></td>
+	                <td class="level-value">₹{pivot_points.get('s3', 'N/A')}</td>
+	                <td class="distance-value">{f'{pivot_points.get("s3", 0) - current_price:.2f}' if pivot_points.get('s3') else 'N/A'}</td>
+	            </tr>
 	        """
-    
-	    # Build pivot table
-	    def get_level_highlight(level_value):
-	        if level_value == nearest_levels.get('nearest_resistance'):
-	            return 'level-highlight resistance-highlight'
-	        elif level_value == nearest_levels.get('nearest_support'):
-	            return 'level-highlight support-highlight'
-	        return ''
-    
-	    pivot_rows = f"""
-	        <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r3'))}">
-	            <td><span class="level-label resistance">R3</span></td>
-	            <td class="level-value">₹{pivot_points.get('r3', 'N/A')}</td>
-	            <td class="distance-value">{f'+{pivot_points.get("r3", 0) - current_price:.2f}' if pivot_points.get('r3') else 'N/A'}</td>
-	        </tr>
-	        <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r2'))}">
-	            <td><span class="level-label resistance">R2</span></td>
-	            <td class="level-value">₹{pivot_points.get('r2', 'N/A')}</td>
-	            <td class="distance-value">{f'+{pivot_points.get("r2", 0) - current_price:.2f}' if pivot_points.get('r2') else 'N/A'}</td>
-	        </tr>
-	        <tr class="pivot-row resistance {get_level_highlight(pivot_points.get('r1'))}">
-	            <td><span class="level-label resistance">R1</span></td>
-	            <td class="level-value">₹{pivot_points.get('r1', 'N/A')}</td>
-	            <td class="distance-value">{f'+{pivot_points.get("r1", 0) - current_price:.2f}' if pivot_points.get('r1') else 'N/A'}</td>
-	        </tr>
-	        <tr class="pivot-row pivot-center">
-	            <td><span class="level-label pivot">PP</span></td>
-	            <td class="level-value pivot-value">₹{pivot_points.get('pivot', 'N/A')}</td>
-	            <td class="distance-value">{f'{pivot_points.get("pivot", 0) - current_price:+.2f}' if pivot_points.get('pivot') else 'N/A'}</td>
-	        </tr>
-	        <tr class="pivot-row support {get_level_highlight(pivot_points.get('s1'))}">
-	            <td><span class="level-label support">S1</span></td>
-	            <td class="level-value">₹{pivot_points.get('s1', 'N/A')}</td>
-	            <td class="distance-value">{f'{pivot_points.get("s1", 0) - current_price:.2f}' if pivot_points.get('s1') else 'N/A'}</td>
-	        </tr>
-	        <tr class="pivot-row support {get_level_highlight(pivot_points.get('s2'))}">
-	            <td><span class="level-label support">S2</span></td>
-	            <td class="level-value">₹{pivot_points.get('s2', 'N/A')}</td>
-	            <td class="distance-value">{f'{pivot_points.get("s2", 0) - current_price:.2f}' if pivot_points.get('s2') else 'N/A'}</td>
-	        </tr>
-	        <tr class="pivot-row support {get_level_highlight(pivot_points.get('s3'))}">
-	            <td><span class="level-label support">S3</span></td>
-	            <td class="level-value">₹{pivot_points.get('s3', 'N/A')}</td>
-	            <td class="distance-value">{f'{pivot_points.get("s3", 0) - current_price:.2f}' if pivot_points.get('s3') else 'N/A'}</td>
-	        </tr>
-	    """
-    
-	    html = f"""
+        
+	        html = f"""
 	<!DOCTYPE html>
 	<html lang="en">
 	<head>
@@ -1375,7 +1375,6 @@ class NiftyAnalyzer:
 	            margin: 0 auto;
 	        }}
         
-	        /* Header */
 	        .header {{
 	            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
 	            border-radius: 20px;
@@ -1412,7 +1411,6 @@ class NiftyAnalyzer:
 	            margin-top: 10px;
 	        }}
         
-	        /* Momentum Cards */
 	        .momentum-grid {{
 	            display: grid;
 	            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1466,7 +1464,6 @@ class NiftyAnalyzer:
 	            opacity: 0.9;
 	        }}
         
-	        /* Recommendation Box */
 	        .recommendation-box {{
 	            background: {rec_gradient};
 	            border-radius: 16px;
@@ -1508,7 +1505,6 @@ class NiftyAnalyzer:
 	            backdrop-filter: blur(10px);
 	        }}
         
-	        /* Section Cards */
 	        .section-grid {{
 	            display: grid;
 	            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -1543,7 +1539,6 @@ class NiftyAnalyzer:
 	            color: #60a5fa;
 	        }}
         
-	        /* Data Grid */
 	        .data-grid {{
 	            display: grid;
 	            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1578,7 +1573,6 @@ class NiftyAnalyzer:
 	            color: #ffffff;
 	        }}
         
-	        /* Levels Box */
 	        .levels-container {{
 	            display: grid;
 	            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1623,7 +1617,6 @@ class NiftyAnalyzer:
 	            border-bottom: none;
 	        }}
         
-	        /* Pivot Table */
 	        .table-container {{
 	            overflow-x: auto;
 	            margin-top: 15px;
@@ -1760,7 +1753,6 @@ class NiftyAnalyzer:
 	            color: #ef4444;
 	        }}
         
-	        /* Strike Recommendations */
 	        .strike-grid {{
 	            display: grid;
 	            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -1922,7 +1914,6 @@ class NiftyAnalyzer:
 	            color: #fbbf24;
 	        }}
         
-	        /* Strategy Cards */
 	        .strategy-card {{
 	            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
 	            border-radius: 16px;
@@ -1983,7 +1974,6 @@ class NiftyAnalyzer:
 	            border-top: 1px solid rgba(148, 163, 184, 0.2);
 	        }}
         
-	        /* Analysis Summary */
 	        .analysis-summary {{
 	            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
 	            border-radius: 16px;
@@ -2020,7 +2010,6 @@ class NiftyAnalyzer:
 	            font-weight: 700;
 	        }}
         
-	        /* Footer */
 	        .footer {{
 	            text-align: center;
 	            margin-top: 40px;
@@ -2034,78 +2023,34 @@ class NiftyAnalyzer:
 	            margin: 8px 0;
 	        }}
         
-	        /* Responsive */
 	        @media (max-width: 768px) {{
-	            .container {{
-	                padding: 10px;
-	            }}
-            
-	            .header h1 {{
-	                font-size: 24px;
-	            }}
-            
-	            .momentum-grid,
-	            .section-grid,
-	            .strike-grid,
-	            .levels-container {{
-	                grid-template-columns: 1fr;
-	            }}
-            
-	            .data-grid {{
-	                grid-template-columns: repeat(2, 1fr);
-	            }}
-            
-	            .targets-grid {{
-	                grid-template-columns: 1fr;
-	            }}
-            
-	            .recommendation-box h2 {{
-	                font-size: 28px;
-	            }}
-            
-	            .momentum-value {{
-	                font-size: 36px;
-	            }}
+	            .container {{ padding: 10px; }}
+	            .header h1 {{ font-size: 24px; }}
+	            .momentum-grid, .section-grid, .strike-grid, .levels-container {{ grid-template-columns: 1fr; }}
+	            .data-grid {{ grid-template-columns: repeat(2, 1fr); }}
+	            .targets-grid {{ grid-template-columns: 1fr; }}
+	            .recommendation-box h2 {{ font-size: 28px; }}
+	            .momentum-value {{ font-size: 36px; }}
 	        }}
         
 	        @media (max-width: 480px) {{
-	            body {{
-	                padding: 10px;
-	            }}
-            
-	            .header {{
-	                padding: 20px 15px;
-	            }}
-            
-	            .header h1 {{
-	                font-size: 20px;
-	            }}
-            
-	            .data-grid {{
-	                grid-template-columns: 1fr;
-	            }}
-            
-	            .data-table {{
-	                font-size: 11px;
-	            }}
-            
-	            .data-table th,
-	            .data-table td {{
-	                padding: 8px 4px;
-	            }}
+	            body {{ padding: 10px; }}
+	            .header {{ padding: 20px 15px; }}
+	            .header h1 {{ font-size: 20px; }}
+	            .data-grid {{ grid-template-columns: 1fr; }}
+	            .data-table {{ font-size: 11px; }}
+	            .data-table th, .data-table td {{ padding: 8px 4px; }}
 	        }}
 	    </style>
 	</head>
 	<body>
 	    <div class="container">
-	        <!-- Header -->
 	        <div class="header">
 	            <h1>📊 {title}</h1>
 	            <div class="timeframe-badge">⏱️ 1-HOUR TIMEFRAME ANALYSIS</div>
 	            <div class="timestamp">Generated: {now_ist}</div>
 	        </div>
         
-	        <!-- Momentum Cards -->
 	        <div class="momentum-grid">
 	            <div class="momentum-card" style="--momentum-bg: {momentum_1h_colors['bg']}; --momentum-bg-dark: {momentum_1h_colors['bg_dark']}; --momentum-text: {momentum_1h_colors['text']}; --momentum-border: {momentum_1h_colors['border']};">
 	                <h3>⚡ 1H Momentum</h3>
@@ -2119,21 +2064,18 @@ class NiftyAnalyzer:
 	            </div>
 	        </div>
         
-	        <!-- Recommendation -->
 	        <div class="recommendation-box">
 	            <h2>{recommendation['recommendation']}</h2>
 	            <div class="recommendation-subtitle">
 	                Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}
 	            </div>
 	            <div class="signal-badges">
-	                <span class="signal-badge">🟢 Bullish Signals: {recommendation['bullish_signals']}</span>
-	                <span class="signal-badge">🔴 Bearish Signals: {recommendation['bearish_signals']}</span>
+	                <span class="signal-badge">🟢 Bullish: {recommendation['bullish_signals']}</span>
+	                <span class="signal-badge">🔴 Bearish: {recommendation['bearish_signals']}</span>
 	            </div>
 	        </div>
         
-	        <!-- Technical Analysis & Option Chain -->
 	        <div class="section-grid">
-	            <!-- Technical Analysis -->
 	            <div class="section-card">
 	                <div class="section-header">
 	                    <span class="section-icon">📈</span>
@@ -2167,7 +2109,6 @@ class NiftyAnalyzer:
 	                </div>
 	            </div>
             
-	            <!-- Option Chain Analysis -->
 	            <div class="section-card">
 	                <div class="section-header">
 	                    <span class="section-icon">📊</span>
@@ -2198,7 +2139,6 @@ class NiftyAnalyzer:
 	            </div>
 	        </div>
         
-	        <!-- Support & Resistance -->
 	        <div class="section-card">
 	            <div class="section-header">
 	                <span class="section-icon">🎯</span>
@@ -2222,11 +2162,10 @@ class NiftyAnalyzer:
 	            </div>
 	        </div>
         
-	        <!-- Pivot Points -->
 	        <div class="section-card">
 	            <div class="section-header">
 	                <span class="section-icon">📍</span>
-	                <h3 class="section-title">Pivot Points (Traditional - 30 Min)</h3>
+	                <h3 class="section-title">Pivot Points (30 Min)</h3>
 	            </div>
 	            <p style="color: #94a3b8; margin-bottom: 15px; font-size: 13px;">
 	                Previous 30-min: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
@@ -2247,15 +2186,14 @@ class NiftyAnalyzer:
 	            </div>
 	        </div>
         
-	        <!-- Top 10 OI -->
 	        <div class="section-card">
 	            <div class="section-header">
 	                <span class="section-icon">🔥</span>
-	                <h3 class="section-title">Top 5 Open Interest Strikes</h3>
+	                <h3 class="section-title">Top 5 Open Interest</h3>
 	            </div>
 	            <div class="section-grid">
 	                <div>
-	                    <h4 style="color: #10b981; margin-bottom: 15px; text-align: center; font-size: 16px;">📞 Call Options (CE)</h4>
+	                    <h4 style="color: #10b981; margin-bottom: 15px; text-align: center;">📞 Calls (CE)</h4>
 	                    <div class="table-container">
 	                        <table class="data-table">
 	                            <thead>
@@ -2264,10 +2202,10 @@ class NiftyAnalyzer:
 	                                    <th>Strike</th>
 	                                    <th>Type</th>
 	                                    <th>OI</th>
-	                                    <th>Chng OI</th>
+	                                    <th>Chng</th>
 	                                    <th>LTP</th>
 	                                    <th>IV</th>
-	                                    <th>Volume</th>
+	                                    <th>Vol</th>
 	                                </tr>
 	                            </thead>
 	                            <tbody>
@@ -2277,7 +2215,7 @@ class NiftyAnalyzer:
 	                    </div>
 	                </div>
 	                <div>
-	                    <h4 style="color: #ef4444; margin-bottom: 15px; text-align: center; font-size: 16px;">📉 Put Options (PE)</h4>
+	                    <h4 style="color: #ef4444; margin-bottom: 15px; text-align: center;">📉 Puts (PE)</h4>
 	                    <div class="table-container">
 	                        <table class="data-table">
 	                            <thead>
@@ -2286,10 +2224,10 @@ class NiftyAnalyzer:
 	                                    <th>Strike</th>
 	                                    <th>Type</th>
 	                                    <th>OI</th>
-	                                    <th>Chng OI</th>
+	                                    <th>Chng</th>
 	                                    <th>LTP</th>
 	                                    <th>IV</th>
-	                                    <th>Volume</th>
+	                                    <th>Vol</th>
 	                                </tr>
 	                            </thead>
 	                            <tbody>
@@ -2301,32 +2239,30 @@ class NiftyAnalyzer:
 	            </div>
 	        </div>
         
-	        <!-- Analysis Summary -->
 	        <div class="analysis-summary">
-	            <h3>💡 Key Analysis Factors</h3>
+	            <h3>💡 Key Factors</h3>
 	            <ul>
 	                {''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}
 	            </ul>
 	        </div>
         
-	        <!-- Strike Recommendations -->
 	        <div class="section-card">
 	            <div class="section-header">
 	                <span class="section-icon">💰</span>
-	                <h3 class="section-title">Detailed Strike Recommendations</h3>
+	                <h3 class="section-title">Strike Recommendations</h3>
 	            </div>
-	            <p style="color: #94a3b8; margin-bottom: 20px; font-size: 14px;">
-	                Based on <strong style="color: #60a5fa;">{recommendation['bias']}</strong> bias with Nifty at <strong style="color: #60a5fa;">₹{tech_analysis.get('current_price', 0):.2f}</strong>
+	            <p style="color: #94a3b8; margin-bottom: 20px;">
+	                Based on <strong style="color: #60a5fa;">{recommendation['bias']}</strong> bias with Nifty at <strong>₹{tech_analysis.get('current_price', 0):.2f}</strong>
 	            </p>
 	            <div class="strike-grid">
-	    """
-    
-	    # Add strike recommendations
-	    if strike_recommendations:
-	        for rec in strike_recommendations:
-	            profit_color = '#10b981' if isinstance(rec.get('profit_at_target_2'), (int, float)) and rec['profit_at_target_2'] > 100 else '#3b82f6'
-            
-	            html += f"""
+	"""
+        
+	        # Add strike recommendations
+	        if strike_recommendations:
+	            for rec in strike_recommendations:
+	                profit_color = '#10b981' if isinstance(rec.get('profit_at_target_2'), (int, float)) and rec['profit_at_target_2'] > 100 else '#3b82f6'
+                
+	                html += f"""
 	                <div class="strike-card" style="border-left: 4px solid {profit_color};">
 	                    <div class="strike-header">
 	                        <h4>{rec['strategy']}</h4>
@@ -2338,15 +2274,15 @@ class NiftyAnalyzer:
 	                            <span class="detail-value">{rec['action']}</span>
 	                        </div>
 	                        <div class="detail-row">
-	                            <span class="detail-label">Strike Price:</span>
+	                            <span class="detail-label">Strike:</span>
 	                            <span class="detail-value">₹{rec['strike']}</span>
 	                        </div>
 	                        <div class="detail-row">
-	                            <span class="detail-label">Current LTP:</span>
+	                            <span class="detail-label">LTP:</span>
 	                            <span class="premium-value">₹{rec['ltp']:.2f}</span>
 	                        </div>
 	                        <div class="detail-row">
-	                            <span class="detail-label">Open Interest:</span>
+	                            <span class="detail-label">OI:</span>
 	                            <span class="detail-value">{rec['oi']}</span>
 	                        </div>
 	                        <div class="detail-row">
@@ -2355,7 +2291,7 @@ class NiftyAnalyzer:
 	                        </div>
 	                    </div>
 	                    <div class="profit-section">
-	                        <h5>📊 Profit Targets & Risk</h5>
+	                        <h5>📊 Targets & Risk</h5>
 	                        <div class="targets-grid">
 	                            <div class="target-box target-1">
 	                                <div class="target-label">Target 1</div>
@@ -2375,24 +2311,23 @@ class NiftyAnalyzer:
 	                        </div>
 	                    </div>
 	                    <div class="trade-example">
-	                        <strong>Example Trade:</strong> 1 lot (50 qty) at ₹{rec['ltp']:.2f} = ₹{rec['ltp'] * 50:.0f} investment<br>
-	                        Target 1 Profit: ₹{rec['profit_at_target_1'] * 50 if isinstance(rec['profit_at_target_1'], (int, float)) else 'Variable':.0f} | Target 2 Profit: ₹{rec['profit_at_target_2'] * 50 if isinstance(rec['profit_at_target_2'], (int, float)) else 'Variable':.0f}
+	                        <strong>Example:</strong> 1 lot (50 qty) at ₹{rec['ltp']:.2f} = ₹{rec['ltp'] * 50:.0f} investment<br>
+	                        T1 Profit: ₹{rec['profit_at_target_1'] * 50 if isinstance(rec['profit_at_target_1'], (int, float)) else 'Variable':.0f} | T2 Profit: ₹{rec['profit_at_target_2'] * 50 if isinstance(rec['profit_at_target_2'], (int, float)) else 'Variable':.0f}
 	                    </div>
 	                </div>
-	            """
-	    else:
-	        html += """
+	                """
+	        else:
+	            html += """
 	                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 30px; text-align: center; color: #fca5a5;">
-	                    <p style="font-size: 16px; font-weight: 600;">No specific strike recommendations available at this time.</p>
-	                    <p style="font-size: 14px; margin-top: 10px;">Please check the general strategies below.</p>
+	                    <p style="font-size: 16px; font-weight: 600;">No specific strike recommendations available.</p>
+	                    <p style="font-size: 14px; margin-top: 10px;">Check general strategies below.</p>
 	                </div>
-	        """
-    
-	    html += f"""
+	            """
+        
+	        html += f"""
 	            </div>
 	        </div>
         
-	        <!-- Options Strategies -->
 	        <div class="section-card">
 	            <div class="section-header">
 	                <span class="section-icon">🎯</span>
@@ -2403,17 +2338,16 @@ class NiftyAnalyzer:
 	            </div>
 	        </div>
         
-	        <!-- Footer -->
 	        <div class="footer">
-	            <p><strong>⚠️ Disclaimer:</strong> This analysis is for educational purposes only. Trading involves significant risk of loss.</p>
-	            <p style="margin-top: 10px;">© 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H)</p>
+	            <p><strong>⚠️ Disclaimer:</strong> Educational purposes only. Trading involves significant risk.</p>
+	            <p>© 2025 Nifty Trading Analyzer | Dual Momentum Analysis</p>
 	        </div>
 	    </div>
 	</body>
 	</html>
-	    """
-    
-	    return html
+	        """
+        
+	        return html
     
     def send_email(self, html_content):
         """Send email with HTML report"""
