@@ -1,11 +1,11 @@
 """
 Nifty Option Chain & Technical Analysis for Day Trading
-COMPLETE VERSION - Both 1H and 5H Momentum Side-by-Side
+PROFESSIONAL VERSION - Enhanced Design with Better Contrast
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
 FIXED: Using curl-cffi for NSE API to bypass anti-scraping
-UPDATED: Grey theme for better readability
+UPDATED: Professional grey theme with improved readability
 """
 
 import pandas as pd
@@ -13,7 +13,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import pytz
 import yfinance as yf
-from curl_cffi import requests  # ← CHANGED: Using curl-cffi instead of requests
+from curl_cffi import requests
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -169,7 +169,7 @@ class NiftyAnalyzer:
                 'technical_source': 'yahoo',
                 'max_retries': 3,
                 'retry_delay': 2,
-                'timeout': 30,  # Increased timeout for curl-cffi
+                'timeout': 30,
                 'fallback_to_sample': True
             },
             'logging': {
@@ -233,13 +233,13 @@ class NiftyAnalyzer:
                 # Create session with curl-cffi
                 session = requests.Session()
                 
-                # First visit the main page to get cookies (impersonate Chrome) ← KEY CHANGE
+                # First visit the main page to get cookies (impersonate Chrome)
                 session.get(base_url, headers=self.headers, impersonate="chrome", timeout=15)
                 
                 # Small delay to mimic human behavior
                 time.sleep(1)
                 
-                # Now fetch the option chain data (impersonate Chrome) ← KEY CHANGE
+                # Now fetch the option chain data (impersonate Chrome)
                 response = session.get(api_url, headers=self.headers, impersonate="chrome", timeout=timeout)
                 
                 if response.status_code == 200:
@@ -583,38 +583,38 @@ class NiftyAnalyzer:
         
         if momentum_pct > strong_threshold:
             return "Strong Upward", "Bullish", {
-                'bg': '#1e7e34',      # Dark green background
-                'bg_dark': '#155724', # Darker green
-                'text': '#ffffff',    # White text
-                'border': '#28a745'   # Green border
+                'bg': '#1e7e34',
+                'bg_dark': '#155724',
+                'text': '#ffffff',
+                'border': '#28a745'
             }
         elif momentum_pct > moderate_threshold:
             return "Moderate Upward", "Bullish", {
-                'bg': '#28a745',      # Green background
-                'bg_dark': '#218838', # Darker green
-                'text': '#ffffff',    # White text
-                'border': '#1e7e34'   # Dark green border
+                'bg': '#28a745',
+                'bg_dark': '#218838',
+                'text': '#ffffff',
+                'border': '#1e7e34'
             }
         elif momentum_pct < -strong_threshold:
             return "Strong Downward", "Bearish", {
-                'bg': '#c82333',      # Dark red background
-                'bg_dark': '#bd2130', # Darker red
-                'text': '#ffffff',    # White text
-                'border': '#dc3545'   # Red border
+                'bg': '#c82333',
+                'bg_dark': '#bd2130',
+                'text': '#ffffff',
+                'border': '#dc3545'
             }
         elif momentum_pct < -moderate_threshold:
             return "Moderate Downward", "Bearish", {
-                'bg': '#fd7e14',      # Orange background
-                'bg_dark': '#e8590c', # Darker orange
-                'text': '#ffffff',    # White text
-                'border': '#dc3545'   # Red border
+                'bg': '#fd7e14',
+                'bg_dark': '#e8590c',
+                'text': '#ffffff',
+                'border': '#dc3545'
             }
         else:
             return "Sideways/Weak", "Neutral", {
-                'bg': '#6c757d',      # Gray background
-                'bg_dark': '#5a6268', # Darker gray
-                'text': '#ffffff',    # White text
-                'border': '#495057'   # Dark gray border
+                'bg': '#6c757d',
+                'bg_dark': '#5a6268',
+                'text': '#ffffff',
+                'border': '#495057'
             }
     
     def technical_analysis(self, df):
@@ -1202,7 +1202,7 @@ class NiftyAnalyzer:
         }
     
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create beautiful HTML report with DUAL MOMENTUM SIDE-BY-SIDE and GREY THEME"""
+        """Create professional HTML report with improved contrast and readability"""
         now_ist = self.format_ist_time()
         
         colors = self.config['report'].get('colors', {})
@@ -1354,133 +1354,656 @@ class NiftyAnalyzer:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
     <style>
-        * {{ box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2b2d31; margin: 0; padding: 10px; color: #dcddde; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background-color: #36393f; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); padding: 20px; }}
-        .header {{ text-align: center; border-bottom: 3px solid #5865f2; padding-bottom: 15px; margin-bottom: 20px; }}
-        .header h1 {{ color: #5865f2; margin: 0; font-size: 24px; }}
-        .timestamp {{ color: #b9bbbe; font-size: 12px; margin-top: 8px; font-weight: bold; }}
-        .timeframe-badge {{ display: inline-block; background: #ed4245; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-top: 8px; }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         
-        /* DUAL MOMENTUM BOXES - SIDE BY SIDE */
-        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }}
-        .momentum-box {{ 
-            background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%); 
-            color: var(--momentum-text); 
-            padding: 15px; 
-            border-radius: 10px; 
-            text-align: center; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            border: 2px solid var(--momentum-border);
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #27273f 100%);
+            color: #e4e4e7;
+            padding: 15px;
+            line-height: 1.6;
         }}
-        .momentum-box h3 {{ margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: var(--momentum-text); text-transform: uppercase; letter-spacing: 0.5px; }}
-        .momentum-box .value {{ font-size: 32px; font-weight: 900; margin: 8px 0; color: var(--momentum-text); text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }}
-        .momentum-box .signal {{ font-size: 14px; margin-top: 5px; font-weight: 600; color: var(--momentum-text); }}
         
-        .recommendation-box {{ background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }}
-        .recommendation-box h2 {{ margin: 0 0 6px 0; font-size: 26px; font-weight: bold; }}
-        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.9; }}
-        .section {{ margin-bottom: 20px; }}
-        .section-title {{ background-color: #5865f2; color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; font-weight: bold; margin-bottom: 12px; }}
-        .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }}
-        .data-item {{ background-color: #2f3136; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #5865f2; }}
-        .data-item .label {{ color: #b9bbbe; font-size: 10px; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }}
-        .data-item .value {{ color: #dcddde; font-size: 16px; font-weight: bold; }}
-        .levels {{ display: flex; flex-wrap: wrap; gap: 15px; }}
-        .levels-box {{ flex: 1; min-width: 250px; background-color: #2f3136; padding: 10px; border-radius: 8px; }}
-        .levels-box.resistance {{ border-left: 4px solid #ed4245; }}
-        .levels-box.support {{ border-left: 4px solid #3ba55d; }}
-        .levels-box h4 {{ margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #dcddde; }}
-        .levels-box ul {{ margin: 0; padding-left: 20px; }}
-        .levels-box li {{ margin: 4px 0; font-size: 13px; font-weight: 500; color: #b9bbbe; }}
-        .pivot-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-        .pivot-info {{ color: #b9bbbe; margin-bottom: 8px; font-size: 11px; line-height: 1.4; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 13px; background-color: #2f3136; }}
-        .pivot-table th {{ background-color: #5865f2; color: white; padding: 8px 6px; text-align: center; font-size: 12px; font-weight: 600; }}
-        .pivot-table td {{ padding: 8px 6px; text-align: center; border-bottom: 1px solid #40444b; font-weight: 500; color: #dcddde; }}
-        .pivot-row {{ background-color: #2f3136; }}
-        .pivot-row.resistance {{ color: #ed4245; }}
-        .pivot-row.support {{ color: #3ba55d; }}
-        .pivot-row.pivot {{ background-color: #faa81a; color: #2b2d31; font-weight: bold; }}
-        .nearest-resistance {{ background-color: #5c2a2a !important; border: 2px solid #ed4245; }}
-        .nearest-support {{ background-color: #2a4c34 !important; border: 2px solid #3ba55d; }}
-        .highlight-badge {{ display: inline-block; background: #ed4245; color: white; padding: 2px 6px; border-radius: 8px; font-size: 9px; margin-left: 3px; font-weight: bold; }}
-        .reasons {{ background-color: #3d3106; border-left: 4px solid #faa81a; padding: 10px; border-radius: 5px; }}
-        .reasons ul {{ margin: 6px 0 0 0; padding-left: 20px; }}
-        .reasons li {{ margin: 4px 0; color: #f1c40f; font-size: 12px; }}
-        .signal-badge {{ display: inline-block; padding: 3px 10px; border-radius: 15px; font-size: 12px; margin: 4px; font-weight: 600; }}
-        .bullish {{ background-color: #2a4c34; color: #3ba55d; }}
-        .bearish {{ background-color: #5c2a2a; color: #ed4245; }}
+        .container {{ 
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #1a1a2e;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            padding: 30px;
+            border: 1px solid #2d2d44;
+        }}
         
-        /* TOP 10 OI TABLE STYLES */
-        .oi-container {{ overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 15px; }}
-        .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 12px; }}
-        .oi-section {{ background-color: #2f3136; padding: 12px; border-radius: 8px; }}
-        .oi-section h4 {{ margin: 0 0 10px 0; font-size: 14px; font-weight: 700; text-align: center; color: #dcddde; }}
-        .oi-section.calls {{ border-top: 4px solid #3ba55d; }}
-        .oi-section.puts {{ border-top: 4px solid #ed4245; }}
-        .oi-table {{ width: 100%; border-collapse: collapse; font-size: 11px; }}
-        .oi-table th {{ background-color: #5865f2; color: white; padding: 6px 4px; text-align: center; font-size: 10px; font-weight: 600; white-space: nowrap; }}
-        .oi-table td {{ padding: 6px 4px; border-bottom: 1px solid #40444b; text-align: center; font-size: 11px; color: #dcddde; }}
-        .oi-table tbody tr:hover {{ background-color: #40444b; }}
-        .badge-itm {{ background-color: #3ba55d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
-        .badge-atm {{ background-color: #faa81a; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
-        .badge-otm {{ background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: bold; }}
+        /* HEADER SECTION */
+        .header {{ 
+            text-align: center;
+            border-bottom: 3px solid #6366f1;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #2d2d44 0%, #1f1f35 100%);
+            padding: 25px;
+            border-radius: 12px;
+        }}
         
-        /* STRIKE RECOMMENDATIONS STYLES */
-        .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }}
-        .strike-card {{ background-color: #2f3136; border: 2px solid #40444b; border-radius: 10px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: transform 0.2s; }}
-        .strike-card:hover {{ transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.4); }}
-        .strike-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #5865f2; padding-bottom: 8px; margin-bottom: 12px; }}
-        .strike-header h4 {{ margin: 0; color: #5865f2; font-size: 16px; font-weight: 700; }}
-        .strike-badge {{ display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600; }}
-        .strike-badge.atm {{ background-color: #faa81a; color: #000; }}
-        .strike-badge.itm {{ background-color: #3ba55d; color: white; }}
-        .strike-badge.otm {{ background-color: #6c757d; color: white; }}
-        .strike-badge.itm-otm {{ background: linear-gradient(90deg, #3ba55d 50%, #6c757d 50%); color: white; }}
-        .strike-badge.atm-atm {{ background-color: #ed4245; color: white; }}
-        .strike-badge.spread {{ background: linear-gradient(135deg, #5865f2, #7289da); color: white; }}
-        .strike-badge.straddle {{ background: linear-gradient(135deg, #fd7e14, #e83e8c); color: white; }}
-        .strike-details {{ background-color: #40444b; padding: 10px; border-radius: 6px; margin-bottom: 12px; }}
-        .strike-row {{ display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #4f545c; }}
+        .header h1 {{ 
+            color: #818cf8;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 10px rgba(99,102,241,0.3);
+        }}
+        
+        .timestamp {{ 
+            color: #a1a1aa;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 10px;
+        }}
+        
+        .timeframe-badge {{ 
+            display: inline-block;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(239,68,68,0.4);
+        }}
+        
+        /* DUAL MOMENTUM BOXES */
+        .momentum-container {{ 
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }}
+        
+        .momentum-box {{ 
+            background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
+            color: var(--momentum-text);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            border: 2px solid var(--momentum-border);
+            transition: transform 0.2s;
+        }}
+        
+        .momentum-box:hover {{ transform: translateY(-3px); }}
+        
+        .momentum-box h3 {{ 
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }}
+        
+        .momentum-box .value {{ 
+            font-size: 36px;
+            font-weight: 900;
+            margin: 10px 0;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }}
+        
+        .momentum-box .signal {{ 
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0.95;
+        }}
+        
+        /* RECOMMENDATION BOX */
+        .recommendation-box {{ 
+            background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            border: 2px solid {rec_color};
+        }}
+        
+        .recommendation-box h2 {{ 
+            font-size: 30px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }}
+        
+        .recommendation-box .subtitle {{ 
+            font-size: 15px;
+            opacity: 0.95;
+            font-weight: 500;
+        }}
+        
+        .signal-badge {{ 
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin: 8px 4px 0 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }}
+        
+        .bullish {{ background: #22c55e; color: #fff; }}
+        .bearish {{ background: #ef4444; color: #fff; }}
+        
+        /* SECTION STYLING */
+        .section {{ 
+            margin-bottom: 25px;
+        }}
+        
+        .section-title {{ 
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }}
+        
+        /* DATA GRID */
+        .data-grid {{ 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }}
+        
+        .data-item {{ 
+            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
+            padding: 16px;
+            border-radius: 10px;
+            border-left: 4px solid #6366f1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }}
+        
+        .data-item:hover {{ transform: translateY(-2px); }}
+        
+        .data-item .label {{ 
+            color: #a1a1aa;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }}
+        
+        .data-item .value {{ 
+            color: #f4f4f5;
+            font-size: 18px;
+            font-weight: 700;
+        }}
+        
+        /* LEVELS BOXES */
+        .levels {{ 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }}
+        
+        .levels-box {{ 
+            flex: 1;
+            min-width: 280px;
+            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        
+        .levels-box.resistance {{ border-left: 4px solid #ef4444; }}
+        .levels-box.support {{ border-left: 4px solid #22c55e; }}
+        
+        .levels-box h4 {{ 
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #f4f4f5;
+        }}
+        
+        .levels-box ul {{ 
+            list-style: none;
+            padding: 0;
+        }}
+        
+        .levels-box li {{ 
+            margin: 6px 0;
+            font-size: 14px;
+            color: #d4d4d8;
+            padding-left: 20px;
+            position: relative;
+        }}
+        
+        .levels-box li:before {{ 
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #6366f1;
+            font-weight: bold;
+        }}
+        
+        /* PIVOT TABLE */
+        .pivot-container {{ 
+            overflow-x: auto;
+            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        
+        .pivot-info {{ 
+            color: #a1a1aa;
+            margin-bottom: 12px;
+            font-size: 12px;
+            line-height: 1.6;
+        }}
+        
+        .pivot-table {{ 
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }}
+        
+        .pivot-table th {{ 
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 13px;
+        }}
+        
+        .pivot-table td {{ 
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #3d3d54;
+            font-weight: 600;
+            color: #e4e4e7;
+        }}
+        
+        .pivot-row {{ background: #252538; }}
+        .pivot-row.resistance {{ color: #fca5a5; }}
+        .pivot-row.support {{ color: #86efac; }}
+        .pivot-row.pivot {{ 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #fff;
+            font-weight: 700;
+        }}
+        
+        .nearest-resistance {{ 
+            background: #7f1d1d !important;
+            border: 2px solid #ef4444;
+            box-shadow: 0 0 12px rgba(239,68,68,0.5);
+        }}
+        
+        .nearest-support {{ 
+            background: #14532d !important;
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 12px rgba(34,197,94,0.5);
+        }}
+        
+        .highlight-badge {{ 
+            display: inline-block;
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 9px;
+            margin-left: 5px;
+            font-weight: 700;
+        }}
+        
+        /* OI TABLE SECTION */
+        .oi-grid {{ 
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }}
+        
+        .oi-section {{ 
+            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        
+        .oi-section h4 {{ 
+            font-size: 15px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            color: #f4f4f5;
+        }}
+        
+        .oi-section.calls {{ border-top: 4px solid #22c55e; }}
+        .oi-section.puts {{ border-top: 4px solid #ef4444; }}
+        
+        .oi-container {{ overflow-x: auto; }}
+        
+        .oi-table {{ 
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }}
+        
+        .oi-table th {{ 
+            background: #6366f1;
+            color: white;
+            padding: 8px 6px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 11px;
+            white-space: nowrap;
+        }}
+        
+        .oi-table td {{ 
+            padding: 8px 6px;
+            border-bottom: 1px solid #3d3d54;
+            text-align: center;
+            color: #e4e4e7;
+        }}
+        
+        .oi-table tbody tr:hover {{ 
+            background: #3d3d54;
+        }}
+        
+        .badge-itm {{ 
+            background: #22c55e;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }}
+        
+        .badge-atm {{ 
+            background: #f59e0b;
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }}
+        
+        .badge-otm {{ 
+            background: #71717a;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }}
+        
+        /* REASONS BOX */
+        .reasons {{ 
+            background: linear-gradient(135deg, #422006 0%, #451a03 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        
+        .reasons strong {{ 
+            color: #fbbf24;
+            font-size: 15px;
+        }}
+        
+        .reasons ul {{ 
+            margin: 10px 0 0 0;
+            padding-left: 25px;
+        }}
+        
+        .reasons li {{ 
+            margin: 6px 0;
+            color: #fde047;
+            font-size: 13px;
+            line-height: 1.6;
+        }}
+        
+        /* STRIKE RECOMMENDATIONS */
+        .strike-recommendations {{ 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }}
+        
+        .strike-card {{ 
+            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
+            border: 2px solid #3d3d54;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }}
+        
+        .strike-card:hover {{ 
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }}
+        
+        .strike-header {{ 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }}
+        
+        .strike-header h4 {{ 
+            color: #818cf8;
+            font-size: 17px;
+            font-weight: 700;
+        }}
+        
+        .strike-badge {{ 
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 700;
+        }}
+        
+        .strike-badge.atm {{ background: #f59e0b; color: #000; }}
+        .strike-badge.itm {{ background: #22c55e; color: white; }}
+        .strike-badge.otm {{ background: #71717a; color: white; }}
+        .strike-badge.itm-otm {{ background: linear-gradient(90deg, #22c55e 50%, #71717a 50%); color: white; }}
+        .strike-badge.atm-atm {{ background: #ef4444; color: white; }}
+        .strike-badge.spread {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }}
+        .strike-badge.straddle {{ background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; }}
+        
+        .strike-details {{ 
+            background: #3d3d54;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }}
+        
+        .strike-row {{ 
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #52525b;
+        }}
+        
         .strike-row:last-child {{ border-bottom: none; }}
-        .strike-row .label {{ color: #b9bbbe; font-size: 12px; font-weight: 500; }}
-        .strike-row .value {{ color: #dcddde; font-size: 13px; font-weight: 600; }}
-        .strike-row .premium {{ color: #5865f2; font-size: 14px; font-weight: 700; }}
-        .profit-targets {{ background: linear-gradient(135deg, #2a3f5f 0%, #2f3136 100%); padding: 12px; border-radius: 6px; margin-bottom: 10px; }}
-        .profit-targets h5 {{ margin: 0 0 10px 0; color: #5865f2; font-size: 13px; font-weight: 700; }}
-        .target-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }}
-        .target-box {{ background-color: #36393f; padding: 8px; border-radius: 6px; text-align: center; border: 2px solid #40444b; }}
-        .target-box.target-1 {{ border-color: #3ba55d; }}
-        .target-box.target-2 {{ border-color: #5bc0de; }}
-        .target-box.stop-loss-box {{ border-color: #ed4245; }}
-        .target-label {{ font-size: 10px; color: #b9bbbe; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }}
-        .target-price {{ font-size: 14px; color: #dcddde; font-weight: 700; margin-bottom: 4px; }}
-        .target-profit {{ font-size: 11px; color: #3ba55d; font-weight: 600; }}
-        .target-box.stop-loss-box .target-profit {{ color: #ed4245; }}
-        .trade-example {{ background-color: #3d3106; border: 1px solid #faa81a; border-radius: 5px; padding: 10px; font-size: 11px; line-height: 1.5; color: #f1c40f; }}
-        .no-recommendations {{ background-color: #5c2a2a; border: 1px solid #ed4245; border-radius: 5px; padding: 20px; text-align: center; color: #ed4245; }}
         
-        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }}
-        .strategy-card {{ background-color: #2f3136; border: 2px solid #40444b; border-radius: 8px; padding: 10px; }}
-        .strategy-header {{ border-bottom: 2px solid #5865f2; padding-bottom: 6px; margin-bottom: 6px; }}
-        .strategy-header h4 {{ margin: 0; color: #5865f2; font-size: 14px; }}
-        .strategy-type {{ display: inline-block; background-color: #2a3f5f; color: #5865f2; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-top: 3px; }}
-        .strategy-body p {{ margin: 5px 0; font-size: 12px; line-height: 1.4; color: #b9bbbe; }}
-        .recommendation-stars {{ color: #faa81a; font-size: 13px; }}
-        .footer {{ text-align: center; margin-top: 25px; padding-top: 15px; border-top: 2px solid #40444b; color: #b9bbbe; font-size: 11px; }}
+        .strike-row .label {{ 
+            color: #a1a1aa;
+            font-size: 12px;
+            font-weight: 600;
+        }}
         
-        /* Mobile Optimizations */
+        .strike-row .value {{ 
+            color: #f4f4f5;
+            font-size: 13px;
+            font-weight: 700;
+        }}
+        
+        .strike-row .premium {{ 
+            color: #818cf8;
+            font-size: 15px;
+            font-weight: 800;
+        }}
+        
+        .profit-targets {{ 
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }}
+        
+        .profit-targets h5 {{ 
+            color: #818cf8;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }}
+        
+        .target-grid {{ 
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }}
+        
+        .target-box {{ 
+            background: #2d2d44;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #3d3d54;
+        }}
+        
+        .target-box.target-1 {{ border-color: #22c55e; }}
+        .target-box.target-2 {{ border-color: #06b6d4; }}
+        .target-box.stop-loss-box {{ border-color: #ef4444; }}
+        
+        .target-label {{ 
+            font-size: 10px;
+            color: #a1a1aa;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }}
+        
+        .target-price {{ 
+            font-size: 15px;
+            color: #f4f4f5;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }}
+        
+        .target-profit {{ 
+            font-size: 11px;
+            color: #86efac;
+            font-weight: 600;
+        }}
+        
+        .target-box.stop-loss-box .target-profit {{ color: #fca5a5; }}
+        
+        .trade-example {{ 
+            background: #422006;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #fde047;
+        }}
+        
+        .no-recommendations {{ 
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            color: #fca5a5;
+            font-size: 14px;
+        }}
+        
+        /* STRATEGIES GRID */
+        .strategies-grid {{ 
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }}
+        
+        .strategy-card {{ 
+            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
+            border: 2px solid #3d3d54;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        
+        .strategy-header {{ 
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }}
+        
+        .strategy-header h4 {{ 
+            color: #818cf8;
+            font-size: 15px;
+            font-weight: 700;
+        }}
+        
+        .strategy-type {{ 
+            display: inline-block;
+            background: #1e3a8a;
+            color: #93c5fd;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            margin-top: 5px;
+            font-weight: 600;
+        }}
+        
+        .strategy-body p {{ 
+            margin: 8px 0;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #d4d4d8;
+        }}
+        
+        .recommendation-stars {{ 
+            color: #fbbf24;
+            font-size: 14px;
+            font-weight: 700;
+        }}
+        
+        /* FOOTER */
+        .footer {{ 
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #3d3d54;
+            color: #a1a1aa;
+            font-size: 12px;
+            line-height: 1.8;
+        }}
+        
+        /* MOBILE OPTIMIZATIONS */
         @media (max-width: 768px) {{
-            .container {{ padding: 12px; }}
-            .header h1 {{ font-size: 20px; }}
-            .momentum-container {{ grid-template-columns: 1fr; gap: 10px; }}
-            .momentum-box .value {{ font-size: 24px; }}
-            .recommendation-box h2 {{ font-size: 22px; }}
-            .section-title {{ font-size: 14px; padding: 6px 12px; }}
-            .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
-            .data-item .value {{ font-size: 14px; }}
+            .container {{ padding: 15px; }}
+            .header h1 {{ font-size: 22px; }}
+            .momentum-container {{ grid-template-columns: 1fr; gap: 12px; }}
+            .momentum-box .value {{ font-size: 28px; }}
+            .recommendation-box h2 {{ font-size: 24px; }}
+            .section-title {{ font-size: 15px; padding: 10px 15px; }}
+            .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 10px; }}
+            .data-item .value {{ font-size: 16px; }}
             .levels {{ flex-direction: column; }}
             .levels-box {{ min-width: 100%; }}
             .oi-grid {{ grid-template-columns: 1fr; }}
@@ -1489,18 +2012,19 @@ class NiftyAnalyzer:
         }}
         
         @media (max-width: 480px) {{
-            body {{ padding: 5px; }}
-            .container {{ padding: 8px; }}
-            .header h1 {{ font-size: 18px; }}
-            .timeframe-badge {{ font-size: 10px; padding: 3px 8px; }}
-            .momentum-box h3 {{ font-size: 14px; }}
-            .momentum-box .value {{ font-size: 20px; }}
-            .recommendation-box {{ padding: 10px; }}
-            .recommendation-box h2 {{ font-size: 20px; }}
+            body {{ padding: 8px; }}
+            .container {{ padding: 12px; border-radius: 12px; }}
+            .header h1 {{ font-size: 20px; }}
+            .header {{ padding: 15px; }}
+            .timeframe-badge {{ font-size: 10px; padding: 4px 10px; }}
+            .momentum-box h3 {{ font-size: 12px; }}
+            .momentum-box .value {{ font-size: 24px; }}
+            .recommendation-box {{ padding: 15px; }}
+            .recommendation-box h2 {{ font-size: 22px; }}
             .data-grid {{ grid-template-columns: 1fr; }}
-            .oi-table {{ font-size: 9px; }}
-            .oi-table th {{ font-size: 9px; padding: 4px 2px; }}
-            .oi-table td {{ font-size: 9px; padding: 4px 2px; }}
+            .oi-table {{ font-size: 10px; }}
+            .oi-table th {{ font-size: 9px; padding: 6px 3px; }}
+            .oi-table td {{ font-size: 9px; padding: 6px 3px; }}
         }}
     </style>
 </head>
@@ -1512,7 +2036,7 @@ class NiftyAnalyzer:
             <div class="timestamp">Generated on: {now_ist}</div>
         </div>
         
-        <!-- DUAL MOMENTUM DISPLAY - SIDE BY SIDE -->
+        <!-- DUAL MOMENTUM DISPLAY -->
         <div class="momentum-container">
             <div class="momentum-box" style="--momentum-bg: {momentum_1h_colors['bg']}; --momentum-bg-dark: {momentum_1h_colors['bg_dark']}; --momentum-text: {momentum_1h_colors['text']}; --momentum-border: {momentum_1h_colors['border']};">
                 <h3>⚡ 1H Momentum</h3>
@@ -1581,10 +2105,10 @@ class NiftyAnalyzer:
         
         <div class="section">
             <div class="section-title">📍 Pivot Points (Traditional - 30 Min)</div>
-            <p class="pivot-info">
-                Previous 30-min Candle: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
-            </p>
             <div class="pivot-container">
+                <p class="pivot-info">
+                    Previous 30-min Candle: High ₹{pivot_points.get('prev_high', 'N/A')} | Low ₹{pivot_points.get('prev_low', 'N/A')} | Close ₹{pivot_points.get('prev_close', 'N/A')}
+                </p>
                 <table class="pivot-table">
                     <thead>
                         <tr>
@@ -1617,7 +2141,7 @@ class NiftyAnalyzer:
                 </div>
             </div>
             
-            <div style="margin-top: 15px;">
+            <div style="margin-top: 20px;">
                 <div class="levels">
                     <div class="levels-box resistance">
                         <h4>🔴 OI Resistance</h4>
@@ -1693,30 +2217,30 @@ class NiftyAnalyzer:
             </div>
         </div>
         
-        <!-- DETAILED STRIKE RECOMMENDATIONS WITH PROFIT CALCULATIONS -->
+        <!-- DETAILED STRIKE RECOMMENDATIONS -->
         <div class="section">
             <div class="section-title">💰 Detailed Strike Recommendations with Profit Targets</div>
-            <p style="color: #b9bbbe; margin-bottom: 15px; font-size: 13px;">
-                <strong>Based on {recommendation['bias']} bias with current Nifty at ₹{tech_analysis.get('current_price', 0):.2f}</strong><br>
+            <p style="color: #a1a1aa; margin-bottom: 15px; font-size: 14px; line-height: 1.6;">
+                <strong style="color: #e4e4e7;">Based on {recommendation['bias']} bias with current Nifty at ₹{tech_analysis.get('current_price', 0):.2f}</strong><br>
                 These are actionable trades with specific strike prices, LTP, and profit calculations.
             </p>
             
             <div class="strike-recommendations">
 """
         
-        # Build strike recommendations table
+        # Build strike recommendations
         if strike_recommendations:
             for rec in strike_recommendations:
                 # Determine color based on profit potential
                 if isinstance(rec.get('profit_at_target_2'), (int, float)):
                     if rec['profit_at_target_2'] > 100:
-                        profit_color = '#3ba55d'  # Green for good profit
+                        profit_color = '#22c55e'
                     elif rec['profit_at_target_2'] > 50:
-                        profit_color = '#faa81a'  # Yellow for moderate
+                        profit_color = '#f59e0b'
                     else:
-                        profit_color = '#ed4245'  # Red for low profit
+                        profit_color = '#ef4444'
                 else:
-                    profit_color = '#5865f2'  # Blue for special cases
+                    profit_color = '#6366f1'
                 
                 html += f"""
                 <div class="strike-card" style="border-left: 4px solid {profit_color};">
@@ -1778,7 +2302,7 @@ class NiftyAnalyzer:
         else:
             html += """
                 <div class="no-recommendations">
-                    <p>No specific strike recommendations available at this time. Check the general strategies below.</p>
+                    <p><strong>⚠️ No specific strike recommendations available at this time.</strong><br>Check the general strategies below.</p>
                 </div>
             """
         
@@ -1788,13 +2312,13 @@ class NiftyAnalyzer:
         
         <div class="section">
             <div class="section-title">🎯 Options Strategies</div>
-            <p style="color: #b9bbbe; margin-bottom: 12px; font-size: 12px;">Based on {recommendation['bias']} bias:</p>
+            <p style="color: #a1a1aa; margin-bottom: 15px; font-size: 13px;">Based on {recommendation['bias']} bias:</p>
             <div class="strategies-grid">{strategies_html}</div>
         </div>
         
         <div class="footer">
-            <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk.</p>
-            <p>© 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H) with Top OI Display</p>
+            <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
+            <p>© 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H) | Professional Edition</p>
         </div>
     </div>
 </body>
