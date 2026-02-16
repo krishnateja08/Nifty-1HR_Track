@@ -345,99 +345,6 @@ class NiftyAnalyzer:
         
         return {'top_ce_strikes': top_ce_strikes, 'top_pe_strikes': top_pe_strikes}
     
-
-    
-    def analyze_oi_change(self, oc_df):
-        """
-        Analyze OI changes from NSE API's changeinOpenInterest field
-        Returns market direction based on Call and Put OI changes
-        """
-        if oc_df is None or oc_df.empty:
-            return {
-                'total_call_oi_change': 0,
-                'total_put_oi_change': 0,
-                'direction': 'No Data',
-                'signal': 'Unable to fetch option chain data',
-                'confidence': 'N/A'
-            }
-        
-        try:
-            # Sum up all Call and Put OI changes
-            total_call_chng_oi = oc_df['Call_Chng_OI'].sum()
-            total_put_chng_oi = oc_df['Put_Chng_OI'].sum()
-            
-            # Determine direction based on OI changes
-            threshold_strong = 500000  # Strong signal
-            threshold_moderate = 200000  # Moderate signal
-            
-            if total_call_chng_oi > threshold_strong and total_put_chng_oi < -threshold_moderate:
-                direction = "Strong Bullish"
-                signal = "Heavy Call writing + Put unwinding - Bulls adding positions"
-                confidence = "Very High"
-            elif total_call_chng_oi > threshold_moderate and total_put_chng_oi < 0:
-                direction = "Bullish"
-                signal = "Call buildup with Put reduction - Bullish sentiment"
-                confidence = "High"
-            elif total_call_chng_oi < -threshold_strong and total_put_chng_oi > threshold_moderate:
-                direction = "Strong Bearish"
-                signal = "Heavy Put writing + Call unwinding - Bears adding positions"
-                confidence = "Very High"
-            elif total_call_chng_oi < 0 and total_put_chng_oi > threshold_moderate:
-                direction = "Bearish"
-                signal = "Put buildup with Call reduction - Bearish sentiment"
-                confidence = "High"
-            elif total_call_chng_oi > threshold_moderate and total_put_chng_oi > threshold_moderate:
-                direction = "Neutral - High Volatility Expected"
-                signal = "Both Call & Put OI increasing - Big move expected"
-                confidence = "Medium"
-            elif total_call_chng_oi < -threshold_moderate and total_put_chng_oi < -threshold_moderate:
-                direction = "Neutral - Unwinding"
-                signal = "Both Call & Put OI decreasing - Position squaring"
-                confidence = "Low"
-            elif abs(total_call_chng_oi) < threshold_moderate and abs(total_put_chng_oi) < threshold_moderate:
-                direction = "Neutral"
-                signal = "Minimal OI changes - Low conviction"
-                confidence = "Low"
-            else:
-                if abs(total_call_chng_oi) > abs(total_put_chng_oi):
-                    if total_call_chng_oi > 0:
-                        direction = "Moderately Bullish"
-                        signal = "Call OI buildup dominant"
-                        confidence = "Medium"
-                    else:
-                        direction = "Moderately Bearish"
-                        signal = "Call OI unwinding dominant"
-                        confidence = "Medium"
-                else:
-                    if total_put_chng_oi > 0:
-                        direction = "Moderately Bearish"
-                        signal = "Put OI buildup dominant"
-                        confidence = "Medium"
-                    else:
-                        direction = "Moderately Bullish"
-                        signal = "Put OI unwinding dominant"
-                        confidence = "Medium"
-            
-            self.logger.info(f"📊 OI Change: Call {total_call_chng_oi:+,} | Put {total_put_chng_oi:+,} → {direction}")
-            
-            return {
-                'total_call_oi_change': int(total_call_chng_oi),
-                'total_put_oi_change': int(total_put_chng_oi),
-                'direction': direction,
-                'signal': signal,
-                'confidence': confidence
-            }
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error analyzing OI change: {e}")
-            return {
-                'total_call_oi_change': 0,
-                'total_put_oi_change': 0,
-                'direction': 'Error',
-                'signal': str(e),
-                'confidence': 'N/A'
-            }
-
     def analyze_option_chain(self, oc_df, spot_price):
         """Analyze option chain for trading signals"""
         if oc_df is None or oc_df.empty:
@@ -857,7 +764,7 @@ class NiftyAnalyzer:
             }
         }
     
-    def generate_recommendation(self, oc_analysis, tech_analysis, oi_change_analysis):
+    def generate_recommendation(self, oc_analysis, tech_analysis):
         """Generate trading recommendation WITH DUAL MOMENTUM FILTER"""
         if not oc_analysis or not tech_analysis:
             return {"recommendation": "Insufficient data", "bias": "Neutral", "confidence": "Low", "reasons": []}
@@ -2474,7 +2381,7 @@ class NiftyAnalyzer:
             tech_analysis = self.get_sample_tech_analysis()
         
         self.logger.info("🎯 Generating Trading Recommendation with Dual Momentum...")
-        recommendation = self.generate_recommendation(oc_analysis, tech_analysis, oi_change_analysis)
+        recommendation = self.generate_recommendation(oc_analysis, tech_analysis)
         
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
@@ -2508,7 +2415,6 @@ class NiftyAnalyzer:
             'oc_analysis': oc_analysis,
             'tech_analysis': tech_analysis,
             'recommendation': recommendation,
-            'oi_change_analysis': oi_change_analysis,
             'html_report': html_report
         }
 
@@ -2522,5 +2428,4 @@ if __name__ == "__main__":
     print(f"RSI (1H): {result['tech_analysis']['rsi']}")
     print(f"1H Momentum: {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
     print(f"5H Momentum: {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
-    print(f"OI Change Direction: {result['oi_change_analysis']['direction']} ({result['oi_change_analysis']['confidence']})")
     print(f"Check your email for the detailed report!")
