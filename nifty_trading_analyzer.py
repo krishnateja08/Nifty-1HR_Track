@@ -3314,13 +3314,28 @@ class NiftyAnalyzer:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
+        :root {{
+            --gold:        #c9a84c;
+            --gold-light:  #f0d080;
+            --gold-bright: #ffd700;
+            --gold-dim:    #8a6a20;
+            --gold-pale:   #e8d090;
+            --dark-bg:     #0d0800;
+            --dark-bg2:    #130e02;
+            --dark-card:   #1a1200;
+            --dark-border: #2a1e06;
+            --dark-border2:#3a2a08;
+            --text-main:   #c8a84a;
+            --text-dim:    #7a6030;
+            --text-bright: #f0d080;
+        }}
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{
-            font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-            background: linear-gradient(160deg, #010810 0%, #020c1a 50%, #010e14 100%);
-            color: #80b8d8;
+            font-family: 'Cormorant Garamond', 'Georgia', serif;
+            background: linear-gradient(160deg, #0d0800 0%, #130e02 50%, #0a0700 100%);
+            color: var(--text-main);
             padding: 15px;
             line-height: 1.6;
             min-height: 100vh;
@@ -3330,69 +3345,106 @@ class NiftyAnalyzer:
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
             background: repeating-linear-gradient(
                 0deg, transparent, transparent 2px,
-                rgba(0,168,255,.003) 2px, rgba(0,168,255,.003) 4px
+                rgba(201,168,76,.003) 2px, rgba(201,168,76,.003) 4px
             );
         }}
         .container {{
             position: relative; z-index: 1;
             max-width: 1400px; margin: 0 auto;
-            background: linear-gradient(160deg, #020b18 0%, #031525 100%);
-            border-radius: 16px;
-            box-shadow: 0 0 0 1px #041428, 0 0 60px rgba(0,150,220,.08), 0 24px 80px rgba(0,0,0,.8);
+            background: linear-gradient(160deg, #100c01 0%, #1a1200 100%);
+            border-radius: 4px;
+            box-shadow: 0 0 0 1px #2a1e06, 0 0 60px rgba(201,168,76,.06), 0 24px 80px rgba(0,0,0,.9);
             padding: 30px;
-            border: 1px solid #0a3d5c;
+            border: 1px solid #3a2a08;
         }}
+
+        /* ══════════════════════════════════════════
+           HEADER — Art Deco Gold
+        ══════════════════════════════════════════ */
         .header {{
             text-align: center;
-            background: linear-gradient(135deg, #020e1c 0%, #031a2c 100%);
-            padding: 28px 25px;
-            border-radius: 12px;
+            background: linear-gradient(180deg, #0d0800 0%, #1a1200 60%, #0d0800 100%);
+            padding: 32px 25px 28px;
             margin-bottom: 28px;
-            border: 1px solid #0a3d5c;
+            border: 1px solid #3a2a08;
             position: relative;
             overflow: hidden;
         }}
+        /* top ornamental line */
         .header::after {{
             content: '';
             position: absolute; top: 0; left: 0; right: 0; height: 2px;
-            background: linear-gradient(90deg, transparent 5%, #0088bb 30%, #00c8ff 50%, #0088bb 70%, transparent 95%);
+            background: linear-gradient(90deg, transparent 5%, var(--gold-dim) 25%, var(--gold-bright) 50%, var(--gold-dim) 75%, transparent 95%);
         }}
+        /* bottom ornamental line */
         .header::before {{
             content: '';
             position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, #00c8ff20, transparent);
+            background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
         }}
+        /* corner diamonds */
+        .header-corner-tl, .header-corner-tr, .header-corner-bl, .header-corner-br {{
+            position: absolute; width: 8px; height: 8px;
+            background: var(--gold);
+            transform: rotate(45deg);
+        }}
+        .header-corner-tl {{ top: 8px; left: 16px; }}
+        .header-corner-tr {{ top: 8px; right: 16px; }}
+        .header-corner-bl {{ bottom: 8px; left: 16px; }}
+        .header-corner-br {{ bottom: 8px; right: 16px; }}
+
         .header h1 {{
-            font-family: 'Orbitron', monospace;
-            color: #00e5ff;
-            font-size: 26px;
-            font-weight: 900;
-            margin-bottom: 12px;
-            letter-spacing: 4px;
-            text-shadow: 0 0 40px rgba(0,220,255,.7), 0 0 80px rgba(0,180,255,.3);
+            font-family: 'Cinzel Decorative', serif;
+            color: var(--gold-light);
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            text-shadow: 0 0 40px rgba(201,168,76,.5), 0 2px 4px rgba(0,0,0,.8);
         }}
-        .timestamp {{ color: #2a8aaa; font-size: 13px; font-weight: 700; margin-top: 10px; letter-spacing: 1.5px; }}
+        .timestamp {{ color: var(--gold-dim); font-size: 12px; font-weight: 600; margin-top: 10px; letter-spacing: 2px; font-family: 'Cinzel', serif; }}
         .timeframe-badge {{
-            display: inline-block;
-            background: rgba(0,200,255,.15);
-            border: 1px solid #00c8ff66;
-            color: #00e5ff;
-            padding: 6px 20px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--gold-dim);
+            padding: 8px 0;
+            font-size: 11px;
+            font-weight: 600;
             margin-top: 10px;
-            letter-spacing: 3px;
-            text-shadow: 0 0 12px rgba(0,220,255,.6);
+            letter-spacing: 4px;
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
         }}
+        .timeframe-badge::before, .timeframe-badge::after {{
+            content: '';
+            display: inline-block;
+            width: 60px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold-dim));
+        }}
+        .timeframe-badge::after {{ background: linear-gradient(90deg, var(--gold-dim), transparent); }}
+        /* diamond dot in timeframe badge */
+        .timeframe-inner {{
+            display: inline-flex; align-items: center; gap: 10px;
+        }}
+        .timeframe-inner::before, .timeframe-inner::after {{
+            content: '◆';
+            color: var(--gold);
+            font-size: 8px;
+        }}
+
+        /* ══════════════════════════════════════════
+           MOMENTUM BOXES
+        ══════════════════════════════════════════ */
         .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
         .momentum-box {{
             background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
             color: var(--momentum-text);
             padding: 22px;
-            border-radius: 12px;
+            border-radius: 2px;
             text-align: center;
-            box-shadow: 0 8px 28px rgba(0,0,0,.5);
+            box-shadow: 0 8px 28px rgba(0,0,0,.7);
             border: 1px solid var(--momentum-border);
             position: relative;
             overflow: hidden;
@@ -3404,26 +3456,31 @@ class NiftyAnalyzer:
             opacity: 0.5;
         }}
         .momentum-box h3 {{
-            font-size: 12px;
-            font-weight: 700;
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             margin-bottom: 10px;
             opacity: 0.85;
         }}
         .momentum-box .value {{
-            font-family: 'Orbitron', monospace;
-            font-size: 34px;
-            font-weight: 900;
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            font-weight: 700;
             margin: 10px 0;
             text-shadow: 0 0 20px currentColor;
         }}
-        .momentum-box .signal {{ font-size: 13px; font-weight: 600; opacity: 0.9; letter-spacing: .5px; }}
+        .momentum-box .signal {{ font-size: 12px; font-weight: 600; opacity: 0.9; letter-spacing: 1px; font-family: 'Cinzel', serif; }}
+
+        /* ══════════════════════════════════════════
+           RECOMMENDATION BOX
+        ══════════════════════════════════════════ */
         .recommendation-box {{
             background: linear-gradient(135deg, {rec_color} 0%, {rec_color}cc 100%);
             color: {rec_text_col};
             padding: 24px;
-            border-radius: 12px;
+            border-radius: 2px;
             text-align: center;
             margin-bottom: 22px;
             box-shadow: 0 8px 32px {rec_glow}, 0 0 0 1px {rec_border}44;
@@ -3432,120 +3489,165 @@ class NiftyAnalyzer:
             overflow: hidden;
         }}
         .recommendation-box::before {{
-            content: 'SIGNAL';
+            content: '◆ SIGNAL ◆';
             position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
             font-size: 9px; letter-spacing: 4px; color: {rec_border}99;
+            font-family: 'Cinzel', serif; white-space: nowrap;
         }}
         .recommendation-box h2 {{
-            font-family: 'Orbitron', monospace;
-            font-size: 30px;
-            font-weight: 900;
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 28px;
+            font-weight: 700;
             margin-bottom: 8px;
             letter-spacing: 4px;
             text-shadow: 0 0 30px {rec_glow};
         }}
-        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.85; font-weight: 500; letter-spacing: .5px; }}
+        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.85; font-weight: 500; letter-spacing: .5px; font-family: 'Cinzel', serif; }}
         .signal-badge {{
             display: inline-block;
             padding: 5px 14px;
-            border-radius: 20px;
+            border-radius: 2px;
             font-size: 12px;
             font-weight: 700;
             margin: 8px 4px 0 4px;
             letter-spacing: 1px;
+            font-family: 'Cinzel', serif;
         }}
-        .bullish {{ background: rgba(0,200,140,.15); border: 1px solid #00aa55; color: #00ff8c; }}
-        .bearish {{ background: rgba(255,60,80,.15); border: 1px solid #cc2233; color: #ff6070; }}
+        .bullish {{ background: rgba(100,160,0,.12); border: 1px solid #8aaa00; color: #ccee44; }}
+        .bearish {{ background: rgba(180,50,0,.12); border: 1px solid #aa3300; color: #ee6644; }}
+
+        /* ══════════════════════════════════════════
+           SECTION TITLES — Art Deco Gold (matching screenshot)
+        ══════════════════════════════════════════ */
         .section {{ margin-bottom: 24px; }}
         .section-title {{
-            background: linear-gradient(135deg, #031a2c 0%, #020e1c 100%);
-            color: #00e5ff;
-            padding: 13px 20px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 800;
+            background: linear-gradient(180deg, #1a1200 0%, #100c01 100%);
+            color: var(--gold-light);
+            padding: 14px 22px;
+            font-size: 13px;
+            font-weight: 600;
             margin-bottom: 14px;
-            letter-spacing: 2.5px;
+            letter-spacing: 4px;
             text-transform: uppercase;
-            border: 1px solid #0a4a6a;
-            border-left: 4px solid #00c8ff;
+            border-top: 1px solid var(--gold);
+            border-bottom: 1px solid var(--gold-dim);
+            border-left: none;
+            border-right: none;
             display: flex;
             align-items: center;
-            gap: 10px;
-            text-shadow: 0 0 20px rgba(0,220,255,.4);
+            justify-content: center;
+            gap: 14px;
+            text-shadow: 0 0 20px rgba(201,168,76,.4);
+            font-family: 'Cinzel', serif;
+            position: relative;
         }}
-        .section-title::before {{ content: '▸'; color: #00e5ff; font-size: 14px; }}
+        .section-title::before, .section-title::after {{
+            content: '◆';
+            color: var(--gold);
+            font-size: 10px;
+            flex-shrink: 0;
+        }}
+        /* side lines flanking the text */
+        .section-title span.st-line {{
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold-dim));
+        }}
+        .section-title span.st-line-r {{
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold-dim), transparent);
+        }}
+
+        /* ══════════════════════════════════════════
+           DATA GRID / ITEMS
+        ══════════════════════════════════════════ */
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }}
         .data-item {{
-            background: rgba(0,100,170,.06);
+            background: linear-gradient(135deg, #1a1200 0%, #130e02 100%);
             padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #0a2a3a;
-            border-left: 3px solid #0a5a7a;
+            border: 1px solid var(--dark-border2);
+            border-top: 2px solid var(--gold-dim);
             transition: border-color .2s;
         }}
-        .data-item:hover {{ border-left-color: #00c8ff; }}
+        .data-item:hover {{ border-top-color: var(--gold); }}
         .data-item .label {{
-            color: #1a6a8a;
-            font-size: 10px;
+            color: var(--text-dim);
+            font-size: 9px;
             text-transform: uppercase;
             font-weight: 700;
-            letter-spacing: 1.5px;
-            margin-bottom: 6px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            font-family: 'Cinzel', serif;
         }}
-        .data-item .value {{ color: #80d8ff; font-size: 18px; font-weight: 700; }}
+        .data-item .value {{ color: var(--gold-light); font-size: 18px; font-weight: 600; font-family: 'Cinzel', serif; }}
+
+        /* ══════════════════════════════════════════
+           REASONS / ANALYSIS SUMMARY
+        ══════════════════════════════════════════ */
         .reasons {{
-            background: rgba(0,80,140,.08);
-            border-left: 4px solid #0088bb;
+            background: linear-gradient(135deg, #1a1200 0%, #130e02 100%);
+            border: 1px solid var(--dark-border2);
+            border-left: 4px solid var(--gold-dim);
             padding: 16px;
-            border-radius: 0 10px 10px 0;
-            border: 1px solid #0a3050;
-            border-left: 4px solid #0088bb;
         }}
-        .reasons strong {{ color: #00c8ff; font-size: 14px; letter-spacing: 1px; }}
+        .reasons strong {{ color: var(--gold-light); font-size: 14px; letter-spacing: 1px; font-family: 'Cinzel', serif; }}
         .reasons ul {{ margin: 10px 0 0 0; padding-left: 22px; }}
-        .reasons li {{ margin: 6px 0; color: #3a8aaa; font-size: 13px; line-height: 1.6; }}
+        .reasons li {{ margin: 6px 0; color: var(--text-main); font-size: 13px; line-height: 1.6; }}
+
+        /* ══════════════════════════════════════════
+           STRATEGY CARDS
+        ══════════════════════════════════════════ */
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }}
         .strategy-card {{
-            background: rgba(0,80,140,.06);
-            border: 1px solid #0a2a3a;
-            border-radius: 10px;
+            background: linear-gradient(135deg, #1a1200 0%, #130e02 100%);
+            border: 1px solid var(--dark-border2);
+            border-top: 2px solid var(--gold-dim);
             padding: 16px;
         }}
-        .strategy-header {{ border-bottom: 1px solid #0a3050; padding-bottom: 8px; margin-bottom: 10px; }}
-        .strategy-header h4 {{ color: #00c8ff; font-size: 14px; font-weight: 700; letter-spacing: 1px; }}
+        .strategy-header {{ border-bottom: 1px solid var(--dark-border2); padding-bottom: 8px; margin-bottom: 10px; }}
+        .strategy-header h4 {{ color: var(--gold-light); font-size: 14px; font-weight: 600; letter-spacing: 1px; font-family: 'Cinzel', serif; }}
         .strategy-type {{
             display: inline-block;
-            background: rgba(0,100,160,.15);
-            color: #3a8aaa;
+            background: rgba(201,168,76,.08);
+            color: var(--gold-dim);
             padding: 3px 8px;
-            border-radius: 8px;
             font-size: 10px;
             margin-top: 4px;
             font-weight: 600;
-            border: 1px solid #0a3050;
+            border: 1px solid var(--dark-border2);
             letter-spacing: .5px;
+            font-family: 'Cinzel', serif;
         }}
-        .strategy-body p {{ margin: 7px 0; font-size: 13px; line-height: 1.5; color: #4a7a9a; }}
-        .strategy-body strong {{ color: #2a8aaa; }}
-        .recommendation-stars {{ color: #cc9900; font-size: 13px; font-weight: 700; }}
+        .strategy-body p {{ margin: 7px 0; font-size: 13px; line-height: 1.5; color: var(--text-main); }}
+        .strategy-body strong {{ color: var(--gold); }}
+        .recommendation-stars {{ color: var(--gold-bright); font-size: 13px; font-weight: 700; }}
+
+        /* ══════════════════════════════════════════
+           FOOTER
+        ══════════════════════════════════════════ */
         .footer {{
             text-align: center;
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid #0a3050;
-            color: #1a4a6a;
+            border-top: 1px solid var(--dark-border2);
+            color: var(--text-dim);
             font-size: 11px;
             line-height: 1.8;
-            letter-spacing: .5px;
+            letter-spacing: 1px;
+            font-family: 'Cinzel', serif;
         }}
+
+        /* ══════════════════════════════════════════
+           MOMENTUM ANIMATIONS
+        ══════════════════════════════════════════ */
         @keyframes momentum-glow-up {{
-            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.5), 0 0 0 1px var(--momentum-border); }}
-            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 24px var(--momentum-border); }}
+            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.6), 0 0 0 1px var(--momentum-border); }}
+            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.6), 0 0 24px var(--momentum-border); }}
         }}
         @keyframes momentum-glow-down {{
-            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.5), 0 0 0 1px var(--momentum-border); }}
-            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 24px var(--momentum-border); }}
+            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.6), 0 0 0 1px var(--momentum-border); }}
+            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.6), 0 0 24px var(--momentum-border); }}
         }}
         .momentum-box.glow-anim {{ animation: momentum-glow-up 3s ease-in-out infinite; }}
         .momentum-box::before {{
@@ -3555,11 +3657,11 @@ class NiftyAnalyzer:
             box-shadow: 0 0 10px var(--momentum-border);
         }}
         .momentum-bar-wrap {{
-            margin-top: 14px; height: 4px;
-            background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;
+            margin-top: 14px; height: 3px;
+            background: rgba(255,255,255,0.05); overflow: hidden;
         }}
         .momentum-bar-fill {{
-            height: 100%; border-radius: 2px;
+            height: 100%;
             background: var(--momentum-border);
             box-shadow: 0 0 8px var(--momentum-border);
             transition: width 0.6s ease;
@@ -3575,8 +3677,14 @@ class NiftyAnalyzer:
 
     <!-- HEADER -->
     <div class="header">
-        <h1>&#128202; {title}</h1>
-        <div class="timeframe-badge">&#9201; 1-HOUR TIMEFRAME</div>
+        <span class="header-corner-tl"></span>
+        <span class="header-corner-tr"></span>
+        <span class="header-corner-bl"></span>
+        <span class="header-corner-br"></span>
+        <h1>&#9830; {title} &#9830;</h1>
+        <div class="timeframe-badge">
+            <div class="timeframe-inner">ONE HOUR TIMEFRAME</div>
+        </div>
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
@@ -3614,7 +3722,7 @@ class NiftyAnalyzer:
 
     <!-- TECHNICAL ANALYSIS -->
     <div class="section">
-        <div class="section-title">Technical Analysis (1H)</div>
+        <div class="section-title"><span class="st-line"></span>Technical Analysis (1H)<span class="st-line-r"></span></div>
         <div class="data-grid">
             <div class="data-item"><div class="label">Current Price</div><div class="value">&#8377;{tech_analysis.get('current_price','N/A')}</div></div>
             <div class="data-item"><div class="label">RSI (14)</div><div class="value">{tech_analysis.get('rsi','N/A')}</div></div>
@@ -3627,31 +3735,31 @@ class NiftyAnalyzer:
 
     <!-- SUPPORT & RESISTANCE — WIDGET 04 BLOOMBERG TABLE -->
     <div class="section">
-        <div class="section-title">Support &amp; Resistance (1H)</div>
+        <div class="section-title"><span class="st-line"></span>Support &amp; Resistance (1H)<span class="st-line-r"></span></div>
         {sr_widget_html}
     </div>
 
     <!-- PIVOT POINTS -->
     <div class="section">
-        <div class="section-title">Pivot Points (Traditional - 30 Min)</div>
+        <div class="section-title"><span class="st-line"></span>Pivot Points (Traditional - 30 Min)<span class="st-line-r"></span></div>
         {pivot_widget_html}
     </div>
 
     <!-- OPTION CHAIN — WIDGET 02 PLASMA RADIAL -->
     <div class="section">
-        <div class="section-title">Option Chain Analysis</div>
+        <div class="section-title"><span class="st-line"></span>Option Chain Analysis<span class="st-line-r"></span></div>
         {oc_plasma_widget_html}
     </div>
 
     <!-- TOP 10 OI — WIDGET 01 NEON LEDGER -->
     <div class="section">
-        <div class="section-title">Top 10 Open Interest (5 CE + 5 PE)</div>
+        <div class="section-title"><span class="st-line"></span>Top 10 Open Interest (5 CE + 5 PE)<span class="st-line-r"></span></div>
         {oi_neon_ledger_html}
     </div>
 
     <!-- ANALYSIS SUMMARY -->
     <div class="section">
-        <div class="section-title">Analysis Summary</div>
+        <div class="section-title"><span class="st-line"></span>Analysis Summary<span class="st-line-r"></span></div>
         <div class="reasons">
             <strong>&#128161; Key Factors:</strong>
             <ul>{''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}</ul>
@@ -3660,9 +3768,9 @@ class NiftyAnalyzer:
 
     <!-- ═══ STRIKE RECOMMENDATIONS — DARK TICKER CARD ═══ -->
     <div class="section">
-        <div class="section-title">Strike Recommendations</div>
-        <p style="color:#1a5a7a;margin-bottom:16px;font-size:13px;line-height:1.6;">
-            <strong style="color:#3a8aaa;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
+        <div class="section-title"><span class="st-line"></span>Strike Recommendations<span class="st-line-r"></span></div>
+        <p style="color:#7a6030;margin-bottom:16px;font-size:13px;line-height:1.6;">
+            <strong style="color:#c9a84c;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
             Actionable trades with specific strike prices, LTP, targets &amp; risk management.
         </p>
         {strike_ticker_card_html}
@@ -3670,9 +3778,9 @@ class NiftyAnalyzer:
 
     <!-- OPTIONS STRATEGIES -->
     <div class="section">
-        <div class="section-title">Options Strategies</div>
-        <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;letter-spacing:.5px;">
-            Based on <strong style="color:#3a8aaa;">{recommendation['bias']}</strong> bias:
+        <div class="section-title"><span class="st-line"></span>Options Strategies<span class="st-line-r"></span></div>
+        <p style="color:#7a6030;margin-bottom:14px;font-size:13px;letter-spacing:.5px;">
+            Based on <strong style="color:#c9a84c;">{recommendation['bias']}</strong> bias:
         </p>
         <div class="strategies-grid">{strategies_html}</div>
     </div>
@@ -3680,7 +3788,7 @@ class NiftyAnalyzer:
     <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Bloomberg S/R Table &nbsp;|&nbsp; Dual Momentum (1H + 5H) &nbsp;|&nbsp; Neon Ledger OI &nbsp;|&nbsp; Dark Ticker Card Strike</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; Art Deco Gold Theme &nbsp;&#9830;&nbsp; Neon Runway Pivot &nbsp;&#9830;&nbsp; Bloomberg S/R Table &nbsp;&#9830;&nbsp; Dual Momentum (1H + 5H) &nbsp;&#9830;&nbsp; Neon Ledger OI &nbsp;&#9830;&nbsp; Dark Ticker Card Strike</p>
     </div>
 
 </div>
