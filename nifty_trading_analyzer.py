@@ -4,6 +4,7 @@ THEME:  DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
 PIVOT:  WIDGET 01 — NEON RUNWAY  |  High-contrast · Bright Cyan · Vivid R/S colour labels
 S/R:    WIDGET 04 — BLOOMBERG TABLE  |  Black · Gold/Amber · Distance column · Strength dots · Table layout
 OI:     WIDGET 01 — NEON LEDGER  |  Glowing rank badges · Inline OI heat bars · Vivid split header
+STRIKE: DARK TICKER CARD  |  High-visibility · Neon highlights · Clearly readable all fields
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
@@ -1535,14 +1536,8 @@ class NiftyAnalyzer:
 
     # =========================================================================
     # WIDGET 02 — PLASMA RADIAL | Option Chain Analysis
-    # Circular PCR gauge · Neon plasma arcs · Bright vivid labels
     # =========================================================================
     def _build_oc_plasma_widget(self, oc_analysis):
-        """
-        Plasma Radial widget for Option Chain Analysis.
-        Left: animated SVG circular PCR gauge.
-        Right: bright vivid stat cards + OI R/S levels with progress bars.
-        """
         pcr          = oc_analysis.get('pcr', 0)
         max_pain     = oc_analysis.get('max_pain', 'N/A')
         oi_sentiment = oc_analysis.get('oi_sentiment', 'N/A')
@@ -1553,7 +1548,6 @@ class NiftyAnalyzer:
         resistances  = oc_analysis.get('resistances', [])
         supports     = oc_analysis.get('supports', [])
 
-        # Sentiment colour
         if oi_sentiment == 'Bullish':
             sent_col  = '#00ff8c'
             sent_bg   = 'rgba(0,200,120,.14)'
@@ -1565,7 +1559,6 @@ class NiftyAnalyzer:
             sent_brd  = '#cc223366'
             sent_icon = '&#8681;'
 
-        # PCR gauge arc: circle r=65, circumference ≈ 408.4
         circ      = 408.4
         pcr_ratio = min(pcr / 2.0, 1.0)
         arc_len   = pcr_ratio * (circ * 0.69)
@@ -1580,7 +1573,6 @@ class NiftyAnalyzer:
         else:
             arc_col1, arc_col2 = '#cc2233', '#ff6070'
 
-        # Build R level bars
         r_bars_html = ''
         for idx, level in enumerate(resistances):
             lbl   = f"R{idx+1}"
@@ -1592,7 +1584,6 @@ class NiftyAnalyzer:
                 <span class="w2oc-level-price w2oc-r-price">&#8377;{level:,.0f}</span>
             </div>'''
 
-        # Build S level bars
         s_bars_html = ''
         for idx, level in enumerate(supports):
             lbl   = f"S{idx+1}"
@@ -1627,8 +1618,6 @@ class NiftyAnalyzer:
                 overflow: hidden;
                 box-shadow: 0 0 60px rgba(0,100,255,.07), 0 24px 80px rgba(0,0,0,.95);
             }}
-
-            /* Header */
             .w2oc-hdr {{
                 background: linear-gradient(135deg, #020810, #031220);
                 border-bottom: 1px solid #0a2040;
@@ -1670,14 +1659,10 @@ class NiftyAnalyzer:
                 0%,100% {{ box-shadow: 0 0 0 0 rgba(0,200,255,.3); }}
                 50%      {{ box-shadow: 0 0 0 6px rgba(0,200,255,0); }}
             }}
-
-            /* Body layout */
             .w2oc-body {{
                 display: grid;
                 grid-template-columns: 240px 1fr;
             }}
-
-            /* Left gauge column */
             .w2oc-gauge-col {{
                 padding: 24px 16px;
                 border-right: 1px solid #0a2040;
@@ -1708,8 +1693,6 @@ class NiftyAnalyzer:
                 letter-spacing: 2px; text-transform: uppercase;
                 text-shadow: 0 0 14px {arc_col2}99;
             }}
-
-            /* Sentiment pill */
             .w2oc-sent-pill {{
                 background: {sent_bg}; border: 1px solid {sent_brd};
                 border-radius: 10px; padding: 10px 16px;
@@ -1724,8 +1707,6 @@ class NiftyAnalyzer:
                 font-size: 20px; font-weight: 700; color: {sent_col};
                 text-shadow: 0 0 18px {sent_col}99; letter-spacing: 1px;
             }}
-
-            /* Max pain */
             .w2oc-maxpain {{
                 background: rgba(0,100,200,.1); border: 1px solid #0a3a5a;
                 border-radius: 10px; padding: 10px 16px;
@@ -1741,14 +1722,10 @@ class NiftyAnalyzer:
                 font-size: 20px; font-weight: 700; color: #00ddff;
                 text-shadow: 0 0 18px rgba(0,220,255,.7); letter-spacing: -0.5px;
             }}
-
-            /* Right stats + levels */
             .w2oc-right {{
                 padding: 20px 22px;
                 display: flex; flex-direction: column; gap: 18px;
             }}
-
-            /* Stat cards */
             .w2oc-stats-row {{
                 display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
             }}
@@ -1776,11 +1753,7 @@ class NiftyAnalyzer:
                 font-size: 10px; margin-top: 5px; color: var(--sc-col);
                 font-family: 'IBM Plex Mono', monospace; opacity: 0.65;
             }}
-
-            /* Divider */
             .w2oc-div {{ height: 1px; background: linear-gradient(90deg, transparent, #0a3050, transparent); }}
-
-            /* Level rows */
             .w2oc-levels-section {{ display: flex; flex-direction: column; gap: 10px; }}
             .w2oc-levels-title {{
                 font-size: 10px; font-weight: 700; letter-spacing: 2px;
@@ -1806,8 +1779,6 @@ class NiftyAnalyzer:
             }}
             .w2oc-r-price {{ color: #ff8090; text-shadow: 0 0 10px #ff405066; }}
             .w2oc-s-price {{ color: #33ffaa; text-shadow: 0 0 10px #00e67666; }}
-
-            /* Footer */
             .w2oc-footer {{
                 background: #020810; border-top: 1px solid #0a2040;
                 padding: 10px 22px;
@@ -1819,7 +1790,6 @@ class NiftyAnalyzer:
         </style>
 
         <div class="w2oc-wrap">
-            <!-- Header -->
             <div class="w2oc-hdr">
                 <div class="w2oc-hdr-icon">&#128202;</div>
                 <div class="w2oc-hdr-text">
@@ -1828,11 +1798,7 @@ class NiftyAnalyzer:
                 </div>
                 <div class="w2oc-hdr-badge">&#9679; LIVE</div>
             </div>
-
-            <!-- Body -->
             <div class="w2oc-body">
-
-                <!-- Left: PCR Gauge -->
                 <div class="w2oc-gauge-col">
                     <div class="w2oc-gauge-wrap">
                         <svg viewBox="0 0 170 170">
@@ -1846,28 +1812,22 @@ class NiftyAnalyzer:
                                     <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                                 </filter>
                             </defs>
-                            <!-- Outer decorative ring -->
                             <circle cx="85" cy="85" r="80" fill="none" stroke="#061830" stroke-width="1"/>
-                            <!-- BG track -->
                             <circle cx="85" cy="85" r="65" fill="none" stroke="#0a1a2a" stroke-width="11"
                                 stroke-dasharray="{circ * 0.69:.1f} {circ:.1f}"
                                 stroke-dashoffset="{arc_offset:.1f}"
                                 stroke-linecap="round"/>
-                            <!-- Glow halo (wide, faint) -->
                             <circle cx="85" cy="85" r="65" fill="none" stroke="{arc_col2}" stroke-width="18"
                                 stroke-dasharray="{arc_len:.1f} {circ:.1f}"
                                 stroke-dashoffset="{arc_offset:.1f}"
                                 stroke-linecap="round" opacity="0.10"/>
-                            <!-- Main arc -->
                             <circle cx="85" cy="85" r="65" fill="none"
                                 stroke="url(#pcr-arc-grad)" stroke-width="11"
                                 stroke-dasharray="{arc_len:.1f} {circ:.1f}"
                                 stroke-dashoffset="{arc_offset:.1f}"
                                 stroke-linecap="round"
                                 filter="url(#arc-glow)"/>
-                            <!-- Inner ring -->
                             <circle cx="85" cy="85" r="52" fill="none" stroke="#061220" stroke-width="1"/>
-                            <!-- Tick marks -->
                             <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(-110 85 85)"/>
                             <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(-55 85 85)"/>
                             <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(0 85 85)"/>
@@ -1881,23 +1841,16 @@ class NiftyAnalyzer:
                         </div>
                     </div>
                     <div class="w2oc-gauge-title">&#9679; PCR GAUGE</div>
-
-                    <!-- Sentiment -->
                     <div class="w2oc-sent-pill">
                         <div class="w2oc-sent-lbl">OI Sentiment</div>
                         <div class="w2oc-sent-val">{sent_icon} {oi_sentiment.upper()}</div>
                     </div>
-
-                    <!-- Max Pain -->
                     <div class="w2oc-maxpain">
                         <div class="w2oc-maxpain-lbl">Max Pain Strike</div>
                         <div class="w2oc-maxpain-val">&#8377;{max_pain:,}</div>
                     </div>
                 </div>
-
-                <!-- Right: Stats + Levels -->
                 <div class="w2oc-right">
-                    <!-- Stat cards -->
                     <div class="w2oc-stats-row">
                         <div class="w2oc-stat-card" style="--sc-accent:#ff5060;--sc-col:#ff8090;">
                             <div class="w2oc-stat-card-lbl">Call Buildup (OI)</div>
@@ -1910,10 +1863,7 @@ class NiftyAnalyzer:
                             <div class="w2oc-stat-card-sub">Avg IV: {avg_put_iv:.1f}%</div>
                         </div>
                     </div>
-
                     <div class="w2oc-div"></div>
-
-                    <!-- OI Resistance -->
                     <div class="w2oc-levels-section">
                         <div class="w2oc-levels-title" style="color:#ff5060;">
                             <span style="width:8px;height:8px;border-radius:50%;background:#ff5060;display:inline-block;box-shadow:0 0 8px #ff5060;flex-shrink:0;"></span>
@@ -1921,10 +1871,7 @@ class NiftyAnalyzer:
                         </div>
                         {r_bars_html if r_bars_html else '<div style="color:#2a4a6a;font-size:12px;padding:6px 0;">No resistance data</div>'}
                     </div>
-
                     <div class="w2oc-div"></div>
-
-                    <!-- OI Support -->
                     <div class="w2oc-levels-section">
                         <div class="w2oc-levels-title" style="color:#00e676;">
                             <span style="width:8px;height:8px;border-radius:50%;background:#00e676;display:inline-block;box-shadow:0 0 8px #00e676;flex-shrink:0;"></span>
@@ -1934,8 +1881,6 @@ class NiftyAnalyzer:
                     </div>
                 </div>
             </div>
-
-            <!-- Footer -->
             <div class="w2oc-footer">
                 <span class="w2oc-footer-l">WIDGET 02 &middot; PLASMA RADIAL &middot; OPTION CHAIN ANALYSIS</span>
                 <span class="w2oc-footer-r">
@@ -1949,7 +1894,7 @@ class NiftyAnalyzer:
         return widget_html
 
     # =========================================================================
-    # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01) — UNCHANGED
+    # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01)
     # =========================================================================
     def _build_pivot_widget(self, pivot_points, current_price, nearest_levels):
         pp = pivot_points
@@ -1992,7 +1937,6 @@ class NiftyAnalyzer:
             dot_pct = 50
 
         def res_row(lbl, val, opacity_name):
-            is_r1   = (lbl == 'R1')
             is_near = is_nearest_r(val)
 
             if opacity_name == 'r1':
@@ -2016,7 +1960,7 @@ class NiftyAnalyzer:
                 near_html = '<span class="w1-near-tag w1-near-r">NEAREST&nbsp;R</span>'
 
             icon_html = ''
-            if is_r1:
+            if lbl == 'R1':
                 icon_html = f'<span class="w1-icon w1-icon-r">&#9650;</span>'
 
             return f'''
@@ -2030,7 +1974,6 @@ class NiftyAnalyzer:
                 </div>'''
 
         def sup_row(lbl, val, opacity_name):
-            is_s1   = (lbl == 'S1')
             is_near = is_nearest_s(val)
 
             if opacity_name == 's1':
@@ -2054,7 +1997,7 @@ class NiftyAnalyzer:
                 near_html = '<span class="w1-near-tag w1-near-s">NEAREST&nbsp;S</span>'
 
             icon_html = ''
-            if is_s1:
+            if lbl == 'S1':
                 icon_html = f'<span class="w1-icon w1-icon-s">&#9660;</span>'
 
             return f'''
@@ -2300,16 +2243,9 @@ class NiftyAnalyzer:
 
     # =========================================================================
     # WIDGET 04 — BLOOMBERG TABLE  |  Support & Resistance (1H)
-    # Black · Gold/Amber · Distance column · Strength dots · Table layout
     # =========================================================================
     def _build_sr_bloomberg_widget(self, tech_resistances, tech_supports, current_price):
-        """
-        Bloomberg-style dark table widget for Support & Resistance levels.
-        Black background · Gold/Amber accents · Distance column · Strength dots.
-        """
-
         def strength_dots(distance_pct, level_type):
-            """Return strength dot HTML based on proximity (closer = stronger)"""
             abs_dist = abs(distance_pct)
             if abs_dist <= 0.3:
                 filled = 5
@@ -2344,7 +2280,6 @@ class NiftyAnalyzer:
                 dots      = strength_dots(dist_pct, 'R')
                 row_opacity = '1' if idx == 0 else ('0.82' if idx == 1 else '0.65')
                 price_size  = '20px' if idx == 0 else ('17px' if idx == 1 else '15px')
-                gold_shade  = '#ffd700' if idx == 0 else ('#e8b800' if idx == 1 else '#c99a00')
                 rows += f'''
                 <tr class="w4-row w4-row-r" style="opacity:{row_opacity};">
                     <td class="w4-td-label">
@@ -2414,7 +2349,6 @@ class NiftyAnalyzer:
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
 
-            /* ── Outer shell ───────────────────────────────────────────── */
             .w4-wrap {{
                 font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
                 background: #000000;
@@ -2426,8 +2360,6 @@ class NiftyAnalyzer:
                     0 0 40px rgba(255, 180, 0, 0.04),
                     0 24px 60px rgba(0,0,0,0.95);
             }}
-
-            /* ── Header bar ────────────────────────────────────────────── */
             .w4-header {{
                 background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
                 border-bottom: 1px solid #1e1e1e;
@@ -2474,8 +2406,6 @@ class NiftyAnalyzer:
                 letter-spacing: 1.5px;
                 color: #3a3a4a;
             }}
-
-            /* ── LTP bar ───────────────────────────────────────────────── */
             .w4-ltp-bar {{
                 background: #0a0800;
                 border-bottom: 1px solid #1e1e1e;
@@ -2513,8 +2443,6 @@ class NiftyAnalyzer:
                 letter-spacing: -0.5px;
                 text-shadow: 0 0 16px rgba(255,215,0,0.5);
             }}
-
-            /* ── Split grid ─────────────────────────────────────────────── */
             .w4-body {{
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -2523,8 +2451,6 @@ class NiftyAnalyzer:
                 padding: 4px 0;
             }}
             .w4-col.r-col {{ border-right: 1px solid #111; }}
-
-            /* ── Col header row ─────────────────────────────────────────── */
             .w4-col-hdr {{
                 display: grid;
                 grid-template-columns: 44px 1fr 90px 80px 1fr;
@@ -2539,8 +2465,6 @@ class NiftyAnalyzer:
                 text-transform: uppercase;
                 color: #333;
             }}
-
-            /* ── Table ──────────────────────────────────────────────────── */
             .w4-table {{
                 width: 100%;
                 border-collapse: collapse;
@@ -2553,15 +2477,11 @@ class NiftyAnalyzer:
             .w4-row-r {{ border-bottom: 1px solid #0f0f0f; }}
             .w4-row-s {{ border-bottom: 1px solid #0f0f0f; }}
             .w4-row:last-child {{ border-bottom: none; }}
-
-            /* ── Table cells ────────────────────────────────────────────── */
             .w4-td-label   {{ padding: 14px 6px 14px 16px; width: 48px; vertical-align: middle; }}
             .w4-td-price   {{ padding: 14px 8px; vertical-align: middle; }}
             .w4-td-dist    {{ padding: 14px 8px; vertical-align: middle; white-space: nowrap; text-align: right; }}
             .w4-td-strength{{ padding: 14px 8px; vertical-align: middle; text-align: center; }}
             .w4-td-bar     {{ padding: 14px 14px 14px 4px; vertical-align: middle; width: 60px; }}
-
-            /* ── Badges ─────────────────────────────────────────────────── */
             .w4-badge {{
                 display: inline-flex; align-items: center; justify-content: center;
                 width: 32px; height: 32px;
@@ -2579,8 +2499,6 @@ class NiftyAnalyzer:
                 border: 1px solid rgba(0,230,118,0.45);
                 color: #00e676;
             }}
-
-            /* ── Distance text ──────────────────────────────────────────── */
             .w4-dist {{
                 display: block;
                 font-family: 'IBM Plex Mono', monospace;
@@ -2598,11 +2516,7 @@ class NiftyAnalyzer:
             .w4-dist-pct-r {{ color: rgba(255,128,153,0.65); }}
             .w4-dist-s     {{ color: #33ffaa; }}
             .w4-dist-pct-s {{ color: rgba(51,255,170,0.65); }}
-
-            /* ── Strength dots wrapper ───────────────────────────────────── */
             .w4-dots {{ display: flex; align-items: center; justify-content: center; }}
-
-            /* ── Mini bar ───────────────────────────────────────────────── */
             .w4-bar-track {{
                 height: 4px;
                 background: #111;
@@ -2616,8 +2530,6 @@ class NiftyAnalyzer:
             }}
             .w4-bar-r {{ background: linear-gradient(90deg, #ff4d6d44, #ff4d6d); }}
             .w4-bar-s {{ background: linear-gradient(90deg, #00e67644, #00e676); }}
-
-            /* ── Footer ─────────────────────────────────────────────────── */
             .w4-footer {{
                 background: #060606;
                 border-top: 1px solid #111;
@@ -2652,8 +2564,6 @@ class NiftyAnalyzer:
         </style>
 
         <div class="w4-wrap">
-
-            <!-- Header -->
             <div class="w4-header">
                 <div class="w4-hdr-half resistance-hdr">
                     <div class="w4-hdr-dot r-dot"></div>
@@ -2666,8 +2576,6 @@ class NiftyAnalyzer:
                     <span class="w4-hdr-tf">1H TIMEFRAME</span>
                 </div>
             </div>
-
-            <!-- LTP strip -->
             <div class="w4-ltp-bar">
                 <div class="w4-ltp-line"></div>
                 <div class="w4-ltp-chip">
@@ -2676,8 +2584,6 @@ class NiftyAnalyzer:
                 </div>
                 <div class="w4-ltp-line"></div>
             </div>
-
-            <!-- Column sub-headers -->
             <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #111;">
                 <div class="w4-col-hdr" style="border-right:1px solid #111;">
                     <span></span>
@@ -2694,8 +2600,6 @@ class NiftyAnalyzer:
                     <span></span>
                 </div>
             </div>
-
-            <!-- Body: R table | S table -->
             <div class="w4-body">
                 <div class="w4-col r-col">
                     <table class="w4-table">
@@ -2708,8 +2612,6 @@ class NiftyAnalyzer:
                     </table>
                 </div>
             </div>
-
-            <!-- Footer -->
             <div class="w4-footer">
                 <span class="w4-footer-left">WIDGET 04 &middot; BLOOMBERG TABLE &middot; PRICE ACTION S/R</span>
                 <span class="w4-footer-right">
@@ -2717,9 +2619,564 @@ class NiftyAnalyzer:
                     LTP &#8377;{current_price:,.1f}
                 </span>
             </div>
-
         </div>
         <!-- ═══ END BLOOMBERG TABLE S/R WIDGET ═══ -->
+        '''
+        return widget_html
+
+    # =========================================================================
+    # DARK TICKER CARD WIDGET — Strike Recommendations
+    # High-contrast · Neon highlights · All fields clearly readable
+    # =========================================================================
+    def _build_strike_ticker_card_widget(self, strike_recommendations, recommendation, tech_analysis):
+        """
+        DARK TICKER CARD widget for Strike Recommendations.
+        Matching the image: dark cards · bright cyan LTP · neon green/red targets
+        · ALL text clearly visible with proper highlight colors
+        """
+        bias          = recommendation['bias']
+        current_price = tech_analysis.get('current_price', 0)
+        confidence    = recommendation['confidence']
+
+        # Header accent color based on bias
+        if bias == 'Bullish':
+            hdr_accent  = '#00ff88'
+            hdr_bg_from = '#003322'
+            hdr_bg_to   = '#001a11'
+            hdr_border  = '#00aa55'
+            bias_color  = '#00ff88'
+            bias_bg     = 'rgba(0,255,136,0.12)'
+            bias_brd    = 'rgba(0,255,136,0.5)'
+        elif bias == 'Bearish':
+            hdr_accent  = '#ff4060'
+            hdr_bg_from = '#330011'
+            hdr_bg_to   = '#1a0008'
+            hdr_border  = '#cc2233'
+            bias_color  = '#ff4060'
+            bias_bg     = 'rgba(255,64,96,0.12)'
+            bias_brd    = 'rgba(255,64,96,0.5)'
+        else:
+            hdr_accent  = '#00c8ff'
+            hdr_bg_from = '#001833'
+            hdr_bg_to   = '#000f1f'
+            hdr_border  = '#0088bb'
+            bias_color  = '#00c8ff'
+            bias_bg     = 'rgba(0,200,255,0.12)'
+            bias_brd    = 'rgba(0,200,255,0.5)'
+
+        def get_option_type_style(opt_type):
+            t = opt_type.upper()
+            if 'ATM' in t and 'OTM' not in t:
+                return {'bg': 'rgba(255,220,0,0.15)', 'color': '#ffe033', 'border': 'rgba(255,220,0,0.6)', 'label': 'ATM'}
+            elif 'OTM' in t:
+                return {'bg': 'rgba(80,160,220,0.15)', 'color': '#55aaff', 'border': 'rgba(80,160,220,0.6)', 'label': 'OTM'}
+            elif 'ITM' in t:
+                return {'bg': 'rgba(0,220,120,0.15)', 'color': '#00dd88', 'border': 'rgba(0,220,120,0.6)', 'label': 'ITM'}
+            elif 'SPREAD' in t or '/' in t:
+                return {'bg': 'rgba(180,80,255,0.15)', 'color': '#cc66ff', 'border': 'rgba(180,80,255,0.6)', 'label': 'SPREAD'}
+            else:
+                return {'bg': 'rgba(0,200,255,0.15)', 'color': '#00ccff', 'border': 'rgba(0,200,255,0.6)', 'label': opt_type}
+
+        def get_action_style(action):
+            a = str(action).upper()
+            if a == 'BUY':
+                return {'bg': 'rgba(0,220,120,0.2)', 'color': '#00ff88', 'border': '#00aa55', 'glow': '#00ff8844'}
+            elif a == 'SELL':
+                return {'bg': 'rgba(255,64,80,0.2)', 'color': '#ff4050', 'border': '#cc2233', 'glow': '#ff405044'}
+            else:
+                # BUY+SELL spread
+                return {'bg': 'rgba(255,180,0,0.15)', 'color': '#ffcc00', 'border': '#cc9900', 'glow': '#ffcc0033'}
+
+        def fmt_oi_short(val):
+            if isinstance(val, str):
+                return val
+            if val >= 1_000_000:
+                return f"{val/1_000_000:.2f}M"
+            elif val >= 1_000:
+                return f"{val/1_000:.1f}L" if val >= 100_000 else f"{val/1_000:.1f}K"
+            return str(val)
+
+        def fmt_vol_short(val):
+            if isinstance(val, str):
+                return val
+            if val >= 100_000:
+                return f"{val/100_000:.1f}L"
+            elif val >= 1_000:
+                return f"{val/1_000:.1f}K"
+            return str(val)
+
+        cards_html = ''
+        for idx, rec_item in enumerate(strike_recommendations):
+            strategy    = rec_item['strategy']
+            action      = rec_item['action']
+            strike      = rec_item['strike']
+            ltp         = rec_item['ltp']
+            option_type = rec_item['option_type']
+            target_1    = rec_item['target_1']
+            target_2    = rec_item['target_2']
+            stop_loss   = rec_item['stop_loss']
+            max_loss    = rec_item['max_loss']
+            p_at_t1     = rec_item['profit_at_target_1']
+            p_at_t2     = rec_item['profit_at_target_2']
+            oi_val      = rec_item['oi']
+            vol_val     = rec_item['volume']
+
+            ot_style     = get_option_type_style(option_type)
+            action_style = get_action_style(action if action in ['BUY','SELL'] else 'BUY+SELL')
+
+            p_at_t1_label = self._fmt_profit_label(p_at_t1)
+            p_at_t2_label = self._fmt_profit_label(p_at_t2)
+            example_invest = ltp * 50 if isinstance(ltp, (int, float)) else 0
+            example_t1     = self._fmt_profit(p_at_t1, 50)
+            example_t2     = self._fmt_profit(p_at_t2, 50)
+
+            # Determine if profit is positive for coloring
+            t1_profit_color = '#00ff88' if isinstance(p_at_t1, (int, float)) and p_at_t1 > 0 else '#ff6070'
+            t2_profit_color = '#00ff88' if isinstance(p_at_t2, (int, float)) and p_at_t2 > 0 else ('#ffcc00' if isinstance(p_at_t2, str) else '#ff6070')
+
+            # Card left border color
+            if idx == 0:
+                card_border_color = '#00c8ff'
+                card_glow = 'rgba(0,200,255,0.08)'
+            elif idx == 1:
+                card_border_color = '#00ff88' if bias == 'Bullish' else '#ff4060'
+                card_glow = 'rgba(0,255,136,0.06)' if bias == 'Bullish' else 'rgba(255,64,96,0.06)'
+            else:
+                card_border_color = '#cc66ff'
+                card_glow = 'rgba(200,100,255,0.06)'
+
+            # Format strike display
+            strike_display = f"₹{strike:,}" if isinstance(strike, (int, float)) else f"₹{strike}"
+            ltp_display    = f"₹{ltp:,.2f}" if isinstance(ltp, (int, float)) else f"₹{ltp}"
+            sl_display     = f"₹{stop_loss:,.2f}" if isinstance(stop_loss, (int, float)) else f"₹{stop_loss}"
+            ml_display     = f"₹{max_loss:,.2f}" if isinstance(max_loss, (int, float)) else f"₹{max_loss}"
+            t1_display     = f"₹{target_1:,}" if isinstance(target_1, (int, float)) else f"₹{target_1}"
+            t2_display     = f"₹{target_2:,}" if isinstance(target_2, (int, float)) else f"₹{target_2}"
+            invest_display = f"₹{example_invest:,.0f}" if example_invest else "N/A"
+            oi_display     = fmt_oi_short(oi_val)
+            vol_display    = fmt_vol_short(vol_val)
+
+            # Action pill
+            action_pill = f'''<span style="
+                display:inline-flex;align-items:center;gap:5px;
+                background:{action_style['bg']};
+                border:1.5px solid {action_style['border']};
+                color:{action_style['color']};
+                padding:5px 14px;border-radius:20px;
+                font-size:11px;font-weight:800;letter-spacing:1.5px;
+                text-shadow:0 0 12px {action_style['glow']};
+                box-shadow:0 0 14px {action_style['glow']};
+            ">{action}</span>'''
+
+            # Option type badge
+            ot_badge = f'''<span style="
+                background:{ot_style['bg']};
+                border:1px solid {ot_style['border']};
+                color:{ot_style['color']};
+                padding:4px 12px;border-radius:16px;
+                font-size:10px;font-weight:800;letter-spacing:1px;
+            ">{ot_style['label']}</span>'''
+
+            cards_html += f'''
+            <div style="
+                background: linear-gradient(135deg, #030d18 0%, #020910 100%);
+                border: 1px solid #0a2a40;
+                border-left: 4px solid {card_border_color};
+                border-radius: 14px;
+                overflow: hidden;
+                box-shadow: 0 0 30px {card_glow}, 0 12px 40px rgba(0,0,0,0.8);
+                font-family: 'Chakra Petch', sans-serif;
+            ">
+                <!-- Card Header -->
+                <div style="
+                    background: linear-gradient(135deg, #031525 0%, #020e1c 100%);
+                    border-bottom: 1px solid #0a3050;
+                    padding: 14px 20px;
+                    display: flex; align-items: center; justify-content: space-between;
+                    flex-wrap: wrap; gap: 10px;
+                ">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <span style="
+                            font-size:17px;font-weight:800;color:#ffffff;
+                            letter-spacing:1px;
+                            text-shadow:0 0 20px rgba(0,200,255,0.3);
+                        ">{strategy}</span>
+                        {action_pill}
+                        {ot_badge}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:10px;color:#1a5a7a;letter-spacing:1.5px;font-weight:600;">NIFTY</span>
+                        <span style="
+                            width:6px;height:6px;border-radius:50%;
+                            background:#00c8ff;
+                            box-shadow:0 0 8px #00c8ff;
+                            display:inline-block;
+                            animation:stc-pulse 1.5s ease-in-out infinite;
+                        "></span>
+                        <span style="font-size:10px;color:#00c8ff;font-weight:700;letter-spacing:1.5px;">LIVE</span>
+                    </div>
+                </div>
+
+                <!-- Main metrics row -->
+                <div style="
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    border-bottom: 1px solid #0a2030;
+                ">
+                    <!-- LTP -->
+                    <div style="
+                        padding: 16px 16px;
+                        border-right: 1px solid #0a2030;
+                        background: rgba(0,200,255,0.04);
+                    ">
+                        <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">LTP</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:24px;font-weight:800;
+                            color:#00c8ff;
+                            text-shadow:0 0 20px rgba(0,200,255,0.7);
+                            letter-spacing:-0.5px;
+                        ">{ltp_display}</div>
+                        <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">CURRENT PREMIUM</div>
+                    </div>
+
+                    <!-- Strike -->
+                    <div style="padding:16px;border-right:1px solid #0a2030;">
+                        <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">STRIKE</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:20px;font-weight:800;color:#e8f4ff;
+                            letter-spacing:-0.5px;
+                        ">{strike_display}</div>
+                        <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">PRICE</div>
+                    </div>
+
+                    <!-- INVEST -->
+                    <div style="padding:16px;border-right:1px solid #0a2030;background:rgba(255,180,0,0.03);">
+                        <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">INVEST</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:18px;font-weight:800;color:#ffcc00;
+                            text-shadow:0 0 14px rgba(255,200,0,0.5);
+                        ">{invest_display}</div>
+                        <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">1 LOT (50 QTY)</div>
+                    </div>
+
+                    <!-- OI -->
+                    <div style="padding:16px;border-right:1px solid #0a2030;">
+                        <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">OI</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:18px;font-weight:800;color:#aaccee;
+                        ">{oi_display}</div>
+                        <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">OPEN INTEREST</div>
+                    </div>
+
+                    <!-- VOL -->
+                    <div style="padding:16px;">
+                        <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">VOL</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:18px;font-weight:800;color:#8899bb;
+                        ">{vol_display}</div>
+                        <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">VOLUME</div>
+                    </div>
+                </div>
+
+                <!-- Targets + Stop Loss Row -->
+                <div style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    border-bottom: 1px solid #0a2030;
+                ">
+                    <!-- Target 1 -->
+                    <div style="
+                        padding: 16px 18px;
+                        border-right: 1px solid #0a2030;
+                        background: rgba(0,200,80,0.05);
+                        border-bottom: 2px solid rgba(0,200,80,0.3);
+                    ">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <span style="
+                                background:rgba(0,220,120,0.2);
+                                border:1px solid #00aa55;
+                                color:#00ff88;
+                                padding:3px 10px;border-radius:12px;
+                                font-size:10px;font-weight:800;letter-spacing:1.5px;
+                                text-shadow:0 0 10px rgba(0,255,136,0.5);
+                            ">TARGET 1</span>
+                        </div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:22px;font-weight:800;
+                            color:#ffffff;
+                            text-shadow:0 0 16px rgba(0,255,136,0.2);
+                            margin-bottom:6px;
+                        ">{t1_display}</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:14px;font-weight:700;
+                            color:{t1_profit_color};
+                            text-shadow:0 0 12px {t1_profit_color}66;
+                        ">{p_at_t1_label}</div>
+                        <div style="
+                            font-size:11px;color:#2a8a4a;margin-top:4px;
+                            font-weight:600;letter-spacing:0.5px;
+                        ">Per lot: {example_t1}</div>
+                    </div>
+
+                    <!-- Target 2 -->
+                    <div style="
+                        padding: 16px 18px;
+                        border-right: 1px solid #0a2030;
+                        background: rgba(0,150,255,0.05);
+                        border-bottom: 2px solid rgba(0,150,255,0.3);
+                    ">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <span style="
+                                background:rgba(0,150,255,0.2);
+                                border:1px solid #0066aa;
+                                color:#55aaff;
+                                padding:3px 10px;border-radius:12px;
+                                font-size:10px;font-weight:800;letter-spacing:1.5px;
+                                text-shadow:0 0 10px rgba(85,170,255,0.5);
+                            ">TARGET 2</span>
+                        </div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:22px;font-weight:800;
+                            color:#ffffff;
+                            text-shadow:0 0 16px rgba(85,170,255,0.2);
+                            margin-bottom:6px;
+                        ">{t2_display}</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:14px;font-weight:700;
+                            color:{t2_profit_color};
+                            text-shadow:0 0 12px {t2_profit_color}66;
+                        ">{p_at_t2_label}</div>
+                        <div style="
+                            font-size:11px;color:#2a6a9a;margin-top:4px;
+                            font-weight:600;letter-spacing:0.5px;
+                        ">Per lot: {example_t2}</div>
+                    </div>
+
+                    <!-- Stop Loss -->
+                    <div style="
+                        padding: 16px 18px;
+                        background: rgba(255,50,80,0.05);
+                        border-bottom: 2px solid rgba(255,50,80,0.3);
+                    ">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <span style="
+                                background:rgba(255,50,80,0.2);
+                                border:1px solid #cc2233;
+                                color:#ff4455;
+                                padding:3px 10px;border-radius:12px;
+                                font-size:10px;font-weight:800;letter-spacing:1.5px;
+                                text-shadow:0 0 10px rgba(255,68,85,0.5);
+                            ">STOP LOSS</span>
+                        </div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:22px;font-weight:800;
+                            color:#ff6677;
+                            text-shadow:0 0 16px rgba(255,100,120,0.4);
+                            margin-bottom:6px;
+                        ">{sl_display}</div>
+                        <div style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:14px;font-weight:700;
+                            color:#ff3344;
+                        ">Max: -{ml_display}</div>
+                        <div style="
+                            font-size:11px;color:#8a2233;margin-top:4px;
+                            font-weight:600;letter-spacing:0.5px;
+                        ">Risk per lot: ₹{max_loss * 50 if isinstance(max_loss,(int,float)) else 'N/A'}</div>
+                    </div>
+                </div>
+
+                <!-- R:R Ratio footer bar -->
+                <div style="
+                    padding: 10px 18px;
+                    background: #020810;
+                    display: flex; align-items: center; justify-content: space-between;
+                    flex-wrap: wrap; gap: 8px;
+                ">
+                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                        <span style="font-size:10px;color:#1a4a6a;letter-spacing:1.5px;font-weight:600;">RISK:REWARD</span>
+                        <span style="
+                            font-family:'IBM Plex Mono',monospace;
+                            font-size:14px;font-weight:800;color:#ffcc00;
+                            text-shadow:0 0 12px rgba(255,200,0,0.5);
+                        ">1 : {(abs(p_at_t2 / max_loss) if isinstance(p_at_t2,(int,float)) and isinstance(max_loss,(int,float)) and max_loss != 0 else 0):.1f}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:10px;color:#1a4a6a;letter-spacing:1px;">TYPE: <span style="color:{ot_style['color']};font-weight:700;">{option_type}</span></span>
+                        <span style="font-size:10px;color:#1a4a6a;letter-spacing:1px;">LOT SIZE: <span style="color:#aaccee;font-weight:700;">50</span></span>
+                    </div>
+                </div>
+            </div>
+            '''
+
+        if not strike_recommendations:
+            cards_html = '''
+            <div style="
+                background:rgba(200,50,70,0.06);
+                border:1px solid rgba(200,50,70,0.3);
+                border-radius:12px;padding:30px;text-align:center;
+            ">
+                <div style="font-size:28px;margin-bottom:12px;">⚠️</div>
+                <div style="font-size:16px;color:#886677;font-weight:700;letter-spacing:1px;">No Strike Recommendations Available</div>
+                <div style="font-size:12px;color:#554455;margin-top:8px;">Check general strategies section below</div>
+            </div>'''
+
+        widget_html = f'''
+        <!-- ═══ STRIKE RECOMMENDATIONS — DARK TICKER CARD WIDGET ═══ -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+            .stc-wrap {{
+                font-family: 'Chakra Petch', sans-serif;
+            }}
+
+            /* Master header bar */
+            .stc-master-hdr {{
+                background: linear-gradient(135deg, {hdr_bg_from} 0%, {hdr_bg_to} 100%);
+                border: 1px solid {hdr_border}44;
+                border-bottom: 2px solid {hdr_accent};
+                border-radius: 12px 12px 0 0;
+                padding: 16px 22px;
+                display: flex; align-items: center; justify-content: space-between;
+                flex-wrap: wrap; gap: 12px;
+                margin-bottom: 0;
+            }}
+            .stc-master-title {{
+                display: flex; align-items: center; gap: 14px;
+            }}
+            .stc-master-icon {{
+                width: 44px; height: 44px; border-radius: 12px;
+                background: linear-gradient(135deg, #020e1c, #031a2c);
+                border: 1px solid {hdr_border}66;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 20px;
+                box-shadow: 0 0 20px {hdr_accent}33;
+            }}
+            .stc-master-text h2 {{
+                font-size: 18px; font-weight: 800; color: #ffffff;
+                letter-spacing: 3px; text-transform: uppercase;
+                text-shadow: 0 0 24px {hdr_accent}88;
+            }}
+            .stc-master-text p {{
+                font-size: 10px; color: #2a6a8a;
+                margin-top: 3px; letter-spacing: 2px;
+                font-weight: 600; text-transform: uppercase;
+            }}
+            .stc-master-right {{
+                display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            }}
+            .stc-bias-pill {{
+                background: {bias_bg};
+                border: 1.5px solid {bias_brd};
+                color: {bias_color};
+                padding: 7px 20px; border-radius: 22px;
+                font-size: 13px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 14px {bias_color}88;
+                box-shadow: 0 0 18px {bias_color}22;
+            }}
+            .stc-price-chip {{
+                background: rgba(0,0,0,0.4);
+                border: 1px solid #0a3050;
+                border-radius: 10px;
+                padding: 7px 16px;
+                display: flex; align-items: center; gap: 8px;
+            }}
+            .stc-price-lbl {{
+                font-size: 9px; color: #2a6a8a;
+                letter-spacing: 2px; font-weight: 700;
+                text-transform: uppercase;
+            }}
+            .stc-price-val {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 15px; font-weight: 800;
+                color: #00c8ff;
+                text-shadow: 0 0 14px rgba(0,200,255,0.6);
+            }}
+
+            /* Cards container */
+            .stc-cards {{
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px 0 0 0;
+            }}
+
+            @keyframes stc-pulse {{
+                0%,100% {{ opacity:1;transform:scale(1); }}
+                50%      {{ opacity:0.5;transform:scale(0.8); }}
+            }}
+
+            /* Footer */
+            .stc-footer {{
+                background: #010810;
+                border: 1px solid #0a2030;
+                border-top: none;
+                border-radius: 0 0 12px 12px;
+                padding: 10px 22px;
+                display: flex; justify-content: space-between; align-items: center;
+                margin-top: 0;
+            }}
+            .stc-footer-l {{
+                font-size: 9px; color: #0d2a40;
+                letter-spacing: 2px; font-weight: 700; text-transform: uppercase;
+            }}
+            .stc-footer-r {{
+                display: flex; align-items: center; gap: 7px;
+                font-size: 9px; color: {hdr_accent};
+                font-weight: 700; letter-spacing: 2px;
+            }}
+            .stc-footer-dot {{
+                width: 6px; height: 6px; border-radius: 50%;
+                background: {hdr_accent};
+                box-shadow: 0 0 8px {hdr_accent};
+                animation: stc-pulse 1.5s ease-in-out infinite;
+            }}
+        </style>
+
+        <div class="stc-wrap">
+            <!-- Master Header -->
+            <div class="stc-master-hdr">
+                <div class="stc-master-title">
+                    <div class="stc-master-icon">&#9654;</div>
+                    <div class="stc-master-text">
+                        <h2>&#9650; Strike Recommendations</h2>
+                        <p>NIFTY &middot; Weekly Expiry &middot; Actionable Trades</p>
+                    </div>
+                </div>
+                <div class="stc-master-right">
+                    <div class="stc-bias-pill">{bias.upper()}</div>
+                    <div class="stc-price-chip">
+                        <span class="stc-price-lbl">NIFTY</span>
+                        <span class="stc-price-val">&#8377;{current_price:,.2f}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="stc-cards">
+                {cards_html}
+            </div>
+
+            <!-- Footer -->
+            <div class="stc-footer">
+                <span class="stc-footer-l">DARK TICKER CARD &middot; STRIKE RECOMMENDATIONS &middot; {confidence.upper()} CONFIDENCE</span>
+                <span class="stc-footer-r">
+                    <div class="stc-footer-dot"></div>
+                    {len(strike_recommendations)} TRADE{'S' if len(strike_recommendations) != 1 else ''} IDENTIFIED
+                </span>
+            </div>
+        </div>
+        <!-- ═══ END DARK TICKER CARD STRIKE WIDGET ═══ -->
         '''
         return widget_html
 
@@ -2782,6 +3239,11 @@ class NiftyAnalyzer:
         top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
         top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
         oi_neon_ledger_html = self._build_oi_neon_ledger_widget(top_ce_strikes, top_pe_strikes)
+
+        # DARK TICKER CARD Strike widget (NEW)
+        strike_ticker_card_html = self._build_strike_ticker_card_widget(
+            strike_recommendations, recommendation, tech_analysis
+        )
 
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
@@ -2998,26 +3460,6 @@ class NiftyAnalyzer:
             margin-bottom: 6px;
         }}
         .data-item .value {{ color: #80d8ff; font-size: 18px; font-weight: 700; }}
-        .levels {{ display: flex; flex-wrap: wrap; gap: 16px; }}
-        .levels-box {{
-            flex: 1;
-            min-width: 260px;
-            background: rgba(0,80,140,.06);
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #0a2a3a;
-        }}
-        .levels-box.resistance {{ border-left: 4px solid #ff6070; }}
-        .levels-box.support    {{ border-left: 4px solid #00ff8c; }}
-        .levels-box h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 10px; color: #80b8d8; letter-spacing: 1px; }}
-        .levels-box ul {{ list-style: none; padding: 0; }}
-        .levels-box li {{
-            margin: 6px 0; font-size: 14px; color: #5a8aaa;
-            padding-left: 18px; position: relative;
-        }}
-        .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #00aaff; font-weight: bold; }}
-        .levels-box.resistance li {{ color: #cc8888; }}
-        .levels-box.support    li {{ color: #44cc88; }}
         .reasons {{
             background: rgba(0,80,140,.08);
             border-left: 4px solid #0088bb;
@@ -3029,79 +3471,6 @@ class NiftyAnalyzer:
         .reasons strong {{ color: #00c8ff; font-size: 14px; letter-spacing: 1px; }}
         .reasons ul {{ margin: 10px 0 0 0; padding-left: 22px; }}
         .reasons li {{ margin: 6px 0; color: #3a8aaa; font-size: 13px; line-height: 1.6; }}
-        .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-top: 14px; }}
-        .strike-card {{
-            background: rgba(0,80,140,.06);
-            border: 1px solid #0a2a3a;
-            border-radius: 12px;
-            padding: 18px;
-        }}
-        .strike-header {{
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #0a3050;
-            padding-bottom: 10px; margin-bottom: 14px;
-        }}
-        .strike-header h4 {{ color: #00c8ff; font-size: 16px; font-weight: 700; letter-spacing: 1px; }}
-        .strike-badge {{ padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }}
-        .strike-badge.atm     {{ background: rgba(255,180,0,.12); color: #ffcc00; border: 1px solid #cc9900; }}
-        .strike-badge.itm     {{ background: rgba(0,200,100,.12); color: #00dd77; border: 1px solid #00aa55; }}
-        .strike-badge.otm     {{ background: rgba(80,120,160,.12); color: #6a9ab8; border: 1px solid #3a6a88; }}
-        .strike-badge.itm-otm {{ background: rgba(0,150,200,.12); color: #44aacc; border: 1px solid #0088aa; }}
-        .strike-badge.atm-atm {{ background: rgba(200,80,0,.12); color: #ff8844; border: 1px solid #cc5500; }}
-        .strike-details {{
-            background: rgba(0,60,110,.1);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 14px;
-            border: 1px solid #0a2a3a;
-        }}
-        .strike-row {{ display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #0a2a3a; }}
-        .strike-row:last-child {{ border-bottom: none; }}
-        .strike-row .label {{ color: #2a6a8a; font-size: 12px; font-weight: 600; }}
-        .strike-row .value {{ color: #80b8d8; font-size: 13px; font-weight: 700; }}
-        .strike-row .premium {{ color: #00c8ff; font-size: 15px; font-weight: 800; text-shadow: 0 0 10px rgba(0,200,255,.4); }}
-        .profit-targets {{
-            background: rgba(0,50,100,.15);
-            padding: 14px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            border: 1px solid #0a2a3a;
-        }}
-        .profit-targets h5 {{ color: #00c8ff; font-size: 13px; font-weight: 700; margin-bottom: 12px; letter-spacing: 1px; }}
-        .target-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }}
-        .target-box {{
-            background: rgba(0,60,110,.15);
-            padding: 10px;
-            border-radius: 7px;
-            text-align: center;
-            border: 1px solid #0a2a3a;
-        }}
-        .target-box.target-1   {{ border-color: #00aa5580; }}
-        .target-box.target-2   {{ border-color: #0088bb80; }}
-        .target-box.stop-loss-box {{ border-color: #cc223380; }}
-        .target-label {{ font-size: 9px; color: #2a6a8a; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; letter-spacing: 1px; }}
-        .target-price {{ font-size: 14px; color: #80b8d8; font-weight: 800; margin-bottom: 4px; }}
-        .target-profit {{ font-size: 10px; color: #00aa55; font-weight: 600; }}
-        .target-box.stop-loss-box .target-profit {{ color: #cc5566; }}
-        .trade-example {{
-            background: rgba(0,80,140,.08);
-            border: 1px solid #0a3050;
-            border-radius: 7px;
-            padding: 10px 12px;
-            font-size: 11px;
-            line-height: 1.6;
-            color: #3a7a9a;
-        }}
-        .trade-example strong {{ color: #00c8ff; }}
-        .no-recommendations {{
-            background: rgba(200,50,70,.06);
-            border: 1px solid #cc223360;
-            border-radius: 8px;
-            padding: 25px;
-            text-align: center;
-            color: #885566;
-            font-size: 13px;
-        }}
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }}
         .strategy-card {{
             background: rgba(0,80,140,.06);
@@ -3138,9 +3507,6 @@ class NiftyAnalyzer:
         }}
         @media (max-width: 768px) {{
             .momentum-container {{ grid-template-columns: 1fr; }}
-            .strike-recommendations {{ grid-template-columns: 1fr; }}
-            .target-grid        {{ grid-template-columns: 1fr; }}
-            .levels             {{ flex-direction: column; }}
         }}
     </style>
 </head>
@@ -3224,81 +3590,14 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- STRIKE RECOMMENDATIONS -->
+    <!-- ═══ STRIKE RECOMMENDATIONS — DARK TICKER CARD ═══ -->
     <div class="section">
-        <div class="section-title">Detailed Strike Recommendations with Profit Targets</div>
-        <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;line-height:1.6;">
+        <div class="section-title">Strike Recommendations</div>
+        <p style="color:#1a5a7a;margin-bottom:16px;font-size:13px;line-height:1.6;">
             <strong style="color:#3a8aaa;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
-            Actionable trades with specific strike prices, LTP, and profit calculations.
+            Actionable trades with specific strike prices, LTP, targets &amp; risk management.
         </p>
-        <div class="strike-recommendations">"""
-
-        if strike_recommendations:
-            for rec_item in strike_recommendations:
-                ltp       = rec_item['ltp']
-                max_loss  = rec_item['max_loss']
-                stop_loss = rec_item['stop_loss']
-                target_1  = rec_item['target_1']
-                target_2  = rec_item['target_2']
-                p_at_t1   = rec_item['profit_at_target_1']
-                p_at_t2   = rec_item['profit_at_target_2']
-
-                p_at_t1_label = self._fmt_profit_label(p_at_t1)
-                p_at_t2_label = self._fmt_profit_label(p_at_t2)
-                example_t1    = self._fmt_profit(p_at_t1, 50)
-                example_t2    = self._fmt_profit(p_at_t2, 50)
-
-                if isinstance(p_at_t2, (int, float)):
-                    card_border = '#00aa5580' if p_at_t2 > 100 else ('#cc990080' if p_at_t2 > 50 else '#cc223380')
-                else:
-                    card_border = '#0088bb80'
-
-                html += f"""
-            <div class="strike-card" style="border-left:4px solid {card_border};">
-                <div class="strike-header">
-                    <h4>{rec_item['strategy']}</h4>
-                    <span class="strike-badge {rec_item['option_type'].lower().replace('/', '-')}">{rec_item['option_type']}</span>
-                </div>
-                <div class="strike-details">
-                    <div class="strike-row"><span class="label">Action:</span><span class="value"><strong>{rec_item['action']}</strong></span></div>
-                    <div class="strike-row"><span class="label">Strike Price:</span><span class="value"><strong>&#8377;{rec_item['strike']}</strong></span></div>
-                    <div class="strike-row"><span class="label">Current LTP:</span><span class="value premium">&#8377;{ltp:.2f}</span></div>
-                    <div class="strike-row"><span class="label">Open Interest:</span><span class="value">{rec_item['oi']}</span></div>
-                    <div class="strike-row"><span class="label">Volume:</span><span class="value">{rec_item['volume']}</span></div>
-                </div>
-                <div class="profit-targets">
-                    <h5>&#128202; Profit Targets &amp; Risk</h5>
-                    <div class="target-grid">
-                        <div class="target-box target-1">
-                            <div class="target-label">Target 1</div>
-                            <div class="target-price">&#8377;{target_1}</div>
-                            <div class="target-profit">{p_at_t1_label}</div>
-                        </div>
-                        <div class="target-box target-2">
-                            <div class="target-label">Target 2</div>
-                            <div class="target-price">&#8377;{target_2}</div>
-                            <div class="target-profit">{p_at_t2_label}</div>
-                        </div>
-                        <div class="target-box stop-loss-box">
-                            <div class="target-label">Stop Loss</div>
-                            <div class="target-price">&#8377;{stop_loss:.2f}</div>
-                            <div class="target-profit">Max Loss: &#8377;{max_loss:.2f}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="trade-example">
-                    <strong>Example:</strong> Buy 1 lot (50 qty) at LTP &#8377;{ltp:.2f} &rarr; Investment = &#8377;{ltp * 50:.0f}<br>
-                    At Target 1: {example_t1} &nbsp;|&nbsp; At Target 2: {example_t2}
-                </div>
-            </div>"""
-        else:
-            html += """
-            <div class="no-recommendations">
-                <p><strong>&#9888;&#65039; No specific strike recommendations available at this time.</strong><br>Check the general strategies below.</p>
-            </div>"""
-
-        html += f"""
-        </div>
+        {strike_ticker_card_html}
     </div>
 
     <!-- OPTIONS STRATEGIES -->
@@ -3313,7 +3612,7 @@ class NiftyAnalyzer:
     <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Bloomberg S/R Table &nbsp;|&nbsp; Dual Momentum (1H + 5H) &nbsp;|&nbsp; Neon Ledger OI</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Bloomberg S/R Table &nbsp;|&nbsp; Dual Momentum (1H + 5H) &nbsp;|&nbsp; Neon Ledger OI &nbsp;|&nbsp; Dark Ticker Card Strike</p>
     </div>
 
 </div>
@@ -3399,7 +3698,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
 
-        self.logger.info("✅ Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI — Analysis Complete!")
+        self.logger.info("✅ Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI · Dark Ticker Card Strike — Analysis Complete!")
 
         return {
             'oc_analysis':    oc_analysis,
@@ -3413,7 +3712,7 @@ if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
 
-    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI)")
+    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI · Dark Ticker Card Strike)")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
     print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
