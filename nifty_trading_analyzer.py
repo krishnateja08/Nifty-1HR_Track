@@ -3224,81 +3224,10 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- STRIKE RECOMMENDATIONS -->
+    <!-- STRIKE RECOMMENDATIONS — DARK TICKER CARD WIDGET -->
     <div class="section">
         <div class="section-title">Detailed Strike Recommendations with Profit Targets</div>
-        <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;line-height:1.6;">
-            <strong style="color:#3a8aaa;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
-            Actionable trades with specific strike prices, LTP, and profit calculations.
-        </p>
-        <div class="strike-recommendations">"""
-
-        if strike_recommendations:
-            for rec_item in strike_recommendations:
-                ltp       = rec_item['ltp']
-                max_loss  = rec_item['max_loss']
-                stop_loss = rec_item['stop_loss']
-                target_1  = rec_item['target_1']
-                target_2  = rec_item['target_2']
-                p_at_t1   = rec_item['profit_at_target_1']
-                p_at_t2   = rec_item['profit_at_target_2']
-
-                p_at_t1_label = self._fmt_profit_label(p_at_t1)
-                p_at_t2_label = self._fmt_profit_label(p_at_t2)
-                example_t1    = self._fmt_profit(p_at_t1, 50)
-                example_t2    = self._fmt_profit(p_at_t2, 50)
-
-                if isinstance(p_at_t2, (int, float)):
-                    card_border = '#00aa5580' if p_at_t2 > 100 else ('#cc990080' if p_at_t2 > 50 else '#cc223380')
-                else:
-                    card_border = '#0088bb80'
-
-                html += f"""
-            <div class="strike-card" style="border-left:4px solid {card_border};">
-                <div class="strike-header">
-                    <h4>{rec_item['strategy']}</h4>
-                    <span class="strike-badge {rec_item['option_type'].lower().replace('/', '-')}">{rec_item['option_type']}</span>
-                </div>
-                <div class="strike-details">
-                    <div class="strike-row"><span class="label">Action:</span><span class="value"><strong>{rec_item['action']}</strong></span></div>
-                    <div class="strike-row"><span class="label">Strike Price:</span><span class="value"><strong>&#8377;{rec_item['strike']}</strong></span></div>
-                    <div class="strike-row"><span class="label">Current LTP:</span><span class="value premium">&#8377;{ltp:.2f}</span></div>
-                    <div class="strike-row"><span class="label">Open Interest:</span><span class="value">{rec_item['oi']}</span></div>
-                    <div class="strike-row"><span class="label">Volume:</span><span class="value">{rec_item['volume']}</span></div>
-                </div>
-                <div class="profit-targets">
-                    <h5>&#128202; Profit Targets &amp; Risk</h5>
-                    <div class="target-grid">
-                        <div class="target-box target-1">
-                            <div class="target-label">Target 1</div>
-                            <div class="target-price">&#8377;{target_1}</div>
-                            <div class="target-profit">{p_at_t1_label}</div>
-                        </div>
-                        <div class="target-box target-2">
-                            <div class="target-label">Target 2</div>
-                            <div class="target-price">&#8377;{target_2}</div>
-                            <div class="target-profit">{p_at_t2_label}</div>
-                        </div>
-                        <div class="target-box stop-loss-box">
-                            <div class="target-label">Stop Loss</div>
-                            <div class="target-price">&#8377;{stop_loss:.2f}</div>
-                            <div class="target-profit">Max Loss: &#8377;{max_loss:.2f}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="trade-example">
-                    <strong>Example:</strong> Buy 1 lot (50 qty) at LTP &#8377;{ltp:.2f} &rarr; Investment = &#8377;{ltp * 50:.0f}<br>
-                    At Target 1: {example_t1} &nbsp;|&nbsp; At Target 2: {example_t2}
-                </div>
-            </div>"""
-        else:
-            html += """
-            <div class="no-recommendations">
-                <p><strong>&#9888;&#65039; No specific strike recommendations available at this time.</strong><br>Check the general strategies below.</p>
-            </div>"""
-
-        html += f"""
-        </div>
+        {self._build_strike_dark_ticker_widget(strike_recommendations, recommendation, tech_analysis)}
     </div>
 
     <!-- OPTIONS STRATEGIES -->
@@ -3321,6 +3250,287 @@ class NiftyAnalyzer:
 </html>"""
 
         return html
+
+    # =========================================================================
+    # WIDGET — DARK TICKER CARD  |  Detailed Strike Recommendations
+    # Compact cards · High-contrast labels · Glowing LTP · Target pills
+    # =========================================================================
+    def _build_strike_dark_ticker_widget(self, strike_recommendations, recommendation, tech_analysis):
+        bias          = recommendation.get('bias', 'Neutral')
+        current_price = tech_analysis.get('current_price', 0)
+
+        ACCENT = {
+            'ATM':     ('#00e5ff', 'rgba(0,229,255,.18)'),
+            'OTM':     ('#b06aff', 'rgba(176,106,255,.15)'),
+            'ITM':     ('#00e676', 'rgba(0,230,118,.15)'),
+            'ITM/OTM': ('#ffd700', 'rgba(255,215,0,.13)'),
+            'ATM/ATM': ('#ff6b35', 'rgba(255,107,53,.15)'),
+        }
+        def get_accent(opt_type):
+            for k, v in ACCENT.items():
+                if k in str(opt_type):
+                    return v
+            return ('#00c8ff', 'rgba(0,200,255,.15)')
+
+        def fmt_num(val):
+            if not isinstance(val, (int, float)):
+                parts = str(val).split('/')
+                return '/'.join(fmt_num(p.strip().replace(',','')) for p in parts)
+            v = abs(int(val))
+            if v >= 10000000: return f"{v/10000000:.1f}Cr"
+            if v >= 100000:   return f"{v/100000:.2f}L"
+            if v >= 1000:     return f"{v/1000:.1f}K"
+            return f"{v:,}"
+
+        def fmt_pnl(v, mult=50):
+            if not isinstance(v, (int, float)): return '<span style="color:#aaa;">—</span>'
+            total = v * mult
+            col   = '#00e676' if total >= 0 else '#ff3a5c'
+            sign  = '+' if total >= 0 else ''
+            return f'<span style="color:{col};font-weight:700;">{sign}&#8377;{abs(total):,.0f}</span>'
+
+        def fmt_pnl_small(v, mult=50):
+            if not isinstance(v, (int, float)): return '—'
+            total = v * mult
+            col   = '#00e676' if total >= 0 else '#ff3a5c'
+            sign  = '+' if total >= 0 else ''
+            return f'<span style="color:{col};">{sign}&#8377;{abs(total):,.0f}</span>'
+
+        if bias == 'Bullish':
+            bias_css = 'background:rgba(0,230,118,.15);border:1px solid rgba(0,230,118,.55);color:#00e676;'
+        elif bias == 'Bearish':
+            bias_css = 'background:rgba(255,58,92,.15);border:1px solid rgba(255,58,92,.55);color:#ff3a5c;'
+        else:
+            bias_css = 'background:rgba(0,200,255,.12);border:1px solid rgba(0,200,255,.45);color:#00c8ff;'
+
+        cards_html = ''
+        for rec in strike_recommendations:
+            accent_hex, accent_glow = get_accent(rec.get('option_type', 'ATM'))
+            ltp       = rec.get('ltp', 0)
+            max_loss  = rec.get('max_loss', ltp)
+            stop_loss = rec.get('stop_loss', 0)
+            target_1  = rec.get('target_1', 0)
+            target_2  = rec.get('target_2', 0)
+            p_at_t1   = rec.get('profit_at_target_1', 0)
+            p_at_t2   = rec.get('profit_at_target_2', 0)
+            oi        = rec.get('oi', 0)
+            volume    = rec.get('volume', 0)
+            strike    = rec.get('strike', 'N/A')
+            invest    = ltp * 50 if isinstance(ltp, (int, float)) else 0
+            opt_type  = rec.get('option_type', 'ATM')
+            action    = str(rec.get('action', 'BUY')).upper()
+            strategy  = rec.get('strategy', 'Strategy')
+            is_spread = 'SELL' in action and 'BUY' in action
+            action_lbl = 'BUY+SELL' if is_spread else action[:6]
+            # stat row label — LTP vs NET PREM for spreads
+            ltp_lbl   = 'NET PREM' if is_spread else 'LTP'
+            # 5th stat: VOL for simple, R:R for spread
+            if is_spread and isinstance(p_at_t2, (int, float)) and isinstance(max_loss, (int, float)) and max_loss > 0:
+                rr_num = abs(p_at_t2 * 50) / abs(max_loss * 50)
+                stat5_lbl = 'R:R'
+                stat5_val = f'1&nbsp;:&nbsp;{rr_num:.1f}'
+            else:
+                stat5_lbl = 'VOL'
+                stat5_val = fmt_num(volume)
+
+            strike_display = str(strike).replace('.0', '') if str(strike).endswith('.0') else str(strike)
+
+            cards_html += f'''
+<div class="dtc-card" style="--c:{accent_hex};--glow:{accent_glow};">
+  <div class="dtc-card-top">
+    <div class="dtc-name-row">
+      <span class="dtc-name">{strategy}</span>
+      <span class="dtc-action-badge" style="background:{accent_hex};color:#000;">{action_lbl}</span>
+    </div>
+    <span class="dtc-type-badge" style="border-color:{accent_hex};color:{accent_hex};">{opt_type}</span>
+  </div>
+
+  <div class="dtc-stats-row">
+    <div class="dtc-stat">
+      <div class="dtc-stat-lbl">{ltp_lbl}</div>
+      <div class="dtc-stat-val dtc-ltp" style="color:{accent_hex};text-shadow:0 0 12px {accent_hex}88;">&#8377;{ltp:.2f}</div>
+    </div>
+    <div class="dtc-stat">
+      <div class="dtc-stat-lbl">STRIKE</div>
+      <div class="dtc-stat-val">&#8377;{strike_display}</div>
+    </div>
+    <div class="dtc-stat">
+      <div class="dtc-stat-lbl">INVEST</div>
+      <div class="dtc-stat-val">&#8377;{invest:,.0f}</div>
+    </div>
+    <div class="dtc-stat">
+      <div class="dtc-stat-lbl">OI</div>
+      <div class="dtc-stat-val">{fmt_num(oi)}</div>
+    </div>
+    <div class="dtc-stat">
+      <div class="dtc-stat-lbl">{stat5_lbl}</div>
+      <div class="dtc-stat-val">{stat5_val}</div>
+    </div>
+  </div>
+
+  <div class="dtc-targets-row">
+    <div class="dtc-tbox dtc-t1">
+      <div class="dtc-tbox-lbl">TARGET 1</div>
+      <div class="dtc-tbox-price">&#8377;{target_1}</div>
+      <div class="dtc-tbox-pnl">{fmt_pnl_small(p_at_t1)}</div>
+    </div>
+    <div class="dtc-tbox dtc-t2">
+      <div class="dtc-tbox-lbl">TARGET 2</div>
+      <div class="dtc-tbox-price">&#8377;{target_2}</div>
+      <div class="dtc-tbox-pnl">{fmt_pnl_small(p_at_t2)}</div>
+    </div>
+    <div class="dtc-tbox dtc-sl">
+      <div class="dtc-tbox-lbl">STOP LOSS</div>
+      <div class="dtc-tbox-price">&#8377;{stop_loss:.2f}</div>
+      <div class="dtc-tbox-pnl"><span style="color:#ff3a5c;">Max&nbsp;{fmt_pnl_small(max_loss, 50) if isinstance(max_loss,(int,float)) else '—'}</span></div>
+    </div>
+  </div>
+</div>'''
+
+        if not cards_html:
+            cards_html = '<div class="dtc-no-rec">⚠ No strike recommendations available. Check strategies below.</div>'
+
+        return f'''
+<style>
+  /* ── Dark Ticker Card Widget ──────────────────────────────── */
+  .dtc-wrap {{ font-family:"JetBrains Mono",monospace; }}
+
+  .dtc-header {{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px; margin-bottom:12px;
+    background:#06101c; border:1px solid #0d2540; border-radius:8px;
+  }}
+  .dtc-header-title {{
+    font-family:"Syne",sans-serif;
+    font-size:13px; font-weight:800; color:#ffffff; letter-spacing:2px; text-transform:uppercase;
+  }}
+  .dtc-header-right {{ display:flex; gap:10px; align-items:center; }}
+  .dtc-bias-pill {{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px; font-weight:700; padding:3px 12px; border-radius:5px;
+    letter-spacing:1.5px; text-transform:uppercase;
+  }}
+  .dtc-nifty-price {{
+    font-family:"JetBrains Mono",monospace;
+    font-size:12px; font-weight:600; color:rgba(220,240,255,.6); letter-spacing:.5px;
+  }}
+
+  /* ── Card ─────────────────────────────────────────────────── */
+  .dtc-card {{
+    background:#080e1a; border:1px solid rgba(255,255,255,.07);
+    border-radius:10px; overflow:hidden; margin-bottom:10px;
+    position:relative;
+    box-shadow:0 4px 24px var(--glow);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }}
+  .dtc-card:last-child {{ margin-bottom:0; }}
+  .dtc-card:hover {{
+    transform:translateY(-2px);
+    box-shadow:0 8px 32px var(--glow);
+  }}
+  .dtc-card::before {{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--c); box-shadow:0 0 14px var(--c);
+  }}
+
+  /* ── Card top row ─────────────────────────────────────────── */
+  .dtc-card-top {{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px 10px 18px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+    background:linear-gradient(90deg,rgba(255,255,255,.025),transparent);
+  }}
+  .dtc-name-row {{ display:flex; align-items:center; gap:10px; }}
+  .dtc-name {{
+    font-family:"Syne",sans-serif;
+    font-size:16px; font-weight:800; color:#ffffff; letter-spacing:.3px;
+    text-shadow:0 0 16px rgba(255,255,255,.1);
+  }}
+  .dtc-action-badge {{
+    font-size:10px; font-weight:700; letter-spacing:1.5px;
+    padding:3px 10px; border-radius:5px; text-transform:uppercase; color:#000;
+  }}
+  .dtc-type-badge {{
+    font-size:11px; font-weight:700; letter-spacing:1.5px;
+    padding:4px 12px; border-radius:6px;
+    border:1px solid; background:rgba(255,255,255,.04);
+    text-transform:uppercase;
+  }}
+
+  /* ── Stats row ────────────────────────────────────────────── */
+  .dtc-stats-row {{
+    display:grid; grid-template-columns:repeat(5,1fr);
+    padding:10px 18px; gap:8px;
+    border-bottom:1px solid rgba(255,255,255,.04);
+    background:#060d18;
+  }}
+  .dtc-stat {{}}
+  .dtc-stat-lbl {{
+    font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+    color:#6ab0d0;          /* ← BRIGHT VISIBLE BLUE-WHITE */
+    margin-bottom:4px;
+  }}
+  .dtc-stat-val {{
+    font-size:13px; font-weight:700;
+    color:#c8e8ff;          /* ← BRIGHT WHITE-BLUE for values */
+    letter-spacing:.3px;
+  }}
+  .dtc-ltp {{
+    font-size:18px !important;
+    font-weight:700 !important;
+  }}
+
+  /* ── Target boxes ─────────────────────────────────────────── */
+  .dtc-targets-row {{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+    padding:10px 18px 12px;
+    background:#06101c;
+  }}
+  .dtc-tbox {{
+    border-radius:7px; padding:10px 12px;
+    position:relative; overflow:hidden;
+  }}
+  .dtc-tbox::before {{
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:var(--tb-c); box-shadow:0 0 8px var(--tb-c);
+  }}
+  .dtc-t1 {{ --tb-c:#00e676; background:rgba(0,230,118,.06); border:1px solid rgba(0,230,118,.25); }}
+  .dtc-t2 {{ --tb-c:#00b4ff; background:rgba(0,180,255,.06); border:1px solid rgba(0,180,255,.25); }}
+  .dtc-sl {{ --tb-c:#ff3a5c; background:rgba(255,58,92,.06);  border:1px solid rgba(255,58,92,.25); }}
+
+  .dtc-tbox-lbl {{
+    font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+    color:var(--tb-c);
+    opacity:1;              /* ← FULLY VISIBLE, no dimming */
+    margin-bottom:5px;
+  }}
+  .dtc-tbox-price {{
+    font-size:15px; font-weight:700;
+    color:#e8f4ff;          /* ← BRIGHT WHITE price */
+    margin-bottom:3px; letter-spacing:-.2px;
+  }}
+  .dtc-tbox-pnl {{
+    font-size:11px; font-weight:700;
+  }}
+
+  /* ── Fallback ─────────────────────────────────────────────── */
+  .dtc-no-rec {{
+    padding:20px; text-align:center;
+    background:rgba(255,58,92,.05); border:1px solid rgba(255,58,92,.2);
+    border-radius:8px; color:#ff6080; font-size:13px; font-weight:700;
+  }}
+</style>
+
+<div class="dtc-wrap">
+  <div class="dtc-header">
+    <span class="dtc-header-title">&#11042; Strike Recommendations</span>
+    <div class="dtc-header-right">
+      <span class="dtc-bias-pill" style="{bias_css}">{bias}</span>
+      <span class="dtc-nifty-price">Nifty &#8377;{current_price:,.2f}</span>
+    </div>
+  </div>
+  {cards_html}
+</div>'''
 
     def send_email(self, html_content):
         """Send email with HTML report"""
