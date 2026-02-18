@@ -586,8 +586,21 @@ class NiftyAnalyzer:
 
         momentum_5h_signal, momentum_5h_bias, momentum_5h_colors = self.get_momentum_signal(momentum_5h_pct)
 
+        # 2-DAY MOMENTUM (approx 13 x 1H bars ≈ 2 trading days)
+        bars_2d = 13
+        if len(df) >= bars_2d:
+            price_2d_ago    = df['Close'].iloc[-bars_2d]
+            momentum_2d     = current_price - price_2d_ago
+            momentum_2d_pct = (momentum_2d / price_2d_ago * 100)
+        else:
+            momentum_2d     = 0
+            momentum_2d_pct = 0
+
+        momentum_2d_signal, momentum_2d_bias, momentum_2d_colors = self.get_momentum_signal(momentum_2d_pct)
+
         self.logger.info(f"📊 1H Momentum: {price_change_pct_1h:+.2f}% - {momentum_1h_signal}")
         self.logger.info(f"📊 5H Momentum: {momentum_5h_pct:+.2f}% - {momentum_5h_signal}")
+        self.logger.info(f"📊 2D Momentum: {momentum_2d_pct:+.2f}% - {momentum_2d_signal}")
 
         df['RSI']      = self.calculate_rsi(df['Close'])
         current_rsi    = df['RSI'].iloc[-1]
@@ -648,7 +661,12 @@ class NiftyAnalyzer:
             'momentum_5h_pct':     round(momentum_5h_pct, 2),
             'momentum_5h_signal':  momentum_5h_signal,
             'momentum_5h_bias':    momentum_5h_bias,
-            'momentum_5h_colors':  momentum_5h_colors
+            'momentum_5h_colors':  momentum_5h_colors,
+            'momentum_2d':         round(momentum_2d, 2),
+            'momentum_2d_pct':     round(momentum_2d_pct, 2),
+            'momentum_2d_signal':  momentum_2d_signal,
+            'momentum_2d_bias':    momentum_2d_bias,
+            'momentum_2d_colors':  momentum_2d_colors
         }
 
     def get_sample_tech_analysis(self):
@@ -677,7 +695,12 @@ class NiftyAnalyzer:
             'momentum_5h_pct':     -0.14,
             'momentum_5h_signal':  'Moderate Downward',
             'momentum_5h_bias':    'Bearish',
-            'momentum_5h_colors':  {'bg': '#3a1500', 'bg_dark': '#280d00', 'text': '#ff8855', 'border': '#cc4400'}
+            'momentum_5h_colors':  {'bg': '#3a1500', 'bg_dark': '#280d00', 'text': '#ff8855', 'border': '#cc4400'},
+            'momentum_2d':         305.50,
+            'momentum_2d_pct':     1.24,
+            'momentum_2d_signal':  'Strong Upward',
+            'momentum_2d_bias':    'Bullish',
+            'momentum_2d_colors':  {'bg': '#004d2e', 'bg_dark': '#003320', 'text': '#00ff8c', 'border': '#00aa55'}
         }
 
     def generate_recommendation(self, oc_analysis, tech_analysis):
@@ -3257,6 +3280,17 @@ class NiftyAnalyzer:
             'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
         })
 
+        momentum_2d_pct    = tech_analysis.get('momentum_2d_pct', 0)
+        momentum_2d_signal = tech_analysis.get('momentum_2d_signal', 'Sideways')
+        momentum_2d_colors = tech_analysis.get('momentum_2d_colors', {
+            'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
+        })
+
+        # Build 2D progress bar width (cap at 100%)
+        bar_1h = min(abs(momentum_1h_pct) * 40, 100)
+        bar_5h = min(abs(momentum_5h_pct) * 20, 100)
+        bar_2d = min(abs(momentum_2d_pct) * 10, 100)
+
         strategies_html = ''
         for strategy in strategies:
             strategies_html += f"""
@@ -3351,7 +3385,7 @@ class NiftyAnalyzer:
             letter-spacing: 3px;
             text-shadow: 0 0 12px rgba(0,220,255,.6);
         }}
-        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
+        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
         .momentum-box {{
             background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
             color: var(--momentum-text);
@@ -3505,8 +3539,34 @@ class NiftyAnalyzer:
             line-height: 1.8;
             letter-spacing: .5px;
         }}
+        @keyframes momentum-glow-up {{
+            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.5), 0 0 0 1px var(--momentum-border); }}
+            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 24px var(--momentum-border); }}
+        }}
+        @keyframes momentum-glow-down {{
+            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.5), 0 0 0 1px var(--momentum-border); }}
+            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.5), 0 0 24px var(--momentum-border); }}
+        }}
+        .momentum-box.glow-anim {{ animation: momentum-glow-up 3s ease-in-out infinite; }}
+        .momentum-box::before {{
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: var(--momentum-border);
+            box-shadow: 0 0 10px var(--momentum-border);
+        }}
+        .momentum-bar-wrap {{
+            margin-top: 14px; height: 4px;
+            background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;
+        }}
+        .momentum-bar-fill {{
+            height: 100%; border-radius: 2px;
+            background: var(--momentum-border);
+            box-shadow: 0 0 8px var(--momentum-border);
+            transition: width 0.6s ease;
+        }}
         @media (max-width: 768px) {{
             .momentum-container {{ grid-template-columns: 1fr; }}
+            .momentum-box .value {{ font-size: 26px; }}
         }}
     </style>
 </head>
@@ -3520,17 +3580,25 @@ class NiftyAnalyzer:
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- DUAL MOMENTUM -->
+    <!-- TRIPLE MOMENTUM — Plasma Pulse Theme -->
     <div class="momentum-container">
-        <div class="momentum-box" style="--momentum-bg:{momentum_1h_colors['bg']};--momentum-bg-dark:{momentum_1h_colors['bg_dark']};--momentum-text:{momentum_1h_colors['text']};--momentum-border:{momentum_1h_colors['border']};">
-            <h3>&#9889; 1H Momentum</h3>
+        <div class="momentum-box glow-anim" style="--momentum-bg:{momentum_1h_colors['bg']};--momentum-bg-dark:{momentum_1h_colors['bg_dark']};--momentum-text:{momentum_1h_colors['text']};--momentum-border:{momentum_1h_colors['border']};">
+            <h3>&#9889; 1H MOMENTUM</h3>
             <div class="value">{momentum_1h_pct:+.2f}%</div>
             <div class="signal">{momentum_1h_signal}</div>
+            <div class="momentum-bar-wrap"><div class="momentum-bar-fill" style="width:{bar_1h:.0f}%;"></div></div>
         </div>
-        <div class="momentum-box" style="--momentum-bg:{momentum_5h_colors['bg']};--momentum-bg-dark:{momentum_5h_colors['bg_dark']};--momentum-text:{momentum_5h_colors['text']};--momentum-border:{momentum_5h_colors['border']};">
-            <h3>&#128202; 5H Momentum</h3>
+        <div class="momentum-box glow-anim" style="--momentum-bg:{momentum_5h_colors['bg']};--momentum-bg-dark:{momentum_5h_colors['bg_dark']};--momentum-text:{momentum_5h_colors['text']};--momentum-border:{momentum_5h_colors['border']};">
+            <h3>&#128202; 5H MOMENTUM</h3>
             <div class="value">{momentum_5h_pct:+.2f}%</div>
             <div class="signal">{momentum_5h_signal}</div>
+            <div class="momentum-bar-wrap"><div class="momentum-bar-fill" style="width:{bar_5h:.0f}%;"></div></div>
+        </div>
+        <div class="momentum-box glow-anim" style="--momentum-bg:{momentum_2d_colors['bg']};--momentum-bg-dark:{momentum_2d_colors['bg_dark']};--momentum-text:{momentum_2d_colors['text']};--momentum-border:{momentum_2d_colors['border']};">
+            <h3>&#128374; 2D MOMENTUM</h3>
+            <div class="value">{momentum_2d_pct:+.2f}%</div>
+            <div class="signal">{momentum_2d_signal}</div>
+            <div class="momentum-bar-wrap"><div class="momentum-bar-fill" style="width:{bar_2d:.0f}%;"></div></div>
         </div>
     </div>
 
