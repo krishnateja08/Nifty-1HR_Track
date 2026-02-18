@@ -2,6 +2,9 @@
 Nifty Option Chain & Technical Analysis for Day Trading
 THEME:  DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
 PIVOT:  WIDGET 01 — NEON RUNWAY  |  High-contrast · Bright Cyan · Vivid R/S colour labels
+S&R:    WIDGET 04 — BLOOMBERG TABLE  |  Black · Gold/Amber · Distance column · Strength dots
+FIX:    Dashboard now receives report — writes latest_report.html (fixed path) on every run
+        ALSO writes timestamped archive copy to ./reports/ for history
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
@@ -1619,7 +1622,7 @@ class NiftyAnalyzer:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&family=IBM+Plex+Mono:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         /* ── Reset & Base ──────────────────────────────────────────────── */
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -1812,24 +1815,114 @@ class NiftyAnalyzer:
         }}
         .data-item .value {{ color: #80d8ff; font-size: 18px; font-weight: 700; }}
 
-        /* ── Levels ─────────────────────────────────────────────────────── */
+        /* ── S&R Bloomberg Table ─────────────────────────────────────── */
+        .sr-wrap {{
+            background: #050300;
+            border-radius: 8px;
+            overflow: hidden;
+            font-family: 'IBM Plex Mono', monospace;
+            box-shadow: 0 8px 32px rgba(0,0,0,.8);
+            border: 1px solid #1a1000;
+        }}
+        .sr-wrap::before {{
+            content: '';
+            display: block; height: 3px;
+            background: linear-gradient(90deg, #ff4444 0%, #ff8800 30%, #ffd700 50%, #00cc66 70%, #00aa55 100%);
+        }}
+        .sr-table-hdr {{
+            background: #080400;
+            padding: 11px 18px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #1a1000;
+        }}
+        .sr-table-hdr-title {{
+            font-size: 16px; font-weight: 700; color: #ffffff;
+            font-family: 'Bebas Neue', 'Rajdhani', sans-serif;
+            letter-spacing: 3px;
+        }}
+        .sr-table-hdr-badge {{
+            font-size: 9px; color: #886600; border: 1px solid #553300;
+            padding: 3px 10px; letter-spacing: 2px;
+            font-family: 'IBM Plex Mono', monospace;
+        }}
+        .sr-table {{
+            width: 100%; border-collapse: collapse;
+            font-family: 'IBM Plex Mono', monospace;
+        }}
+        .sr-table thead th {{
+            background: #0a0600; color: #554400;
+            font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+            padding: 8px 16px; text-align: left;
+            border-bottom: 1px solid #1a1000; font-weight: 700;
+        }}
+        .sr-table thead th:nth-child(3),
+        .sr-table thead th:nth-child(4) {{ text-align: right; }}
+        .sr-table thead th:last-child {{ text-align: center; }}
+        .sr-table tbody td {{
+            padding: 13px 16px; border-bottom: 1px solid #0d0800;
+            font-size: 14px; vertical-align: middle;
+        }}
+        .sr-table tbody tr:hover td {{ background: #0a0700; }}
+        .sr-table tbody tr:last-child td {{ border-bottom: none; }}
+        /* level label */
+        .sr-td-label {{ color: #665500; font-size: 13px; }}
+        .sr-td-label-r {{ color: #cc6600; }}
+        .sr-td-label-s {{ color: #449966; }}
+        /* type badge */
+        .sr-td-type {{
+            font-size: 10px; font-weight: 800; padding: 2px 8px;
+            border-radius: 4px; letter-spacing: .5px;
+        }}
+        .sr-td-type-r {{ color: #ff6600; background: rgba(255,100,0,.12); border: 1px solid rgba(255,100,0,.3); }}
+        .sr-td-type-s {{ color: #00cc66; background: rgba(0,200,100,.12); border: 1px solid rgba(0,200,100,.3); }}
+        /* prices */
+        .sr-td-price-r {{ color: #ffcc88; font-weight: 700; text-align: right; font-size: 16px; }}
+        .sr-td-price-s {{ color: #88ffcc; font-weight: 700; text-align: right; font-size: 16px; }}
+        .sr-td-price-nearest-r {{ color: #ffeecc; font-size: 18px; }}
+        .sr-td-price-nearest-s {{ color: #eeffee; font-size: 18px; }}
+        /* distances */
+        .sr-td-dist {{ text-align: right; font-size: 13px; }}
+        .sr-td-dist-r {{ color: rgba(255,150,80,.7); }}
+        .sr-td-dist-s {{ color: rgba(80,255,160,.7); }}
+        /* strength dots */
+        .sr-dots {{ display: flex; gap: 5px; justify-content: center; }}
+        .sr-dot-r {{ width: 9px; height: 9px; border-radius: 50%; background: #ff4400; box-shadow: 0 0 5px rgba(255,68,0,.6); }}
+        .sr-dot-s {{ width: 9px; height: 9px; border-radius: 50%; background: #00cc66; box-shadow: 0 0 5px rgba(0,204,102,.6); }}
+        .sr-dot-empty {{ width: 9px; height: 9px; border-radius: 50%; background: #1a1200; border: 1px solid #332200; }}
+        /* nearest tag */
+        .sr-near-r {{
+            display: inline-block; font-size: 9px; padding: 1px 6px;
+            border-radius: 4px; font-weight: 800; margin-left: 6px; letter-spacing: .5px;
+            background: rgba(255,100,0,.15); color: #ff8844; border: 1px solid rgba(255,100,0,.4);
+            font-family: 'IBM Plex Mono', monospace;
+        }}
+        .sr-near-s {{
+            display: inline-block; font-size: 9px; padding: 1px 6px;
+            border-radius: 4px; font-weight: 800; margin-left: 6px; letter-spacing: .5px;
+            background: rgba(0,200,100,.15); color: #44ffaa; border: 1px solid rgba(0,200,100,.4);
+            font-family: 'IBM Plex Mono', monospace;
+        }}
+        /* LTP divider row */
+        .sr-ltp-row td {{
+            background: rgba(255,215,0,.04) !important;
+            border-top: 1px solid #332200 !important;
+            border-bottom: 1px solid #332200 !important;
+            padding: 11px 16px !important;
+        }}
+        .sr-ltp-lbl {{ color: #664400; font-size: 12px; }}
+        .sr-ltp-price {{ color: #ffd700; font-size: 18px; font-weight: 700; }}
+        /* keep old .levels for OI section reuse */
         .levels {{ display: flex; flex-wrap: wrap; gap: 16px; }}
         .levels-box {{
-            flex: 1;
-            min-width: 260px;
+            flex: 1; min-width: 260px;
             background: rgba(0,80,140,.06);
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #0a2a3a;
+            padding: 16px; border-radius: 10px; border: 1px solid #0a2a3a;
         }}
         .levels-box.resistance {{ border-left: 4px solid #ff6070; }}
         .levels-box.support    {{ border-left: 4px solid #00ff8c; }}
         .levels-box h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 10px; color: #80b8d8; letter-spacing: 1px; }}
         .levels-box ul {{ list-style: none; padding: 0; }}
-        .levels-box li {{
-            margin: 6px 0; font-size: 14px; color: #5a8aaa;
-            padding-left: 18px; position: relative;
-        }}
+        .levels-box li {{ margin: 6px 0; font-size: 14px; color: #5a8aaa; padding-left: 18px; position: relative; }}
         .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #00aaff; font-weight: bold; }}
         .levels-box.resistance li {{ color: #cc8888; }}
         .levels-box.support    li {{ color: #44cc88; }}
@@ -2054,21 +2147,53 @@ class NiftyAnalyzer:
     <!-- ── SUPPORT & RESISTANCE ──────────────────────────────────────────── -->
     <div class="section">
         <div class="section-title">Support &amp; Resistance (1H)</div>
-        <div class="levels">
-            <div class="levels-box resistance">
-                <h4>&#128308; Resistance Levels</h4>
-                <ul>{''.join([f'<li>R{i+1}: &#8377;{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}</ul>
+        <div class="sr-wrap">
+            <div class="sr-table-hdr">
+                <span class="sr-table-hdr-title">Support &amp; Resistance · 1H</span>
+                <span class="sr-table-hdr-badge">NSE · NIFTY · PRICE ACTION</span>
             </div>
-            <div class="levels-box support">
-                <h4>&#128994; Support Levels</h4>
-                <ul>{''.join([f'<li>S{i+1}: &#8377;{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
-            </div>
+            <table class="sr-table">
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>Distance</th>
+                        <th>Strength</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join([
+                        f"""<tr{'style="background:#0a0600;"' if i == 0 else ''}>
+                        <td class="sr-td-label sr-td-label-r">{'R' + str(i+1) + (' ★' if i == 0 else '')}</td>
+                        <td><span class="sr-td-type sr-td-type-r">RESISTANCE</span>{'<span class="sr-near-r">NEAREST</span>' if i == 0 else ''}</td>
+                        <td class="sr-td-price-r {'sr-td-price-nearest-r' if i == 0 else ''}">&#8377;{r}</td>
+                        <td class="sr-td-dist sr-td-dist-r">+{round(r - tech_analysis.get('current_price', 0), 1)} pts</td>
+                        <td><div class="sr-dots">{''.join(['<div class="sr-dot-r"></div>' for _ in range(3 - i)] + ['<div class="sr-dot-empty"></div>' for _ in range(i)])}</div></td>
+                        </tr>"""
+                        for i, r in enumerate(tech_analysis.get('tech_resistances', []))
+                    ])}
+                    <tr class="sr-ltp-row">
+                        <td class="sr-ltp-lbl" colspan="2">&#9654; LIVE PRICE</td>
+                        <td class="sr-ltp-price" colspan="3">&#8377;{tech_analysis.get('current_price','N/A')}</td>
+                    </tr>
+                    {''.join([
+                        f"""<tr{'style="background:#080700;"' if i == 0 else ''}>
+                        <td class="sr-td-label sr-td-label-s">{'S' + str(i+1) + (' ★' if i == 0 else '')}</td>
+                        <td><span class="sr-td-type sr-td-type-s">SUPPORT</span>{'<span class="sr-near-s">NEAREST</span>' if i == 0 else ''}</td>
+                        <td class="sr-td-price-s {'sr-td-price-nearest-s' if i == 0 else ''}">&#8377;{s}</td>
+                        <td class="sr-td-dist sr-td-dist-s">-{round(tech_analysis.get('current_price', 0) - s, 1)} pts</td>
+                        <td><div class="sr-dots">{''.join(['<div class="sr-dot-s"></div>' for _ in range(3 - i)] + ['<div class="sr-dot-empty"></div>' for _ in range(i)])}</div></td>
+                        </tr>"""
+                        for i, s in enumerate(tech_analysis.get('tech_supports', []))
+                    ])}
+                </tbody>
+            </table>
         </div>
     </div>
 
     <!-- ── PIVOT POINTS ──────────────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">Pivot Points (Traditional - 30 Min)</div>
         {pivot_widget_html}
     </div>
 
@@ -2218,7 +2343,7 @@ class NiftyAnalyzer:
     <!-- ── FOOTER ────────────────────────────────────────────────────────── -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Dual Momentum (1H + 5H)</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Bloomberg S&amp;R &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Dual Momentum (1H + 5H)</p>
     </div>
 
 </div>
@@ -2295,16 +2420,37 @@ class NiftyAnalyzer:
             os.makedirs(report_dir, exist_ok=True)
             ist_time        = self.get_ist_time()
             filename_format = self.config['report']['filename_format']
-            report_filename = os.path.join(report_dir, ist_time.strftime(filename_format))
 
+            # ── 1. Timestamped archive copy (one file per run) ────────────
+            report_filename = os.path.join(report_dir, ist_time.strftime(filename_format))
             with open(report_filename, 'w', encoding='utf-8') as f:
                 f.write(html_report)
             self.logger.info(f"💾 Report saved as: {report_filename}")
 
+            # ── 2. Fixed filename — dashboard always reads THIS file ──────
+            #    Overwrites every run so the UI always shows the latest.
+            latest_path = os.path.join(report_dir, 'latest_report.html')
+            with open(latest_path, 'w', encoding='utf-8') as f:
+                f.write(html_report)
+            self.logger.info(f"📄 Latest report updated: {latest_path}")
+
+            # ── 3. Sibling copy next to the script itself (fallback) ──────
+            #    Some workflow runners set CWD to a temp folder; this
+            #    ensures the file also lands next to the script file.
+            try:
+                script_dir   = os.path.dirname(os.path.abspath(__file__))
+                sibling_path = os.path.join(script_dir, 'latest_report.html')
+                if os.path.abspath(sibling_path) != os.path.abspath(latest_path):
+                    with open(sibling_path, 'w', encoding='utf-8') as f:
+                        f.write(html_report)
+                    self.logger.info(f"📄 Sibling copy: {sibling_path}")
+            except Exception as e:
+                self.logger.warning(f"Could not write sibling copy: {e}")
+
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
 
-        self.logger.info("✅ Deep Ocean · Neon Runway Pivot Widget — Analysis Complete!")
+        self.logger.info("✅ Deep Ocean · Bloomberg S&R · Neon Runway Pivot — Analysis Complete!")
 
         return {
             'oc_analysis':    oc_analysis,
@@ -2318,7 +2464,7 @@ if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
 
-    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot Widget)")
+    print(f"\n✅ Analysis Complete! (Deep Ocean · Bloomberg S&R · Neon Runway Pivot)")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
     print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
