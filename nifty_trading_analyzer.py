@@ -1093,6 +1093,421 @@ class NiftyAnalyzer:
         return str(value)
 
     # =========================================================================
+    # WIDGET 02 — PLASMA RADIAL | Option Chain Analysis
+    # Circular PCR gauge · Neon plasma arcs · Bright vivid labels
+    # =========================================================================
+    def _build_oc_plasma_widget(self, oc_analysis):
+        """
+        Plasma Radial widget for Option Chain Analysis.
+        Left: animated SVG circular PCR gauge.
+        Right: bright vivid stat cards + OI R/S levels with progress bars.
+        """
+        pcr          = oc_analysis.get('pcr', 0)
+        max_pain     = oc_analysis.get('max_pain', 'N/A')
+        oi_sentiment = oc_analysis.get('oi_sentiment', 'N/A')
+        call_buildup = oc_analysis.get('call_buildup', 0)
+        put_buildup  = oc_analysis.get('put_buildup', 0)
+        avg_call_iv  = oc_analysis.get('avg_call_iv', 0)
+        avg_put_iv   = oc_analysis.get('avg_put_iv', 0)
+        resistances  = oc_analysis.get('resistances', [])
+        supports     = oc_analysis.get('supports', [])
+
+        # Sentiment colour
+        if oi_sentiment == 'Bullish':
+            sent_col  = '#00ff8c'
+            sent_bg   = 'rgba(0,200,120,.14)'
+            sent_brd  = '#00aa5566'
+            sent_icon = '&#8679;'
+        else:
+            sent_col  = '#ff6070'
+            sent_bg   = 'rgba(255,60,80,.14)'
+            sent_brd  = '#cc223366'
+            sent_icon = '&#8681;'
+
+        # PCR gauge arc: circle r=65, circumference ≈ 408.4
+        circ      = 408.4
+        pcr_ratio = min(pcr / 2.0, 1.0)
+        arc_len   = pcr_ratio * (circ * 0.69)
+        arc_offset = -(circ * 0.155)
+
+        if pcr >= 1.2:
+            arc_col1, arc_col2 = '#00aa55', '#00ff8c'
+        elif pcr >= 1.0:
+            arc_col1, arc_col2 = '#0066ff', '#00c8ff'
+        elif pcr >= 0.8:
+            arc_col1, arc_col2 = '#ff9500', '#ffcc00'
+        else:
+            arc_col1, arc_col2 = '#cc2233', '#ff6070'
+
+        # Build R level bars
+        r_bars_html = ''
+        for idx, level in enumerate(resistances):
+            lbl   = f"R{idx+1}"
+            bar_w = max(15, 85 - idx * 20)
+            r_bars_html += f'''
+            <div class="w2oc-level-row">
+                <span class="w2oc-level-tag w2oc-r-tag">{lbl}</span>
+                <div class="w2oc-level-track"><div class="w2oc-level-fill w2oc-fill-r" style="width:{bar_w}%;"></div></div>
+                <span class="w2oc-level-price w2oc-r-price">&#8377;{level:,.0f}</span>
+            </div>'''
+
+        # Build S level bars
+        s_bars_html = ''
+        for idx, level in enumerate(supports):
+            lbl   = f"S{idx+1}"
+            bar_w = max(15, 85 - idx * 20)
+            s_bars_html += f'''
+            <div class="w2oc-level-row">
+                <span class="w2oc-level-tag w2oc-s-tag">{lbl}</span>
+                <div class="w2oc-level-track"><div class="w2oc-level-fill w2oc-fill-s" style="width:{bar_w}%;"></div></div>
+                <span class="w2oc-level-price w2oc-s-price">&#8377;{level:,.0f}</span>
+            </div>'''
+
+        def fmt_millions(val):
+            if abs(val) >= 1_000_000:
+                return f"{val/1_000_000:.1f}M"
+            elif abs(val) >= 1_000:
+                return f"{val/1_000:.0f}K"
+            return str(int(val))
+
+        call_b_str = fmt_millions(call_buildup)
+        put_b_str  = fmt_millions(put_buildup)
+
+        widget_html = f'''
+        <!-- ═══ OPTION CHAIN — WIDGET 02 PLASMA RADIAL ═══ -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+
+            .w2oc-wrap {{
+                font-family: 'Chakra Petch', sans-serif;
+                background: linear-gradient(135deg, #02060f, #030d1a);
+                border: 1px solid #0a2040;
+                border-radius: 14px;
+                overflow: hidden;
+                box-shadow: 0 0 60px rgba(0,100,255,.07), 0 24px 80px rgba(0,0,0,.95);
+            }}
+
+            /* Header */
+            .w2oc-hdr {{
+                background: linear-gradient(135deg, #020810, #031220);
+                border-bottom: 1px solid #0a2040;
+                padding: 14px 22px;
+                display: flex; align-items: center; gap: 12px;
+                position: relative;
+            }}
+            .w2oc-hdr::after {{
+                content: '';
+                position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+                background: linear-gradient(90deg, transparent, #0066ff66, #00c8ffaa, #0066ff66, transparent);
+            }}
+            .w2oc-hdr-icon {{
+                width: 36px; height: 36px; border-radius: 10px;
+                background: linear-gradient(135deg, #001866, #0033aa);
+                display: flex; align-items: center; justify-content: center; font-size: 17px;
+                box-shadow: 0 0 20px rgba(0,100,255,.5), inset 0 1px 0 rgba(255,255,255,.1);
+            }}
+            .w2oc-hdr-text h3 {{
+                font-size: 14px; font-weight: 700; color: #ffffff;
+                letter-spacing: 2.5px; text-transform: uppercase;
+                text-shadow: 0 0 20px rgba(0,200,255,.5);
+            }}
+            .w2oc-hdr-text p {{
+                font-size: 10px; color: #4499ff; margin-top: 3px;
+                letter-spacing: 1.5px; font-weight: 600;
+            }}
+            .w2oc-hdr-badge {{
+                margin-left: auto;
+                background: rgba(0,200,255,.14);
+                border: 1px solid #0066ff99;
+                color: #00ddff;
+                padding: 5px 16px; border-radius: 20px;
+                font-size: 10px; font-weight: 700; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(0,220,255,.7);
+                animation: w2oc-pulse 2s ease-in-out infinite;
+            }}
+            @keyframes w2oc-pulse {{
+                0%,100% {{ box-shadow: 0 0 0 0 rgba(0,200,255,.3); }}
+                50%      {{ box-shadow: 0 0 0 6px rgba(0,200,255,0); }}
+            }}
+
+            /* Body layout */
+            .w2oc-body {{
+                display: grid;
+                grid-template-columns: 240px 1fr;
+            }}
+
+            /* Left gauge column */
+            .w2oc-gauge-col {{
+                padding: 24px 16px;
+                border-right: 1px solid #0a2040;
+                background: #02080f;
+                display: flex; flex-direction: column; align-items: center; gap: 16px;
+            }}
+            .w2oc-gauge-wrap {{
+                position: relative; width: 170px; height: 170px;
+            }}
+            .w2oc-gauge-wrap svg {{
+                position: absolute; inset: 0; width: 100%; height: 100%;
+                filter: drop-shadow(0 0 10px {arc_col2}55);
+            }}
+            .w2oc-gauge-center {{
+                position: absolute; inset: 0;
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center; gap: 2px;
+            }}
+            .w2oc-gauge-lbl  {{ font-size: 9px; color: #2a5a8a; letter-spacing: 3px; text-transform: uppercase; }}
+            .w2oc-gauge-val  {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 32px; font-weight: 700; color: #ffffff;
+                letter-spacing: -1px; text-shadow: 0 0 28px {arc_col2};
+            }}
+            .w2oc-gauge-sub  {{ font-size: 9px; color: #2a5a8a; letter-spacing: 2px; }}
+            .w2oc-gauge-title {{
+                font-size: 11px; font-weight: 700; color: {arc_col2};
+                letter-spacing: 2px; text-transform: uppercase;
+                text-shadow: 0 0 14px {arc_col2}99;
+            }}
+
+            /* Sentiment pill */
+            .w2oc-sent-pill {{
+                background: {sent_bg}; border: 1px solid {sent_brd};
+                border-radius: 10px; padding: 10px 16px;
+                text-align: center; width: 100%;
+            }}
+            .w2oc-sent-lbl {{
+                font-size: 9px; color: #4499ff;
+                letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px;
+                font-weight: 700;
+            }}
+            .w2oc-sent-val {{
+                font-size: 20px; font-weight: 700; color: {sent_col};
+                text-shadow: 0 0 18px {sent_col}99; letter-spacing: 1px;
+            }}
+
+            /* Max pain */
+            .w2oc-maxpain {{
+                background: rgba(0,100,200,.1); border: 1px solid #0a3a5a;
+                border-radius: 10px; padding: 10px 16px;
+                text-align: center; width: 100%;
+            }}
+            .w2oc-maxpain-lbl {{
+                font-size: 9px; color: #4499ff;
+                letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px;
+                font-weight: 700;
+            }}
+            .w2oc-maxpain-val {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 20px; font-weight: 700; color: #00ddff;
+                text-shadow: 0 0 18px rgba(0,220,255,.7); letter-spacing: -0.5px;
+            }}
+
+            /* Right stats + levels */
+            .w2oc-right {{
+                padding: 20px 22px;
+                display: flex; flex-direction: column; gap: 18px;
+            }}
+
+            /* Stat cards */
+            .w2oc-stats-row {{
+                display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            }}
+            .w2oc-stat-card {{
+                background: rgba(0,60,120,.1); border: 1px solid #0a2a3a;
+                border-radius: 10px; padding: 14px 16px;
+                position: relative; overflow: hidden;
+            }}
+            .w2oc-stat-card::before {{
+                content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+                background: var(--sc-accent);
+                box-shadow: 0 0 10px var(--sc-accent);
+            }}
+            .w2oc-stat-card-lbl {{
+                font-size: 10px; font-weight: 700; letter-spacing: 2px;
+                text-transform: uppercase; margin-bottom: 8px; color: #88bbdd;
+            }}
+            .w2oc-stat-card-val {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 22px; font-weight: 700;
+                color: var(--sc-col);
+                text-shadow: 0 0 16px var(--sc-accent);
+            }}
+            .w2oc-stat-card-sub {{
+                font-size: 10px; margin-top: 5px; color: var(--sc-col);
+                font-family: 'IBM Plex Mono', monospace; opacity: 0.65;
+            }}
+
+            /* Divider */
+            .w2oc-div {{ height: 1px; background: linear-gradient(90deg, transparent, #0a3050, transparent); }}
+
+            /* Level rows */
+            .w2oc-levels-section {{ display: flex; flex-direction: column; gap: 10px; }}
+            .w2oc-levels-title {{
+                font-size: 10px; font-weight: 700; letter-spacing: 2px;
+                text-transform: uppercase; margin-bottom: 2px;
+                display: flex; align-items: center; gap: 8px;
+            }}
+            .w2oc-level-row {{ display: flex; align-items: center; gap: 12px; }}
+            .w2oc-level-tag {{
+                font-size: 10px; font-weight: 800; width: 28px; height: 28px;
+                border-radius: 6px; display: flex; align-items: center;
+                justify-content: center; flex-shrink: 0;
+            }}
+            .w2oc-r-tag {{ background:rgba(255,64,80,.14); border:1px solid rgba(255,64,80,.5); color:#ff5060; }}
+            .w2oc-s-tag {{ background:rgba(0,230,118,.14); border:1px solid rgba(0,230,118,.5); color:#00e676; }}
+            .w2oc-level-track {{ flex: 1; height: 8px; background: #0a1a2a; border-radius: 4px; overflow: hidden; }}
+            .w2oc-level-fill  {{ height: 100%; border-radius: 4px; }}
+            .w2oc-fill-r {{ background: linear-gradient(90deg,#ff405033,#ff4050cc); box-shadow:0 0 8px #ff405066; }}
+            .w2oc-fill-s {{ background: linear-gradient(90deg,#00e67633,#00e676cc); box-shadow:0 0 8px #00e67666; }}
+            .w2oc-level-price {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 16px; font-weight: 700;
+                min-width: 90px; text-align: right; flex-shrink: 0;
+            }}
+            .w2oc-r-price {{ color: #ff8090; text-shadow: 0 0 10px #ff405066; }}
+            .w2oc-s-price {{ color: #33ffaa; text-shadow: 0 0 10px #00e67666; }}
+
+            /* Footer */
+            .w2oc-footer {{
+                background: #020810; border-top: 1px solid #0a2040;
+                padding: 10px 22px;
+                display: flex; justify-content: space-between; align-items: center;
+            }}
+            .w2oc-footer-l {{ font-size: 9px; color: #1a4a6a; letter-spacing: 1.5px; font-weight: 600; }}
+            .w2oc-footer-r {{ display: flex; align-items: center; gap: 6px; font-size: 9px; color: #00c8ff; letter-spacing: 2px; font-weight: 700; }}
+            .w2oc-footer-dot {{ width: 6px; height: 6px; border-radius: 50%; background: #00c8ff; box-shadow: 0 0 8px #00c8ff; animation: w2oc-pulse 1.5s ease-in-out infinite; }}
+        </style>
+
+        <div class="w2oc-wrap">
+            <!-- Header -->
+            <div class="w2oc-hdr">
+                <div class="w2oc-hdr-icon">&#128202;</div>
+                <div class="w2oc-hdr-text">
+                    <h3>Option Chain Analysis</h3>
+                    <p>NIFTY &middot; WEEKLY EXPIRY &middot; LIVE DATA</p>
+                </div>
+                <div class="w2oc-hdr-badge">&#9679; LIVE</div>
+            </div>
+
+            <!-- Body -->
+            <div class="w2oc-body">
+
+                <!-- Left: PCR Gauge -->
+                <div class="w2oc-gauge-col">
+                    <div class="w2oc-gauge-wrap">
+                        <svg viewBox="0 0 170 170">
+                            <defs>
+                                <linearGradient id="pcr-arc-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="{arc_col1}"/>
+                                    <stop offset="100%" stop-color="{arc_col2}"/>
+                                </linearGradient>
+                                <filter id="arc-glow">
+                                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Outer decorative ring -->
+                            <circle cx="85" cy="85" r="80" fill="none" stroke="#061830" stroke-width="1"/>
+                            <!-- BG track -->
+                            <circle cx="85" cy="85" r="65" fill="none" stroke="#0a1a2a" stroke-width="11"
+                                stroke-dasharray="{circ * 0.69:.1f} {circ:.1f}"
+                                stroke-dashoffset="{arc_offset:.1f}"
+                                stroke-linecap="round"/>
+                            <!-- Glow halo (wide, faint) -->
+                            <circle cx="85" cy="85" r="65" fill="none" stroke="{arc_col2}" stroke-width="18"
+                                stroke-dasharray="{arc_len:.1f} {circ:.1f}"
+                                stroke-dashoffset="{arc_offset:.1f}"
+                                stroke-linecap="round" opacity="0.10"/>
+                            <!-- Main arc -->
+                            <circle cx="85" cy="85" r="65" fill="none"
+                                stroke="url(#pcr-arc-grad)" stroke-width="11"
+                                stroke-dasharray="{arc_len:.1f} {circ:.1f}"
+                                stroke-dashoffset="{arc_offset:.1f}"
+                                stroke-linecap="round"
+                                filter="url(#arc-glow)"/>
+                            <!-- Inner ring -->
+                            <circle cx="85" cy="85" r="52" fill="none" stroke="#061220" stroke-width="1"/>
+                            <!-- Tick marks -->
+                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(-110 85 85)"/>
+                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(-55 85 85)"/>
+                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(0 85 85)"/>
+                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(55 85 85)"/>
+                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(110 85 85)"/>
+                        </svg>
+                        <div class="w2oc-gauge-center">
+                            <span class="w2oc-gauge-lbl">PUT / CALL</span>
+                            <span class="w2oc-gauge-val">{pcr:.2f}</span>
+                            <span class="w2oc-gauge-sub">PCR RATIO</span>
+                        </div>
+                    </div>
+                    <div class="w2oc-gauge-title">&#9679; PCR GAUGE</div>
+
+                    <!-- Sentiment -->
+                    <div class="w2oc-sent-pill">
+                        <div class="w2oc-sent-lbl">OI Sentiment</div>
+                        <div class="w2oc-sent-val">{sent_icon} {oi_sentiment.upper()}</div>
+                    </div>
+
+                    <!-- Max Pain -->
+                    <div class="w2oc-maxpain">
+                        <div class="w2oc-maxpain-lbl">Max Pain Strike</div>
+                        <div class="w2oc-maxpain-val">&#8377;{max_pain:,}</div>
+                    </div>
+                </div>
+
+                <!-- Right: Stats + Levels -->
+                <div class="w2oc-right">
+                    <!-- Stat cards -->
+                    <div class="w2oc-stats-row">
+                        <div class="w2oc-stat-card" style="--sc-accent:#ff5060;--sc-col:#ff8090;">
+                            <div class="w2oc-stat-card-lbl">Call Buildup (OI)</div>
+                            <div class="w2oc-stat-card-val">&#8679; {call_b_str}</div>
+                            <div class="w2oc-stat-card-sub">Avg IV: {avg_call_iv:.1f}%</div>
+                        </div>
+                        <div class="w2oc-stat-card" style="--sc-accent:#00e676;--sc-col:#33ffaa;">
+                            <div class="w2oc-stat-card-lbl">Put Buildup (OI)</div>
+                            <div class="w2oc-stat-card-val">&#8679; {put_b_str}</div>
+                            <div class="w2oc-stat-card-sub">Avg IV: {avg_put_iv:.1f}%</div>
+                        </div>
+                    </div>
+
+                    <div class="w2oc-div"></div>
+
+                    <!-- OI Resistance -->
+                    <div class="w2oc-levels-section">
+                        <div class="w2oc-levels-title" style="color:#ff5060;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#ff5060;display:inline-block;box-shadow:0 0 8px #ff5060;flex-shrink:0;"></span>
+                            OI RESISTANCE WALLS
+                        </div>
+                        {r_bars_html if r_bars_html else '<div style="color:#2a4a6a;font-size:12px;padding:6px 0;">No resistance data</div>'}
+                    </div>
+
+                    <div class="w2oc-div"></div>
+
+                    <!-- OI Support -->
+                    <div class="w2oc-levels-section">
+                        <div class="w2oc-levels-title" style="color:#00e676;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#00e676;display:inline-block;box-shadow:0 0 8px #00e676;flex-shrink:0;"></span>
+                            OI SUPPORT FLOORS
+                        </div>
+                        {s_bars_html if s_bars_html else '<div style="color:#2a4a6a;font-size:12px;padding:6px 0;">No support data</div>'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="w2oc-footer">
+                <span class="w2oc-footer-l">WIDGET 02 &middot; PLASMA RADIAL &middot; OPTION CHAIN ANALYSIS</span>
+                <span class="w2oc-footer-r">
+                    <div class="w2oc-footer-dot"></div>
+                    NIFTY &middot; WEEKLY EXPIRY
+                </span>
+            </div>
+        </div>
+        <!-- ═══ END PLASMA RADIAL OC WIDGET ═══ -->
+        '''
+        return widget_html
+
+    # =========================================================================
     # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01) — UNCHANGED
     # =========================================================================
     def _build_pivot_widget(self, pivot_points, current_price, nearest_levels):
@@ -1927,6 +2342,9 @@ class NiftyAnalyzer:
         tech_supports    = tech_analysis.get('tech_supports', [])
         sr_widget_html   = self._build_sr_bloomberg_widget(tech_resistances, tech_supports, current_price)
 
+        # Plasma Radial OC widget (Widget 02)
+        oc_plasma_widget_html = self._build_oc_plasma_widget(oc_analysis)
+
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
         momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
@@ -2411,26 +2829,10 @@ class NiftyAnalyzer:
         {pivot_widget_html}
     </div>
 
-    <!-- OPTION CHAIN -->
+    <!-- OPTION CHAIN — WIDGET 02 PLASMA RADIAL -->
     <div class="section">
         <div class="section-title">Option Chain Analysis</div>
-        <div class="data-grid">
-            <div class="data-item"><div class="label">Put-Call Ratio</div><div class="value">{oc_analysis.get('pcr','N/A')}</div></div>
-            <div class="data-item"><div class="label">Max Pain</div><div class="value">&#8377;{oc_analysis.get('max_pain','N/A')}</div></div>
-            <div class="data-item"><div class="label">OI Sentiment</div><div class="value">{oc_analysis.get('oi_sentiment','N/A')}</div></div>
-        </div>
-        <div style="margin-top:16px;">
-            <div class="levels">
-                <div class="levels-box resistance">
-                    <h4>&#128308; OI Resistance</h4>
-                    <ul>{''.join([f'<li>&#8377;{r}</li>' for r in oc_analysis.get('resistances', [])])}</ul>
-                </div>
-                <div class="levels-box support">
-                    <h4>&#128994; OI Support</h4>
-                    <ul>{''.join([f'<li>&#8377;{s}</li>' for s in oc_analysis.get('supports', [])])}</ul>
-                </div>
-            </div>
-        </div>
+        {oc_plasma_widget_html}
     </div>
 
     <!-- TOP OI -->
