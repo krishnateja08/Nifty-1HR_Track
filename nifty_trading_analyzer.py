@@ -7,6 +7,7 @@ EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
 FIXED: Using curl-cffi for NSE API to bypass anti-scraping
 UPDATED: Professional grey theme with improved readability
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str' - fixed in create_html_report
+UPDATED: Terminal Split Panel Pivot Points Widget (v2)
 """
 
 import pandas as pd
@@ -861,7 +862,7 @@ class NiftyAnalyzer:
                 'profit':      'Limited (Strike difference - Net premium)',
                 'risk':        'Limited to net premium paid',
                 'best_when':   'Moderately bearish, reduce cost',
-                'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐'
+                'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐⭐'
             })
         
         else:
@@ -1091,7 +1092,7 @@ class NiftyAnalyzer:
         """Return a formatted profit string; handles both numeric and string values."""
         if isinstance(value, (int, float)):
             return f"₹{value * multiplier:.0f}"
-        return str(value)          # e.g. "Unlimited both sides"
+        return str(value)
 
     @staticmethod
     def _fmt_profit_label(value, multiplier=1):
@@ -1099,6 +1100,363 @@ class NiftyAnalyzer:
         if isinstance(value, (int, float)):
             return f"Profit: ₹{value * multiplier:.0f}"
         return str(value)
+
+    # =========================================================================
+    # PIVOT POINTS WIDGET — Terminal Split Panel
+    # =========================================================================
+    def _build_pivot_widget(self, pivot_points, current_price, nearest_levels):
+        """
+        Build the Terminal Green Split Panel pivot widget HTML.
+        Returns an HTML string to be embedded in the report.
+        """
+        pp  = pivot_points
+
+        def dist(val):
+            if val is None:
+                return 'N/A'
+            d = val - current_price
+            return f"{d:+.2f}"
+
+        def is_nearest_r(val):
+            return val == nearest_levels.get('nearest_resistance')
+
+        def is_nearest_s(val):
+            return val == nearest_levels.get('nearest_support')
+
+        # Determine zone text
+        nr = nearest_levels.get('nearest_resistance')
+        ns = nearest_levels.get('nearest_support')
+        if nr and ns:
+            zone_text  = f"Between {self._nearest_level_name(pp, ns)} and {self._nearest_level_name(pp, nr)}"
+            above_dist = current_price - (pp.get('pivot', current_price))
+            if above_dist >= 0:
+                zone_detail = f"+{above_dist:.2f} above PP"
+            else:
+                zone_detail = f"{above_dist:.2f} below PP"
+        elif nr:
+            zone_text   = f"Below {self._nearest_level_name(pp, nr)}"
+            zone_detail = f"Next R: &#8377;{nr}"
+        elif ns:
+            zone_text   = f"Above {self._nearest_level_name(pp, ns)}"
+            zone_detail = f"Next S: &#8377;{ns}"
+        else:
+            zone_text   = "At Pivot Zone"
+            zone_detail = f"PP: &#8377;{pp.get('pivot','N/A')}"
+
+        # Gauge dot position: map current price between s1 and r1
+        s1_val = pp.get('s1', current_price - 100)
+        r1_val = pp.get('r1', current_price + 100)
+        total_range = r1_val - s1_val
+        if total_range > 0:
+            dot_pct = ((current_price - s1_val) / total_range) * 100
+            dot_pct = max(5, min(95, dot_pct))
+        else:
+            dot_pct = 50
+
+        # Build resistance rows (R3 top → R1 bottom, dimming by distance)
+        res_levels = [
+            ('R3', pp.get('r3'), 'r3', False),
+            ('R2', pp.get('r2'), 'r2', False),
+            ('R1', pp.get('r1'), 'r1', True),
+        ]
+        sup_levels = [
+            ('S1', pp.get('s1'), 's1', True),
+            ('S2', pp.get('s2'), 's2', False),
+            ('S3', pp.get('s3'), 's3', False),
+        ]
+
+        def res_row(lbl, val, cls, is_r1):
+            near_tag = ' <span class="pv-near-tag">NEAREST R</span>' if is_nearest_r(val) else ''
+            icon_html = '<span class="pv-icon pv-icon-r">&#9650;</span>' if is_r1 else '<span class="pv-icon-spacer"></span>'
+            border = 'border-left:3px solid rgba(255,68,68,0.5);' if is_r1 else ''
+            bg = 'background:rgba(255,68,68,0.025);' if is_r1 else ''
+            return f'''
+                <div class="pv-lv-row pv-{cls}" style="{border}{bg}">
+                    <span class="pv-lbl">{lbl}</span>
+                    <span class="pv-price">&#8377;{val}{near_tag}</span>
+                    {icon_html}
+                </div>'''
+
+        def sup_row(lbl, val, cls, is_s1):
+            near_tag = ' <span class="pv-near-tag pv-near-tag-s">NEAREST S</span>' if is_nearest_s(val) else ''
+            icon_html = '<span class="pv-icon pv-icon-s">&#9660;</span>' if is_s1 else '<span class="pv-icon-spacer"></span>'
+            border = 'border-right:3px solid rgba(0,255,65,0.5);' if is_s1 else ''
+            bg = 'background:rgba(0,255,65,0.025);' if is_s1 else ''
+            return f'''
+                <div class="pv-lv-row pv-{cls}" style="{border}{bg}">
+                    {icon_html}
+                    <span class="pv-price" style="text-align:right">&#8377;{val}{near_tag}</span>
+                    <span class="pv-lbl" style="text-align:right">{lbl}</span>
+                </div>'''
+
+        res_rows_html = ''.join([res_row(l, v, c, n) for l, v, c, n in res_levels])
+        sup_rows_html = ''.join([sup_row(l, v, c, n) for l, v, c, n in sup_levels])
+
+        widget_html = f'''
+        <!-- ═══ PIVOT POINTS WIDGET — Terminal Split Panel ═══ -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+            .pv-widget {{
+                background: #000a00;
+                border: 1px solid #003300;
+                border-radius: 10px;
+                overflow: hidden;
+                font-family: 'IBM Plex Mono', 'Courier New', monospace;
+                box-shadow: 0 0 0 1px #001a00, 0 0 40px rgba(0,150,0,.07), 0 16px 50px rgba(0,0,0,.9);
+                position: relative;
+                width: 100%;
+            }}
+            .pv-widget::before {{
+                content: '';
+                position: absolute; inset: 0;
+                background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,.006) 2px, rgba(0,255,0,.006) 4px);
+                pointer-events: none; z-index: 20; border-radius: inherit;
+            }}
+            /* Header */
+            .pv-hdr {{
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 11px 18px; background: #000d00; border-bottom: 1px solid #002200;
+            }}
+            .pv-hdr-l {{ display: flex; align-items: center; gap: 10px; }}
+            .pv-icon-wrap {{
+                width: 32px; height: 32px; border-radius: 7px;
+                background: #001800; border: 1px solid #009900;
+                display: flex; align-items: center; justify-content: center;
+                font-size: .9rem; box-shadow: 0 0 10px rgba(0,170,0,.22);
+            }}
+            .pv-title {{ font-size: .78rem; font-weight: 700; color: #00ff41; letter-spacing: 1px; }}
+            .pv-sub   {{ font-size: .46rem; color: #004400; margin-top: 1px; letter-spacing: .5px; }}
+            .pv-badge {{
+                font-size: .52rem; padding: 3px 10px; border-radius: 20px;
+                background: #001000; border: 1px solid #005500;
+                color: #009900; letter-spacing: 1.5px; font-weight: 700;
+            }}
+            /* Gauge */
+            .pv-gauge {{ padding: 10px 18px 8px; border-bottom: 1px solid #001800; background: #000c00; }}
+            .pv-gauge-track {{
+                height: 7px; border-radius: 20px; position: relative; overflow: visible;
+                background: #001000; border: 1px solid #003300;
+            }}
+            .pv-gfl {{ position:absolute; left:0; top:0; bottom:0; width:{dot_pct:.1f}%; border-radius:20px 0 0 20px; background:linear-gradient(90deg,rgba(0,255,65,.25),transparent); }}
+            .pv-gfr {{ position:absolute; right:0; top:0; bottom:0; width:{100-dot_pct:.1f}%; border-radius:0 20px 20px 0; background:linear-gradient(90deg,transparent,rgba(255,68,68,.18)); }}
+            .pv-gdot {{
+                position:absolute; left:{dot_pct:.1f}%; top:50%; transform:translate(-50%,-50%);
+                width:14px; height:14px; background:#00ff41; border-radius:50%;
+                border:2px solid #000; z-index:2;
+                box-shadow: 0 0 0 2px #00ff41, 0 0 16px rgba(0,255,65,.65);
+                animation: pv-pulse 2s ease-in-out infinite;
+            }}
+            @keyframes pv-pulse {{ 0%,100%{{opacity:1}} 50%{{opacity:.35}} }}
+            .pv-glabels {{ display:flex; justify-content:space-between; margin-top:5px; font-size:.56rem; }}
+            .pv-gl-s  {{ color:#00aa00; }}
+            .pv-gl-ltp{{ color:#00ff41; font-weight:700; }}
+            .pv-gl-r  {{ color:#ff4444; }}
+            /* Zone */
+            .pv-zone {{
+                margin: 8px 14px;
+                padding: 6px 12px;
+                background: rgba(100,130,0,.1); border: 1px solid #334400; border-radius: 4px;
+                display: flex; align-items: center; gap: 8px;
+            }}
+            .pv-zdot  {{ width:7px; height:7px; border-radius:50%; background:#ccff00; flex-shrink:0; box-shadow:0 0 7px #ccff00; animation:pv-pulse 2s ease-in-out infinite; }}
+            .pv-ztxt  {{ font-size:.64rem; color:#ccff00; font-weight:700; }}
+            .pv-zval  {{ margin-left:auto; font-size:.54rem; color:#556600; white-space:nowrap; }}
+            /* Prev candle */
+            .pv-candle {{ display:flex; margin:0 14px 8px; border:1px solid #002200; border-radius:4px; overflow:hidden; background:#000d00; }}
+            .pv-ci {{ flex:1; padding:6px 10px; border-right:1px solid #001800; }}
+            .pv-ci:last-child {{ border-right:none; }}
+            .pv-ci-lbl {{ font-size:.46rem; color:#003300; letter-spacing:1.5px; margin-bottom:2px; text-transform:uppercase; }}
+            .pv-ci-val {{ font-size:.76rem; font-weight:700; }}
+            .pv-ci-h .pv-ci-val {{ color:#ff4444; }}
+            .pv-ci-l .pv-ci-val {{ color:#00ff41; }}
+            .pv-ci-c .pv-ci-val {{ color:#00cc33; }}
+            /* Column headers */
+            .pv-col-hdr {{
+                display: grid; grid-template-columns: 1fr 130px 1fr;
+                border-top: 1px solid #002200; border-bottom: 1px solid #002200;
+                background: #000d00;
+            }}
+            .pv-hdr-res, .pv-hdr-sup {{
+                display: grid; grid-template-columns: 60px 1fr 80px;
+                padding: 6px 14px; gap: 6px;
+            }}
+            .pv-hdr-res {{ border-right: 1px solid #002200; }}
+            .pv-hdr-sup {{ direction: rtl; }}
+            .pv-hdr-res span, .pv-hdr-sup span, .pv-hdr-pp span {{
+                font-size: .46rem; color: #003300; text-transform: uppercase; letter-spacing: 1.5px;
+            }}
+            .pv-hdr-pp {{
+                display: flex; align-items: center; justify-content: center;
+                border-left: 1px solid #002200; border-right: 1px solid #002200;
+                padding: 6px 8px;
+            }}
+            /* Split panel */
+            .pv-split {{ display: grid; grid-template-columns: 1fr 130px 1fr; }}
+            .pv-col-res {{ display:flex; flex-direction:column; border-right:1px solid #002200; }}
+            .pv-col-sup {{ display:flex; flex-direction:column; }}
+            /* Level rows */
+            .pv-lv-row {{
+                display: grid; grid-template-columns: 55px 1fr 26px;
+                align-items: center; height: 42px; padding: 0 14px; gap: 6px;
+                border-bottom: 1px solid #000f00; transition: background .15s; cursor: default;
+            }}
+            .pv-lv-row:last-child {{ border-bottom: none; }}
+            .pv-lv-row:hover {{ background: #001600 !important; }}
+            /* Support rows reverse */
+            .pv-col-sup .pv-lv-row {{ grid-template-columns: 26px 1fr 55px; }}
+            .pv-lbl   {{ font-size: .66rem; font-weight: 700; letter-spacing: 1px; }}
+            .pv-price {{ font-size: .72rem; font-weight: 600; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }}
+            .pv-icon  {{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.5rem; font-weight:800; flex-shrink:0; }}
+            .pv-icon-spacer {{ width:22px; flex-shrink:0; }}
+            .pv-icon-r {{ background:rgba(255,68,68,.12); color:#ff4444; border:1px solid rgba(255,68,68,.4); }}
+            .pv-icon-s {{ background:rgba(0,255,65,.12); color:#00ff41; border:1px solid rgba(0,255,65,.4); }}
+            .pv-near-tag {{
+                font-size:.4rem; padding:1px 5px; border-radius:8px; border:1px solid;
+                font-weight:800; letter-spacing:.5px; white-space:nowrap;
+                background:rgba(255,68,68,.1); color:#ff4444; border-color:rgba(255,68,68,.4);
+            }}
+            .pv-near-tag-s {{ background:rgba(0,255,65,.1); color:#00ff41; border-color:rgba(0,255,65,.4); }}
+            /* Resistance row colours */
+            .pv-r3 .pv-lbl, .pv-r3 .pv-price {{ color:rgba(255,68,68,.32); }}
+            .pv-r2 .pv-lbl, .pv-r2 .pv-price {{ color:rgba(255,68,68,.58); }}
+            .pv-r1 .pv-lbl, .pv-r1 .pv-price {{ color:#ff8080; }}
+            .pv-r1 .pv-lbl {{ color:#ff4444; }}
+            /* Support row colours */
+            .pv-s1 .pv-lbl, .pv-s1 .pv-price {{ color:#80ff90; }}
+            .pv-s1 .pv-lbl {{ color:#00ff41; }}
+            .pv-s2 .pv-lbl, .pv-s2 .pv-price {{ color:rgba(0,255,65,.58); }}
+            .pv-s3 .pv-lbl, .pv-s3 .pv-price {{ color:rgba(0,255,65,.32); }}
+            /* Pivot center column */
+            .pv-col-pp {{
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                gap: 4px; padding: 12px 8px;
+                border-left: 1px solid #002200; border-right: 1px solid #002200;
+                background: rgba(100,130,0,.05);
+            }}
+            .pv-pp-tag   {{ font-size:.44rem; color:#556600; letter-spacing:2px; text-transform:uppercase; }}
+            .pv-pp-val   {{ font-size:.95rem; font-weight:700; color:#ccff00; line-height:1; }}
+            .pv-pp-dist  {{ font-size:.52rem; color:#668800; }}
+            .pv-pp-line  {{ width:26px; height:1px; background:#334400; margin:3px 0; }}
+            .pv-ltp-block {{
+                display: flex; flex-direction: column; align-items: center; gap: 2px;
+                background: rgba(0,60,0,.35); border: 1px solid #003300;
+                border-radius: 4px; padding: 4px 12px; margin-top: 1px;
+            }}
+            .pv-ltp-tag {{ font-size:.4rem; color:#005500; letter-spacing:2px; text-transform:uppercase; }}
+            .pv-ltp-val {{ font-size:.72rem; font-weight:700; color:#00ff41; }}
+            .pv-ltp-dot {{ width:5px; height:5px; border-radius:50%; background:#00ff41; animation:pv-pulse 2s ease-in-out infinite; box-shadow:0 0 5px #00ff41; }}
+            /* Footer */
+            .pv-footer {{
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 8px 18px; background: #000d00; border-top: 1px solid #002200;
+            }}
+            .pv-footer .pv-f-mthd {{ font-size:.48rem; color:#002800; letter-spacing:1.5px; }}
+            .pv-footer .pv-f-ltp  {{ font-size:.62rem; font-weight:700; color:#00ff41; letter-spacing:.5px; }}
+        </style>
+
+        <div class="pv-widget">
+            <!-- Header -->
+            <div class="pv-hdr">
+                <div class="pv-hdr-l">
+                    <div class="pv-icon-wrap">&#128205;</div>
+                    <div>
+                        <div class="pv-title">Pivot Points</div>
+                        <div class="pv-sub">Traditional Method &middot; Auto-calculated</div>
+                    </div>
+                </div>
+                <div class="pv-badge">30 MIN</div>
+            </div>
+
+            <!-- Gauge -->
+            <div class="pv-gauge">
+                <div class="pv-gauge-track">
+                    <div class="pv-gfl"></div>
+                    <div class="pv-gfr"></div>
+                    <div class="pv-gdot"></div>
+                </div>
+                <div class="pv-glabels">
+                    <span class="pv-gl-s">S1 &#8377;{pp.get('s1','N/A')}</span>
+                    <span class="pv-gl-ltp">&#9650; &#8377;{current_price} LTP</span>
+                    <span class="pv-gl-r">R1 &#8377;{pp.get('r1','N/A')}</span>
+                </div>
+            </div>
+
+            <!-- Zone -->
+            <div class="pv-zone">
+                <div class="pv-zdot"></div>
+                <span class="pv-ztxt">{zone_text}</span>
+                <span class="pv-zval">{zone_detail}</span>
+            </div>
+
+            <!-- Prev Candle -->
+            <div class="pv-candle">
+                <div class="pv-ci pv-ci-h">
+                    <div class="pv-ci-lbl">&#9650; Prev High</div>
+                    <div class="pv-ci-val">&#8377;{pp.get('prev_high','N/A')}</div>
+                </div>
+                <div class="pv-ci pv-ci-l">
+                    <div class="pv-ci-lbl">&#9660; Prev Low</div>
+                    <div class="pv-ci-val">&#8377;{pp.get('prev_low','N/A')}</div>
+                </div>
+                <div class="pv-ci pv-ci-c">
+                    <div class="pv-ci-lbl">&#9679; Prev Close</div>
+                    <div class="pv-ci-val">&#8377;{pp.get('prev_close','N/A')}</div>
+                </div>
+            </div>
+
+            <!-- Column Headers -->
+            <div class="pv-col-hdr">
+                <div class="pv-hdr-res">
+                    <span>Level</span><span>Price</span><span style="text-align:right">Dist</span>
+                </div>
+                <div class="pv-hdr-pp"><span>Pivot</span></div>
+                <div class="pv-hdr-sup">
+                    <span>Level</span><span>Price</span><span style="text-align:right">Dist</span>
+                </div>
+            </div>
+
+            <!-- Split Panel -->
+            <div class="pv-split">
+                <!-- Resistance side -->
+                <div class="pv-col-res">{res_rows_html}</div>
+
+                <!-- Pivot center -->
+                <div class="pv-col-pp">
+                    <div class="pv-pp-tag">Pivot Point</div>
+                    <div class="pv-pp-val">&#8377;{pp.get('pivot','N/A')}</div>
+                    <div class="pv-pp-dist">{dist(pp.get('pivot'))} from LTP</div>
+                    <div class="pv-pp-line"></div>
+                    <div class="pv-ltp-block">
+                        <div class="pv-ltp-tag">LTP</div>
+                        <div class="pv-ltp-val">&#8377;{current_price}</div>
+                        <div class="pv-ltp-dot"></div>
+                    </div>
+                </div>
+
+                <!-- Support side -->
+                <div class="pv-col-sup">{sup_rows_html}</div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pv-footer">
+                <span class="pv-f-mthd">Traditional &middot; 30 Min Candle</span>
+                <span class="pv-f-ltp">LTP &#8377;{current_price}</span>
+            </div>
+        </div>
+        <!-- ═══ END PIVOT WIDGET ═══ -->
+        '''
+        return widget_html
+
+    def _nearest_level_name(self, pivot_points, value):
+        """Map a numeric pivot level back to its label string."""
+        mapping = {
+            pivot_points.get('r1'): 'R1', pivot_points.get('r2'): 'R2',
+            pivot_points.get('r3'): 'R3', pivot_points.get('s1'): 'S1',
+            pivot_points.get('s2'): 'S2', pivot_points.get('s3'): 'S3',
+            pivot_points.get('pivot'): 'PP',
+        }
+        return mapping.get(value, str(value))
 
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
         """Create professional HTML report"""
@@ -1128,6 +1486,9 @@ class NiftyAnalyzer:
         pivot_points   = tech_analysis.get('pivot_points', {})
         current_price  = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
+
+        # Build the Terminal Split Panel pivot widget
+        pivot_widget_html = self._build_pivot_widget(pivot_points, current_price, nearest_levels)
         
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
@@ -1193,65 +1554,6 @@ class NiftyAnalyzer:
                         <p class="recommendation-stars"><strong>Recommended:</strong> {strategy['recommended']}</p>
                     </div>
                 </div>"""
-        
-        # ---- Helper for pivot level highlighting ----
-        def get_level_class(level_value):
-            if level_value == nearest_levels.get('nearest_resistance'):
-                return 'nearest-resistance'
-            elif level_value == nearest_levels.get('nearest_support'):
-                return 'nearest-support'
-            return ''
-        
-        def nearest_r_badge(level_value):
-            return ' <span class="highlight-badge">NEAREST R</span>' \
-                if level_value == nearest_levels.get('nearest_resistance') else ''
-        
-        def nearest_s_badge(level_value):
-            return ' <span class="highlight-badge">NEAREST S</span>' \
-                if level_value == nearest_levels.get('nearest_support') else ''
-        
-        def dist(level_value):
-            if level_value is None:
-                return 'N/A'
-            diff = level_value - current_price
-            return f"{diff:+.2f}"
-        
-        pivot_rows = f"""
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r3'))}">
-                        <td>R3</td>
-                        <td>&#8377;{pivot_points.get('r3', 'N/A')}{nearest_r_badge(pivot_points.get('r3'))}</td>
-                        <td>{dist(pivot_points.get('r3'))}</td>
-                    </tr>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r2'))}">
-                        <td>R2</td>
-                        <td>&#8377;{pivot_points.get('r2', 'N/A')}{nearest_r_badge(pivot_points.get('r2'))}</td>
-                        <td>{dist(pivot_points.get('r2'))}</td>
-                    </tr>
-                    <tr class="pivot-row resistance {get_level_class(pivot_points.get('r1'))}">
-                        <td>R1</td>
-                        <td>&#8377;{pivot_points.get('r1', 'N/A')}{nearest_r_badge(pivot_points.get('r1'))}</td>
-                        <td>{dist(pivot_points.get('r1'))}</td>
-                    </tr>
-                    <tr class="pivot-row pivot">
-                        <td>PP</td>
-                        <td>&#8377;{pivot_points.get('pivot', 'N/A')}</td>
-                        <td>{dist(pivot_points.get('pivot'))}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s1'))}">
-                        <td>S1</td>
-                        <td>&#8377;{pivot_points.get('s1', 'N/A')}{nearest_s_badge(pivot_points.get('s1'))}</td>
-                        <td>{dist(pivot_points.get('s1'))}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s2'))}">
-                        <td>S2</td>
-                        <td>&#8377;{pivot_points.get('s2', 'N/A')}{nearest_s_badge(pivot_points.get('s2'))}</td>
-                        <td>{dist(pivot_points.get('s2'))}</td>
-                    </tr>
-                    <tr class="pivot-row support {get_level_class(pivot_points.get('s3'))}">
-                        <td>S3</td>
-                        <td>&#8377;{pivot_points.get('s3', 'N/A')}{nearest_s_badge(pivot_points.get('s3'))}</td>
-                        <td>{dist(pivot_points.get('s3'))}</td>
-                    </tr>"""
         
         html = f"""<!DOCTYPE html>
 <html>
@@ -1331,27 +1633,6 @@ class NiftyAnalyzer:
         .levels-box ul {{ list-style: none; padding: 0; }}
         .levels-box li {{ margin: 6px 0; font-size: 14px; color: #d4d4d8; padding-left: 20px; position: relative; }}
         .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #6366f1; font-weight: bold; }}
-        .pivot-container {{
-            overflow-x: auto; background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
-            border-radius: 10px; padding: 15px;
-        }}
-        .pivot-info {{ color: #a1a1aa; margin-bottom: 12px; font-size: 12px; line-height: 1.6; }}
-        .pivot-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-        .pivot-table th {{
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            color: white; padding: 12px; text-align: center; font-weight: 700;
-        }}
-        .pivot-table td {{ padding: 12px; text-align: center; border-bottom: 1px solid #3d3d54; font-weight: 600; color: #e4e4e7; }}
-        .pivot-row {{ background: #252538; }}
-        .pivot-row.resistance {{ color: #fca5a5; }}
-        .pivot-row.support {{ color: #86efac; }}
-        .pivot-row.pivot {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-weight: 700; }}
-        .nearest-resistance {{ background: #7f1d1d !important; border: 2px solid #ef4444; }}
-        .nearest-support {{ background: #14532d !important; border: 2px solid #22c55e; }}
-        .highlight-badge {{
-            display: inline-block; background: #ef4444; color: white;
-            padding: 2px 8px; border-radius: 10px; font-size: 9px; margin-left: 5px; font-weight: 700;
-        }}
         .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }}
         .oi-section {{
             background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
@@ -1484,18 +1765,10 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- PIVOT POINTS -->
+    <!-- PIVOT POINTS — Terminal Split Panel Widget -->
     <div class="section">
         <div class="section-title">&#128205; Pivot Points (Traditional - 30 Min)</div>
-        <div class="pivot-container">
-            <p class="pivot-info">
-                Previous 30-min Candle: High &#8377;{pivot_points.get('prev_high','N/A')} | Low &#8377;{pivot_points.get('prev_low','N/A')} | Close &#8377;{pivot_points.get('prev_close','N/A')}
-            </p>
-            <table class="pivot-table">
-                <thead><tr><th>Level</th><th>Value</th><th>Distance</th></tr></thead>
-                <tbody>{pivot_rows}</tbody>
-            </table>
-        </div>
+        {pivot_widget_html}
     </div>
 
     <!-- OPTION CHAIN -->
@@ -1563,7 +1836,7 @@ class NiftyAnalyzer:
         </p>
         <div class="strike-recommendations">"""
         
-        # ---- Strike cards (BUG FIX: pre-compute all profit strings) ----
+        # ---- Strike cards ----
         if strike_recommendations:
             for rec_item in strike_recommendations:
                 ltp        = rec_item['ltp']
@@ -1574,14 +1847,11 @@ class NiftyAnalyzer:
                 p_at_t1    = rec_item['profit_at_target_1']
                 p_at_t2    = rec_item['profit_at_target_2']
 
-                # ---- PRE-COMPUTE profit strings to avoid :.0f on str ----
                 p_at_t1_label  = self._fmt_profit_label(p_at_t1)
                 p_at_t2_label  = self._fmt_profit_label(p_at_t2)
                 example_t1     = self._fmt_profit(p_at_t1, 50)
                 example_t2     = self._fmt_profit(p_at_t2, 50)
-                # ----------------------------------------------------------
 
-                # Determine card accent colour
                 if isinstance(p_at_t2, (int, float)):
                     profit_color = '#22c55e' if p_at_t2 > 100 else ('#f59e0b' if p_at_t2 > 50 else '#ef4444')
                 else:
