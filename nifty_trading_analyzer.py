@@ -3,6 +3,7 @@ Nifty Option Chain & Technical Analysis for Day Trading
 THEME:  DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
 PIVOT:  WIDGET 01 — NEON RUNWAY  |  High-contrast · Bright Cyan · Vivid R/S colour labels
 S/R:    WIDGET 04 — BLOOMBERG TABLE  |  Black · Gold/Amber · Distance column · Strength dots · Table layout
+OI:     WIDGET 01 — NEON LEDGER  |  Glowing rank badges · Inline OI heat bars · Vivid split header
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
@@ -1093,6 +1094,446 @@ class NiftyAnalyzer:
         return str(value)
 
     # =========================================================================
+    # WIDGET 01 — NEON LEDGER  |  Top 10 Open Interest
+    # Glowing rank badges · Inline OI heat bars · Vivid split header
+    # =========================================================================
+    def _build_oi_neon_ledger_widget(self, top_ce_strikes, top_pe_strikes):
+        """
+        NEON LEDGER widget for Top 10 Open Interest display.
+        Split CE / PE panels · Glowing rank badges · Inline OI heat bars
+        · Vivid colour-coded type badges · Bright split header
+        """
+
+        # ── find max OI across both sides for heat-bar scaling ────────────
+        all_oi = [s['oi'] for s in top_ce_strikes] + [s['oi'] for s in top_pe_strikes]
+        max_oi = max(all_oi) if all_oi else 1
+
+        def type_badge(t):
+            if t == 'ITM':
+                return '<span class="nl-tbadge nl-itm">ITM</span>'
+            elif t == 'ATM':
+                return '<span class="nl-tbadge nl-atm">ATM</span>'
+            else:
+                return '<span class="nl-tbadge nl-otm">OTM</span>'
+
+        def fmt_oi(val):
+            if val >= 1_000_000:
+                return f"{val/1_000_000:.2f}M"
+            elif val >= 1_000:
+                return f"{val/1_000:.1f}K"
+            return str(val)
+
+        def fmt_vol(val):
+            if val >= 1_000_000:
+                return f"{val/1_000_000:.1f}M"
+            elif val >= 1_000:
+                return f"{val/1_000:.0f}K"
+            return str(val)
+
+        def chng_oi_cell(val):
+            if val > 0:
+                return f'<span class="nl-chng nl-chng-up">+{fmt_oi(val)}</span>'
+            elif val < 0:
+                return f'<span class="nl-chng nl-chng-dn">{fmt_oi(val)}</span>'
+            return f'<span class="nl-chng nl-chng-flat">{fmt_oi(val)}</span>'
+
+        def rank_badge(rank, side):
+            # side: 'ce' = red glow, 'pe' = green glow
+            glow_col = '#ff3a5c' if side == 'ce' else '#00e676'
+            bg_col   = 'rgba(255,58,92,0.18)' if side == 'ce' else 'rgba(0,230,118,0.18)'
+            brd_col  = 'rgba(255,58,92,0.55)' if side == 'ce' else 'rgba(0,230,118,0.55)'
+            txt_col  = '#ff6680' if side == 'ce' else '#33ff99'
+            return (f'<div class="nl-rank" style="background:{bg_col};border:1px solid {brd_col};'
+                    f'color:{txt_col};box-shadow:0 0 10px {glow_col}44;">{rank}</div>')
+
+        def build_ce_rows(strikes):
+            rows = ''
+            for idx, s in enumerate(strikes, 1):
+                bar_w = int((s['oi'] / max_oi) * 100)
+                rows += f'''
+                <tr class="nl-row">
+                    <td class="nl-td-rank">{rank_badge(idx, "ce")}</td>
+                    <td class="nl-td-strike">
+                        <span class="nl-strike-val">&#8377;{int(s["strike"]):,}</span>
+                    </td>
+                    <td class="nl-td-type">{type_badge(s["type"])}</td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-ce">{fmt_oi(s["oi"])}</span>
+                            <div class="nl-bar-track">
+                                <div class="nl-bar-fill nl-bar-ce" style="width:{bar_w}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng">{chng_oi_cell(s["chng_oi"])}</td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-ce">&#8377;{s["ltp"]:.2f}</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">{fmt_vol(s["volume"])}</span></td>
+                </tr>'''
+            return rows
+
+        def build_pe_rows(strikes):
+            rows = ''
+            for idx, s in enumerate(strikes, 1):
+                bar_w = int((s['oi'] / max_oi) * 100)
+                rows += f'''
+                <tr class="nl-row">
+                    <td class="nl-td-rank">{rank_badge(idx, "pe")}</td>
+                    <td class="nl-td-strike">
+                        <span class="nl-strike-val">&#8377;{int(s["strike"]):,}</span>
+                    </td>
+                    <td class="nl-td-type">{type_badge(s["type"])}</td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-pe">{fmt_oi(s["oi"])}</span>
+                            <div class="nl-bar-track">
+                                <div class="nl-bar-fill nl-bar-pe" style="width:{bar_w}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng">{chng_oi_cell(s["chng_oi"])}</td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-pe">&#8377;{s["ltp"]:.2f}</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">{fmt_vol(s["volume"])}</span></td>
+                </tr>'''
+            return rows
+
+        ce_rows_html = build_ce_rows(top_ce_strikes)
+        pe_rows_html = build_pe_rows(top_pe_strikes)
+
+        col_heads = '''
+            <th class="nl-th">#</th>
+            <th class="nl-th">STRIKE</th>
+            <th class="nl-th">TYPE</th>
+            <th class="nl-th">OPEN INTEREST</th>
+            <th class="nl-th">CHG OI</th>
+            <th class="nl-th">LTP</th>
+            <th class="nl-th">VOLUME</th>'''
+
+        widget_html = f'''
+        <!-- ═══ TOP 10 OI — WIDGET 01 NEON LEDGER ═══ -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+
+            /* ── Shell ──────────────────────────────────────────────────── */
+            .nl-wrap {{
+                font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+                background: #020912;
+                border: 1px solid #0b2540;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow:
+                    0 0 0 1px #040f1f,
+                    0 0 80px rgba(0,180,255,.05),
+                    0 32px 80px rgba(0,0,0,.95);
+            }}
+
+            /* ── Master header ──────────────────────────────────────────── */
+            .nl-master-hdr {{
+                background: linear-gradient(135deg, #030c1c 0%, #040f22 100%);
+                border-bottom: 1px solid #0b2540;
+                padding: 16px 24px;
+                display: flex; align-items: center; justify-content: space-between;
+                position: relative;
+            }}
+            .nl-master-hdr::after {{
+                content: '';
+                position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                background: linear-gradient(90deg,
+                    transparent 0%, #ff3a5c 20%, #ff3a5c 49%,
+                    #00e676 51%, #00e676 80%, transparent 100%);
+                opacity: 0.85;
+            }}
+            .nl-master-title {{
+                display: flex; align-items: center; gap: 12px;
+            }}
+            .nl-master-icon {{
+                width: 40px; height: 40px; border-radius: 10px;
+                background: linear-gradient(135deg, #0a1a3a, #102040);
+                border: 1px solid #0d3060;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 18px;
+                box-shadow: 0 0 20px rgba(0,160,255,.2);
+            }}
+            .nl-master-text h2 {{
+                font-size: 16px; font-weight: 700; color: #ffffff;
+                letter-spacing: 3px; text-transform: uppercase;
+                text-shadow: 0 0 20px rgba(0,200,255,.4);
+            }}
+            .nl-master-text p {{
+                font-size: 10px; color: #2a6a9a; margin-top: 3px;
+                letter-spacing: 2px; font-weight: 600; text-transform: uppercase;
+            }}
+            .nl-master-badges {{
+                display: flex; gap: 10px; align-items: center;
+            }}
+            .nl-ce-badge {{
+                background: rgba(255,58,92,.15);
+                border: 1px solid rgba(255,58,92,.6);
+                color: #ff3a5c;
+                padding: 6px 18px; border-radius: 20px;
+                font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(255,58,92,.8);
+                box-shadow: 0 0 16px rgba(255,58,92,.2);
+            }}
+            .nl-pe-badge {{
+                background: rgba(0,230,118,.15);
+                border: 1px solid rgba(0,230,118,.6);
+                color: #00e676;
+                padding: 6px 18px; border-radius: 20px;
+                font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(0,230,118,.8);
+                box-shadow: 0 0 16px rgba(0,230,118,.2);
+            }}
+            .nl-live-dot {{
+                width: 8px; height: 8px; border-radius: 50%;
+                background: #00e676;
+                box-shadow: 0 0 10px #00e676;
+                animation: nl-pulse 1.5s ease-in-out infinite;
+            }}
+            @keyframes nl-pulse {{
+                0%,100% {{ opacity: 1; transform: scale(1); }}
+                50%      {{ opacity: 0.5; transform: scale(0.8); }}
+            }}
+
+            /* ── Split panel headers ────────────────────────────────────── */
+            .nl-panels {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }}
+            .nl-panel {{ overflow: hidden; }}
+            .nl-panel.nl-panel-ce {{ border-right: 2px solid #0b2540; }}
+
+            .nl-panel-hdr {{
+                display: flex; align-items: center; gap: 10px;
+                padding: 14px 20px;
+                position: relative;
+            }}
+            .nl-panel-hdr::after {{
+                content: '';
+                position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            }}
+            .nl-panel-ce .nl-panel-hdr {{
+                background: linear-gradient(135deg, #1a0610 0%, #110310 100%);
+                border-bottom: 2px solid #ff3a5c;
+            }}
+            .nl-panel-pe .nl-panel-hdr {{
+                background: linear-gradient(135deg, #031a0e 0%, #021408 100%);
+                border-bottom: 2px solid #00e676;
+            }}
+            .nl-panel-hdr-dot {{
+                width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+            }}
+            .nl-ce-dot {{ background: #ff3a5c; box-shadow: 0 0 10px #ff3a5c; }}
+            .nl-pe-dot {{ background: #00e676; box-shadow: 0 0 10px #00e676; }}
+            .nl-panel-hdr-title {{
+                font-size: 13px; font-weight: 800;
+                letter-spacing: 2.5px; text-transform: uppercase;
+            }}
+            .nl-ce-title {{ color: #ff3a5c; text-shadow: 0 0 14px rgba(255,58,92,.6); }}
+            .nl-pe-title {{ color: #00e676; text-shadow: 0 0 14px rgba(0,230,118,.6); }}
+            .nl-panel-hdr-sub {{
+                margin-left: auto;
+                font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+            }}
+            .nl-ce-sub {{ color: rgba(255,58,92,.55); }}
+            .nl-pe-sub {{ color: rgba(0,230,118,.55); }}
+
+            /* ── Column header row ──────────────────────────────────────── */
+            .nl-col-hdr-row {{
+                background: #030b18;
+                border-bottom: 1px solid #0b2030;
+            }}
+            .nl-th {{
+                font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+                text-transform: uppercase; color: #1a4a6a;
+                padding: 8px 10px;
+                text-align: left;
+                white-space: nowrap;
+            }}
+            .nl-th:first-child {{ padding-left: 16px; }}
+            .nl-th:last-child  {{ padding-right: 16px; }}
+
+            /* ── Data rows ──────────────────────────────────────────────── */
+            .nl-table {{ width: 100%; border-collapse: collapse; }}
+            .nl-row {{
+                border-bottom: 1px solid #070f1c;
+                transition: background .15s;
+                cursor: default;
+            }}
+            .nl-row:last-child {{ border-bottom: none; }}
+            .nl-panel-ce .nl-row:hover {{ background: rgba(255,58,92,.04); }}
+            .nl-panel-pe .nl-row:hover {{ background: rgba(0,230,118,.04); }}
+
+            /* ── Cells ──────────────────────────────────────────────────── */
+            .nl-td-rank    {{ padding: 12px 8px 12px 14px; width: 42px; vertical-align: middle; }}
+            .nl-td-strike  {{ padding: 12px 8px; vertical-align: middle; }}
+            .nl-td-type    {{ padding: 12px 6px; vertical-align: middle; }}
+            .nl-td-oi      {{ padding: 12px 8px; vertical-align: middle; min-width: 120px; }}
+            .nl-td-chng    {{ padding: 12px 8px; vertical-align: middle; }}
+            .nl-td-ltp     {{ padding: 12px 8px; vertical-align: middle; }}
+            .nl-td-vol     {{ padding: 12px 14px 12px 8px; vertical-align: middle; }}
+
+            /* ── Rank badge ─────────────────────────────────────────────── */
+            .nl-rank {{
+                width: 30px; height: 30px; border-radius: 8px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 13px; font-weight: 800;
+                font-family: 'IBM Plex Mono', monospace;
+                flex-shrink: 0;
+            }}
+
+            /* ── Strike value ───────────────────────────────────────────── */
+            .nl-strike-val {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 15px; font-weight: 700; color: #e8f4ff;
+                letter-spacing: -0.3px;
+            }}
+
+            /* ── Type badges ────────────────────────────────────────────── */
+            .nl-tbadge {{
+                display: inline-block;
+                padding: 3px 9px; border-radius: 6px;
+                font-size: 10px; font-weight: 800; letter-spacing: 1px;
+            }}
+            .nl-itm {{
+                background: rgba(0,230,118,.14); color: #00ff88;
+                border: 1px solid rgba(0,230,118,.5);
+                text-shadow: 0 0 8px rgba(0,255,136,.5);
+            }}
+            .nl-atm {{
+                background: rgba(255,220,0,.12); color: #ffe033;
+                border: 1px solid rgba(255,220,0,.5);
+                text-shadow: 0 0 8px rgba(255,220,0,.5);
+            }}
+            .nl-otm {{
+                background: rgba(80,140,200,.12); color: #7ab4d8;
+                border: 1px solid rgba(80,140,200,.4);
+            }}
+
+            /* ── OI value + heat bar ────────────────────────────────────── */
+            .nl-oi-wrap  {{ display: flex; flex-direction: column; gap: 5px; }}
+            .nl-oi-val   {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 14px; font-weight: 700;
+            }}
+            .nl-oi-ce {{ color: #ff6680; text-shadow: 0 0 10px rgba(255,58,92,.4); }}
+            .nl-oi-pe {{ color: #33ffaa; text-shadow: 0 0 10px rgba(0,230,118,.4); }}
+            .nl-bar-track {{
+                height: 5px; background: #060f1c; border-radius: 3px; overflow: hidden;
+                width: 100%; max-width: 120px;
+            }}
+            .nl-bar-fill  {{ height: 100%; border-radius: 3px; min-width: 3px; }}
+            .nl-bar-ce {{ background: linear-gradient(90deg, #ff3a5c44, #ff3a5c); box-shadow: 0 0 6px #ff3a5c66; }}
+            .nl-bar-pe {{ background: linear-gradient(90deg, #00e67644, #00e676); box-shadow: 0 0 6px #00e67666; }}
+
+            /* ── Chng OI ────────────────────────────────────────────────── */
+            .nl-chng {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px; font-weight: 700;
+            }}
+            .nl-chng-up   {{ color: #00e676; }}
+            .nl-chng-dn   {{ color: #ff4d6d; }}
+            .nl-chng-flat {{ color: #3a6a8a; }}
+
+            /* ── LTP ────────────────────────────────────────────────────── */
+            .nl-ltp {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 14px; font-weight: 800;
+            }}
+            .nl-ltp-ce {{ color: #ffaacc; }}
+            .nl-ltp-pe {{ color: #aaffdd; }}
+
+            /* ── Volume ─────────────────────────────────────────────────── */
+            .nl-vol {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 12px; font-weight: 600; color: #3a7a9a;
+            }}
+
+            /* ── Footer ─────────────────────────────────────────────────── */
+            .nl-footer {{
+                background: #020810;
+                border-top: 1px solid #0a2030;
+                padding: 10px 24px;
+                display: flex; justify-content: space-between; align-items: center;
+            }}
+            .nl-footer-l {{
+                font-size: 9px; color: #0d2a40; letter-spacing: 2px;
+                font-weight: 700; text-transform: uppercase;
+            }}
+            .nl-footer-r {{
+                display: flex; align-items: center; gap: 7px;
+                font-size: 9px; color: #00c8ff;
+                font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+            }}
+        </style>
+
+        <div class="nl-wrap">
+
+            <!-- Master header -->
+            <div class="nl-master-hdr">
+                <div class="nl-master-title">
+                    <div class="nl-master-icon">&#9651;</div>
+                    <div class="nl-master-text">
+                        <h2>Top 10 Open Interest</h2>
+                        <p>NIFTY &middot; Weekly Expiry &middot; OI Analysis</p>
+                    </div>
+                </div>
+                <div class="nl-master-badges">
+                    <span class="nl-ce-badge">5 CE</span>
+                    <span class="nl-pe-badge">5 PE</span>
+                    <div class="nl-live-dot"></div>
+                </div>
+            </div>
+
+            <!-- Split panels -->
+            <div class="nl-panels">
+
+                <!-- CE Panel -->
+                <div class="nl-panel nl-panel-ce">
+                    <div class="nl-panel-hdr">
+                        <div class="nl-panel-hdr-dot nl-ce-dot"></div>
+                        <span class="nl-panel-hdr-title nl-ce-title">Top 5 Call Options (CE)</span>
+                        <span class="nl-panel-hdr-sub nl-ce-sub">RESISTANCE WALL</span>
+                    </div>
+                    <table class="nl-table">
+                        <thead class="nl-col-hdr-row">
+                            <tr>{col_heads}</tr>
+                        </thead>
+                        <tbody>{ce_rows_html}</tbody>
+                    </table>
+                </div>
+
+                <!-- PE Panel -->
+                <div class="nl-panel nl-panel-pe">
+                    <div class="nl-panel-hdr">
+                        <div class="nl-panel-hdr-dot nl-pe-dot"></div>
+                        <span class="nl-panel-hdr-title nl-pe-title">Top 5 Put Options (PE)</span>
+                        <span class="nl-panel-hdr-sub nl-pe-sub">SUPPORT FLOOR</span>
+                    </div>
+                    <table class="nl-table">
+                        <thead class="nl-col-hdr-row">
+                            <tr>{col_heads}</tr>
+                        </thead>
+                        <tbody>{pe_rows_html}</tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="nl-footer">
+                <span class="nl-footer-l">WIDGET 01 &middot; NEON LEDGER &middot; OI ANALYSIS</span>
+                <span class="nl-footer-r">
+                    <div class="nl-live-dot"></div>
+                    LIVE
+                </span>
+            </div>
+
+        </div>
+        <!-- ═══ END NEON LEDGER OI WIDGET ═══ -->
+        '''
+        return widget_html
+
+    # =========================================================================
     # WIDGET 02 — PLASMA RADIAL | Option Chain Analysis
     # Circular PCR gauge · Neon plasma arcs · Bright vivid labels
     # =========================================================================
@@ -1901,7 +2342,6 @@ class NiftyAnalyzer:
                 dist_str  = f"+{dist:.1f}"
                 dist_pct_str = f"+{dist_pct:.2f}%"
                 dots      = strength_dots(dist_pct, 'R')
-                # Fade higher resistances slightly
                 row_opacity = '1' if idx == 0 else ('0.82' if idx == 1 else '0.65')
                 price_size  = '20px' if idx == 0 else ('17px' if idx == 1 else '15px')
                 gold_shade  = '#ffd700' if idx == 0 else ('#e8b800' if idx == 1 else '#c99a00')
@@ -2073,13 +2513,6 @@ class NiftyAnalyzer:
                 letter-spacing: -0.5px;
                 text-shadow: 0 0 16px rgba(255,215,0,0.5);
             }}
-            .w4-ltp-arrow {{
-                width: 0; height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-            }}
-            .w4-ltp-arrow.up   {{ border-bottom: 8px solid #00e676; }}
-            .w4-ltp-arrow.down {{ border-top: 8px solid #ff4d6d; }}
 
             /* ── Split grid ─────────────────────────────────────────────── */
             .w4-body {{
@@ -2345,6 +2778,11 @@ class NiftyAnalyzer:
         # Plasma Radial OC widget (Widget 02)
         oc_plasma_widget_html = self._build_oc_plasma_widget(oc_analysis)
 
+        # NEON LEDGER OI widget (Widget 01)
+        top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
+        top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
+        oi_neon_ledger_html = self._build_oi_neon_ledger_widget(top_ce_strikes, top_pe_strikes)
+
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
         momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
@@ -2356,39 +2794,6 @@ class NiftyAnalyzer:
         momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
             'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
         })
-
-        top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
-        top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
-
-        ce_rows_html = ''
-        for idx, strike in enumerate(top_ce_strikes, 1):
-            badge_class = f"badge-{strike['type'].lower()}"
-            ce_rows_html += f"""
-                    <tr>
-                        <td>{idx}</td>
-                        <td><strong>&#8377;{strike['strike']}</strong></td>
-                        <td><span class="{badge_class}">{strike['type']}</span></td>
-                        <td>{strike['oi']:,}</td>
-                        <td>{strike['chng_oi']:,}</td>
-                        <td>&#8377;{strike['ltp']:.2f}</td>
-                        <td>{strike['iv']:.2f}%</td>
-                        <td>{strike['volume']:,}</td>
-                    </tr>"""
-
-        pe_rows_html = ''
-        for idx, strike in enumerate(top_pe_strikes, 1):
-            badge_class = f"badge-{strike['type'].lower()}"
-            pe_rows_html += f"""
-                    <tr>
-                        <td>{idx}</td>
-                        <td><strong>&#8377;{strike['strike']}</strong></td>
-                        <td><span class="{badge_class}">{strike['type']}</span></td>
-                        <td>{strike['oi']:,}</td>
-                        <td>{strike['chng_oi']:,}</td>
-                        <td>&#8377;{strike['ltp']:.2f}</td>
-                        <td>{strike['iv']:.2f}%</td>
-                        <td>{strike['volume']:,}</td>
-                    </tr>"""
 
         strategies_html = ''
         for strategy in strategies:
@@ -2463,25 +2868,26 @@ class NiftyAnalyzer:
         }}
         .header h1 {{
             font-family: 'Orbitron', monospace;
-            color: #00c8ff;
-            font-size: 24px;
-            font-weight: 700;
+            color: #00e5ff;
+            font-size: 26px;
+            font-weight: 900;
             margin-bottom: 12px;
-            letter-spacing: 3px;
-            text-shadow: 0 0 30px rgba(0,200,255,.5);
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(0,220,255,.7), 0 0 80px rgba(0,180,255,.3);
         }}
-        .timestamp {{ color: #2a6a8a; font-size: 12px; font-weight: 600; margin-top: 10px; letter-spacing: 1px; }}
+        .timestamp {{ color: #2a8aaa; font-size: 13px; font-weight: 700; margin-top: 10px; letter-spacing: 1.5px; }}
         .timeframe-badge {{
             display: inline-block;
-            background: rgba(0,100,160,0.2);
-            border: 1px solid #0a5a7a;
-            color: #00c8ff;
-            padding: 5px 16px;
+            background: rgba(0,200,255,.15);
+            border: 1px solid #00c8ff66;
+            color: #00e5ff;
+            padding: 6px 20px;
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 800;
             margin-top: 10px;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 12px rgba(0,220,255,.6);
         }}
         .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
         .momentum-box {{
@@ -2557,21 +2963,22 @@ class NiftyAnalyzer:
         .section {{ margin-bottom: 24px; }}
         .section-title {{
             background: linear-gradient(135deg, #031a2c 0%, #020e1c 100%);
-            color: #00c8ff;
-            padding: 12px 20px;
+            color: #00e5ff;
+            padding: 13px 20px;
             border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 800;
             margin-bottom: 14px;
-            letter-spacing: 2px;
+            letter-spacing: 2.5px;
             text-transform: uppercase;
-            border: 1px solid #0a3d5c;
+            border: 1px solid #0a4a6a;
             border-left: 4px solid #00c8ff;
             display: flex;
             align-items: center;
             gap: 10px;
+            text-shadow: 0 0 20px rgba(0,220,255,.4);
         }}
-        .section-title::before {{ content: '▸'; color: #00aaff; }}
+        .section-title::before {{ content: '▸'; color: #00e5ff; font-size: 14px; }}
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }}
         .data-item {{
             background: rgba(0,100,170,.06);
@@ -2583,7 +2990,7 @@ class NiftyAnalyzer:
         }}
         .data-item:hover {{ border-left-color: #00c8ff; }}
         .data-item .label {{
-            color: #1a5a7a;
+            color: #1a6a8a;
             font-size: 10px;
             text-transform: uppercase;
             font-weight: 700;
@@ -2611,38 +3018,6 @@ class NiftyAnalyzer:
         .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #00aaff; font-weight: bold; }}
         .levels-box.resistance li {{ color: #cc8888; }}
         .levels-box.support    li {{ color: #44cc88; }}
-        .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }}
-        .oi-section {{
-            background: rgba(0,80,140,.06);
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #0a2a3a;
-        }}
-        .oi-section h4 {{ font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 12px; color: #80b8d8; letter-spacing: 1px; }}
-        .oi-section.calls {{ border-top: 3px solid #00aa55; }}
-        .oi-section.puts  {{ border-top: 3px solid #cc2233; }}
-        .oi-container {{ overflow-x: auto; }}
-        .oi-table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
-        .oi-table th {{
-            background: rgba(0,100,160,.2);
-            color: #2a8aaa;
-            padding: 8px 6px;
-            text-align: center;
-            border-bottom: 1px solid #0a3050;
-            font-size: 10px;
-            letter-spacing: 1px;
-            font-weight: 700;
-        }}
-        .oi-table td {{
-            padding: 8px 6px;
-            border-bottom: 1px solid #061820;
-            text-align: center;
-            color: #5a8aaa;
-        }}
-        .oi-table tbody tr:hover {{ background: rgba(0,150,220,.05); }}
-        .badge-itm {{ background: rgba(0,200,100,.15); color: #00dd77; border: 1px solid #00aa55; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
-        .badge-atm {{ background: rgba(255,180,0,.12); color: #ffcc00; border: 1px solid #cc9900; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
-        .badge-otm {{ background: rgba(80,120,160,.12); color: #6a9ab8; border: 1px solid #3a6a88; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
         .reasons {{
             background: rgba(0,80,140,.08);
             border-left: 4px solid #0088bb;
@@ -2763,7 +3138,6 @@ class NiftyAnalyzer:
         }}
         @media (max-width: 768px) {{
             .momentum-container {{ grid-template-columns: 1fr; }}
-            .oi-grid            {{ grid-template-columns: 1fr; }}
             .strike-recommendations {{ grid-template-columns: 1fr; }}
             .target-grid        {{ grid-template-columns: 1fr; }}
             .levels             {{ flex-direction: column; }}
@@ -2835,29 +3209,10 @@ class NiftyAnalyzer:
         {oc_plasma_widget_html}
     </div>
 
-    <!-- TOP OI -->
+    <!-- TOP 10 OI — WIDGET 01 NEON LEDGER -->
     <div class="section">
         <div class="section-title">Top 10 Open Interest (5 CE + 5 PE)</div>
-        <div class="oi-grid">
-            <div class="oi-section calls">
-                <h4>&#128308; Top 5 Call Options (CE)</h4>
-                <div class="oi-container">
-                    <table class="oi-table">
-                        <thead><tr><th>#</th><th>Strike</th><th>Type</th><th>OI</th><th>Chng OI</th><th>LTP</th><th>IV</th><th>Volume</th></tr></thead>
-                        <tbody>{ce_rows_html}</tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="oi-section puts">
-                <h4>&#128994; Top 5 Put Options (PE)</h4>
-                <div class="oi-container">
-                    <table class="oi-table">
-                        <thead><tr><th>#</th><th>Strike</th><th>Type</th><th>OI</th><th>Chng OI</th><th>LTP</th><th>IV</th><th>Volume</th></tr></thead>
-                        <tbody>{pe_rows_html}</tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        {oi_neon_ledger_html}
     </div>
 
     <!-- ANALYSIS SUMMARY -->
@@ -2958,7 +3313,7 @@ class NiftyAnalyzer:
     <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Bloomberg S/R Table &nbsp;|&nbsp; Dual Momentum (1H + 5H)</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Bloomberg S/R Table &nbsp;|&nbsp; Dual Momentum (1H + 5H) &nbsp;|&nbsp; Neon Ledger OI</p>
     </div>
 
 </div>
@@ -3044,7 +3399,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
 
-        self.logger.info("✅ Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table — Analysis Complete!")
+        self.logger.info("✅ Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI — Analysis Complete!")
 
         return {
             'oc_analysis':    oc_analysis,
@@ -3058,7 +3413,7 @@ if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
 
-    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table)")
+    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI)")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
     print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
