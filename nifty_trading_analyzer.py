@@ -1,13 +1,13 @@
 """
 Nifty Option Chain & Technical Analysis for Day Trading
-PROFESSIONAL VERSION - Enhanced Design with Better Contrast
+THEME: DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
 FIXED: Using curl-cffi for NSE API to bypass anti-scraping
-UPDATED: Professional grey theme with improved readability
+UPDATED: Deep Ocean Trading Desk theme (Dark Navy / Cyan / Aqua)
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str' - fixed in create_html_report
-UPDATED: Terminal Split Panel Pivot Points Widget (v2)
+UPDATED: Terminal Split Panel Pivot Points Widget (v2) — Ocean theme
 """
 
 import pandas as pd
@@ -32,13 +32,13 @@ class NiftyAnalyzer:
         """Initialize analyzer with YAML configuration"""
         self.config = self.load_config(config_path)
         self.setup_logging()
-        
+
         # IST timezone
         self.ist = pytz.timezone('Asia/Kolkata')
-        
+
         self.nifty_symbol = "^NSEI"
         self.option_chain_base_url = "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry="
-        
+
         self.headers = {
             "authority": "www.nseindia.com",
             "accept": "application/json, text/plain, */*",
@@ -46,7 +46,7 @@ class NiftyAnalyzer:
             "referer": "https://www.nseindia.com/option-chain",
             "accept-language": "en-US,en;q=0.9",
         }
-    
+
     def get_next_expiry_date(self):
         """
         Calculate the next NIFTY expiry date (Weekly Tuesday)
@@ -54,7 +54,7 @@ class NiftyAnalyzer:
         """
         now_ist = self.get_ist_time()
         current_day = now_ist.weekday()  # 0=Monday, 1=Tuesday, ...
-        
+
         if current_day == 1:
             current_hour = now_ist.hour
             current_minute = now_ist.minute
@@ -70,16 +70,16 @@ class NiftyAnalyzer:
             days_until_tuesday = (1 - current_day) % 7
             if days_until_tuesday == 0:
                 days_until_tuesday = 7
-        
+
         expiry_date = now_ist + timedelta(days=days_until_tuesday)
         expiry_str = expiry_date.strftime('%d-%b-%Y')
         self.logger.info(f"📅 Next NIFTY Expiry: {expiry_str} ({expiry_date.strftime('%A')})")
         return expiry_str
-    
+
     def get_ist_time(self):
         """Get current time in IST"""
         return datetime.now(self.ist)
-    
+
     def format_ist_time(self, dt=None):
         """Format datetime in IST"""
         if dt is None:
@@ -89,7 +89,7 @@ class NiftyAnalyzer:
         else:
             dt = dt.astimezone(self.ist)
         return dt.strftime("%Y-%m-%d %H:%M:%S IST")
-        
+
     def load_config(self, config_path):
         """Load configuration from YAML file"""
         try:
@@ -104,7 +104,7 @@ class NiftyAnalyzer:
         except Exception as e:
             print(f"❌ Error loading config: {e}")
             return self.get_default_config()
-    
+
     def get_default_config(self):
         """Return default configuration"""
         return {
@@ -173,23 +173,22 @@ class NiftyAnalyzer:
                 'use_momentum_filter': True
             }
         }
-    
+
     def setup_logging(self):
         """Setup logging based on configuration"""
         log_config = self.config.get('logging', {})
         level = getattr(logging, log_config.get('level', 'INFO'))
-        
+
         self.logger = logging.getLogger('NiftyAnalyzer')
         self.logger.setLevel(level)
-        
-        # Avoid duplicate handlers
+
         if not self.logger.handlers:
             console_handler = logging.StreamHandler()
             console_handler.setLevel(level)
             formatter = logging.Formatter(log_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'))
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
-            
+
             if log_config.get('log_to_file', True):
                 log_file = log_config.get('log_file', './logs/nifty_analyzer.log')
                 os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -197,79 +196,79 @@ class NiftyAnalyzer:
                 file_handler.setLevel(level)
                 file_handler.setFormatter(formatter)
                 self.logger.addHandler(file_handler)
-    
+
     def fetch_option_chain(self):
         """Fetch Nifty option chain data from NSE using curl-cffi"""
         if self.config['data_source']['option_chain_source'] == 'sample':
             self.logger.info("Using sample option chain data")
             return None, None
-        
+
         expiry_date = self.get_next_expiry_date()
         symbol = "NIFTY"
-        
+
         api_url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol={symbol}&expiry={expiry_date}"
         base_url = "https://www.nseindia.com/"
-        
+
         max_retries = self.config['data_source']['max_retries']
         retry_delay = self.config['data_source']['retry_delay']
-        timeout = self.config['data_source']['timeout']
-        
+        timeout     = self.config['data_source']['timeout']
+
         for attempt in range(max_retries):
             try:
                 self.logger.info(f"Fetching option chain data for expiry {expiry_date} (attempt {attempt + 1}/{max_retries})...")
-                
+
                 session = requests.Session()
                 session.get(base_url, headers=self.headers, impersonate="chrome", timeout=15)
                 time.sleep(1)
-                
+
                 response = session.get(api_url, headers=self.headers, impersonate="chrome", timeout=timeout)
-                
+
                 if response.status_code == 200:
                     data = response.json()
-                    
+
                     if 'records' in data and 'data' in data['records']:
-                        option_data = data['records']['data']
+                        option_data  = data['records']['data']
                         current_price = data['records']['underlyingValue']
-                        
+
                         if not option_data:
                             self.logger.warning(f"No option data for expiry {expiry_date}")
                             continue
-                        
+
                         calls_data = []
-                        puts_data = []
-                        
+                        puts_data  = []
+
                         for item in option_data:
                             strike = item.get('strikePrice', 0)
-                            
+
                             if 'CE' in item:
                                 ce = item['CE']
                                 calls_data.append({
-                                    'Strike': strike,
-                                    'Call_OI': ce.get('openInterest', 0),
+                                    'Strike':       strike,
+                                    'Call_OI':      ce.get('openInterest', 0),
                                     'Call_Chng_OI': ce.get('changeinOpenInterest', 0),
-                                    'Call_Volume': ce.get('totalTradedVolume', 0),
-                                    'Call_IV': ce.get('impliedVolatility', 0),
-                                    'Call_LTP': ce.get('lastPrice', 0)
+                                    'Call_Volume':  ce.get('totalTradedVolume', 0),
+                                    'Call_IV':      ce.get('impliedVolatility', 0),
+                                    'Call_LTP':     ce.get('lastPrice', 0)
                                 })
-                            
+
                             if 'PE' in item:
                                 pe = item['PE']
                                 puts_data.append({
-                                    'Strike': strike,
-                                    'Put_OI': pe.get('openInterest', 0),
+                                    'Strike':      strike,
+                                    'Put_OI':      pe.get('openInterest', 0),
                                     'Put_Chng_OI': pe.get('changeinOpenInterest', 0),
-                                    'Put_Volume': pe.get('totalTradedVolume', 0),
-                                    'Put_IV': pe.get('impliedVolatility', 0),
-                                    'Put_LTP': pe.get('lastPrice', 0)
+                                    'Put_Volume':  pe.get('totalTradedVolume', 0),
+                                    'Put_IV':      pe.get('impliedVolatility', 0),
+                                    'Put_LTP':     pe.get('lastPrice', 0)
                                 })
-                        
+
                         calls_df = pd.DataFrame(calls_data)
-                        puts_df = pd.DataFrame(puts_data)
-                        
+                        puts_df  = pd.DataFrame(puts_data)
+
                         oc_df = pd.merge(calls_df, puts_df, on='Strike', how='outer')
                         oc_df = oc_df.fillna(0)
                         oc_df = oc_df.sort_values('Strike')
-                        
+
                         self.logger.info(f"✅ Option chain fetched | Spot: ₹{current_price} | Expiry: {expiry_date}")
                         self.logger.info(f"✅ Total strikes fetched: {len(oc_df)}")
                         return oc_df, current_price
@@ -277,68 +276,68 @@ class NiftyAnalyzer:
                         self.logger.warning("Invalid response structure from NSE API")
                 else:
                     self.logger.warning(f"NSE API returned status code: {response.status_code}")
-                
+
             except Exception as e:
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
-        
+
         if self.config['data_source']['fallback_to_sample']:
             self.logger.warning("All NSE API attempts failed, using sample data")
-        
+
         return None, None
-    
+
     def get_top_strikes_by_oi(self, oc_df, spot_price):
         """Get top 5 strikes by Open Interest for CE and PE"""
         if oc_df is None or oc_df.empty:
             return {'top_ce_strikes': [], 'top_pe_strikes': []}
-        
+
         top_count = self.config['option_chain'].get('top_strikes_count', 5)
-        
+
         ce_data = oc_df[oc_df['Call_OI'] > 0].copy()
         ce_data = ce_data.sort_values('Call_OI', ascending=False).head(top_count)
         top_ce_strikes = []
         for _, row in ce_data.iterrows():
             strike_type = 'ITM' if row['Strike'] < spot_price else ('ATM' if row['Strike'] == spot_price else 'OTM')
             top_ce_strikes.append({
-                'strike': row['Strike'],
-                'oi': int(row['Call_OI']),
-                'ltp': row['Call_LTP'],
-                'iv': row['Call_IV'],
-                'type': strike_type,
-                'chng_oi': int(row['Call_Chng_OI']),
-                'volume': int(row['Call_Volume'])
+                'strike':   row['Strike'],
+                'oi':       int(row['Call_OI']),
+                'ltp':      row['Call_LTP'],
+                'iv':       row['Call_IV'],
+                'type':     strike_type,
+                'chng_oi':  int(row['Call_Chng_OI']),
+                'volume':   int(row['Call_Volume'])
             })
-        
+
         pe_data = oc_df[oc_df['Put_OI'] > 0].copy()
         pe_data = pe_data.sort_values('Put_OI', ascending=False).head(top_count)
         top_pe_strikes = []
         for _, row in pe_data.iterrows():
             strike_type = 'ITM' if row['Strike'] > spot_price else ('ATM' if row['Strike'] == spot_price else 'OTM')
             top_pe_strikes.append({
-                'strike': row['Strike'],
-                'oi': int(row['Put_OI']),
-                'ltp': row['Put_LTP'],
-                'iv': row['Put_IV'],
-                'type': strike_type,
+                'strike':  row['Strike'],
+                'oi':      int(row['Put_OI']),
+                'ltp':     row['Put_LTP'],
+                'iv':      row['Put_IV'],
+                'type':    strike_type,
                 'chng_oi': int(row['Put_Chng_OI']),
-                'volume': int(row['Put_Volume'])
+                'volume':  int(row['Put_Volume'])
             })
-        
+
         return {'top_ce_strikes': top_ce_strikes, 'top_pe_strikes': top_pe_strikes}
-    
+
     def analyze_option_chain(self, oc_df, spot_price):
         """Analyze option chain for trading signals"""
         if oc_df is None or oc_df.empty:
             self.logger.warning("No option chain data, using sample analysis")
             return self.get_sample_oc_analysis()
-        
+
         config = self.config['option_chain']
-        
+
         total_call_oi = oc_df['Call_OI'].sum()
-        total_put_oi = oc_df['Put_OI'].sum()
+        total_put_oi  = oc_df['Put_OI'].sum()
         pcr = total_put_oi / total_call_oi if total_call_oi > 0 else 0
-        
+
         oc_df['Call_Pain'] = oc_df.apply(
             lambda row: row['Call_OI'] * max(0, spot_price - row['Strike']), axis=1
         )
@@ -346,57 +345,57 @@ class NiftyAnalyzer:
             lambda row: row['Put_OI'] * max(0, row['Strike'] - spot_price), axis=1
         )
         oc_df['Total_Pain'] = oc_df['Call_Pain'] + oc_df['Put_Pain']
-        
+
         max_pain_strike = oc_df.loc[oc_df['Total_Pain'].idxmax(), 'Strike']
-        
-        strike_range = config['strike_range']
+
+        strike_range   = config['strike_range']
         nearby_strikes = oc_df[
-            (oc_df['Strike'] >= spot_price - strike_range) & 
+            (oc_df['Strike'] >= spot_price - strike_range) &
             (oc_df['Strike'] <= spot_price + strike_range)
         ].copy()
-        
+
         num_resistance = self.config['technical']['num_resistance_levels']
-        num_support = self.config['technical']['num_support_levels']
-        
+        num_support    = self.config['technical']['num_support_levels']
+
         resistance_df = nearby_strikes[nearby_strikes['Strike'] > spot_price].nlargest(num_resistance, 'Call_OI')
-        resistances = resistance_df['Strike'].tolist()
-        
+        resistances   = resistance_df['Strike'].tolist()
+
         support_df = nearby_strikes[nearby_strikes['Strike'] < spot_price].nlargest(num_support, 'Put_OI')
-        supports = support_df['Strike'].tolist()
-        
+        supports   = support_df['Strike'].tolist()
+
         total_call_buildup = oc_df['Call_Chng_OI'].sum()
-        total_put_buildup = oc_df['Put_Chng_OI'].sum()
-        
+        total_put_buildup  = oc_df['Put_Chng_OI'].sum()
+
         avg_call_iv = oc_df['Call_IV'].mean()
-        avg_put_iv = oc_df['Put_IV'].mean()
-        
+        avg_put_iv  = oc_df['Put_IV'].mean()
+
         top_strikes = self.get_top_strikes_by_oi(oc_df, spot_price)
-        
+
         return {
-            'pcr': round(pcr, 2),
-            'max_pain': max_pain_strike,
-            'resistances': sorted(resistances, reverse=True),
-            'supports': sorted(supports, reverse=True),
-            'call_buildup': total_call_buildup,
-            'put_buildup': total_put_buildup,
-            'avg_call_iv': round(avg_call_iv, 2),
-            'avg_put_iv': round(avg_put_iv, 2),
-            'oi_sentiment': 'Bullish' if total_put_buildup > total_call_buildup else 'Bearish',
+            'pcr':           round(pcr, 2),
+            'max_pain':      max_pain_strike,
+            'resistances':   sorted(resistances, reverse=True),
+            'supports':      sorted(supports, reverse=True),
+            'call_buildup':  total_call_buildup,
+            'put_buildup':   total_put_buildup,
+            'avg_call_iv':   round(avg_call_iv, 2),
+            'avg_put_iv':    round(avg_put_iv, 2),
+            'oi_sentiment':  'Bullish' if total_put_buildup > total_call_buildup else 'Bearish',
             'top_ce_strikes': top_strikes['top_ce_strikes'],
             'top_pe_strikes': top_strikes['top_pe_strikes']
         }
-    
+
     def get_sample_oc_analysis(self):
         """Return sample option chain analysis"""
         return {
-            'pcr': 1.15,
-            'max_pain': 24500,
-            'resistances': [24600, 24650],
-            'supports': [24400, 24350],
+            'pcr':          1.15,
+            'max_pain':     24500,
+            'resistances':  [24600, 24650],
+            'supports':     [24400, 24350],
             'call_buildup': 5000000,
-            'put_buildup': 6000000,
-            'avg_call_iv': 15.5,
-            'avg_put_iv': 16.2,
+            'put_buildup':  6000000,
+            'avg_call_iv':  15.5,
+            'avg_put_iv':   16.2,
             'oi_sentiment': 'Bullish',
             'top_ce_strikes': [
                 {'strike': 24500, 'oi': 5000000, 'ltp': 120, 'iv': 16.5, 'type': 'ATM', 'chng_oi': 500000, 'volume': 125000},
@@ -413,40 +412,40 @@ class NiftyAnalyzer:
                 {'strike': 24600, 'oi': 4000000, 'ltp': 160, 'iv': 16.8, 'type': 'ITM', 'chng_oi': 400000, 'volume': 95000},
             ]
         }
-    
+
     def fetch_technical_data(self):
         """Fetch historical data for technical analysis - ALWAYS 1 HOUR"""
         if self.config['data_source']['technical_source'] == 'sample':
             self.logger.info("Using sample technical data")
             return None
-            
-        period = self.config['technical']['period']
+
+        period   = self.config['technical']['period']
         interval = '1h'
-        
+
         try:
             self.logger.info(f"Fetching 1-HOUR technical data ({period})...")
             ticker = yf.Ticker(self.nifty_symbol)
-            df = ticker.history(period=period, interval=interval)
-            
+            df     = ticker.history(period=period, interval=interval)
+
             if self.config['advanced']['validate_data']:
                 min_points = self.config['advanced']['min_data_points']
                 if len(df) < min_points:
                     self.logger.warning(f"Insufficient data points: {len(df)} < {min_points}")
                     return None
-            
+
             self.logger.info(f"✅ 1-HOUR data fetched | {len(df)} bars")
             self.logger.info(f"Price: ₹{df['Close'].iloc[-1]:.2f} | Last candle: {df.index[-1]}")
             return df
         except Exception as e:
             self.logger.error(f"Error fetching technical data: {e}")
             return None
-    
+
     def calculate_pivot_points(self, df, current_price):
         """Calculate Traditional Pivot Points (30-minute timeframe)"""
         try:
-            ticker = yf.Ticker(self.nifty_symbol)
-            min_30_df = ticker.history(period='5d', interval='30m')
-            
+            ticker     = yf.Ticker(self.nifty_symbol)
+            min_30_df  = ticker.history(period='5d', interval='30m')
+
             if len(min_30_df) >= 2:
                 prev_high  = min_30_df['High'].iloc[-2]
                 prev_low   = min_30_df['Low'].iloc[-2]
@@ -455,19 +454,17 @@ class NiftyAnalyzer:
                 prev_high  = df['High'].max()
                 prev_low   = df['Low'].min()
                 prev_close = df['Close'].iloc[-1]
-            
+
             pivot = (prev_high + prev_low + prev_close) / 3
-            
-            r1 = (2 * pivot) - prev_low
-            r2 = pivot + (prev_high - prev_low)
-            r3 = prev_high + 2 * (pivot - prev_low)
-            
-            s1 = (2 * pivot) - prev_high
-            s2 = pivot - (prev_high - prev_low)
-            s3 = prev_low - 2 * (prev_high - pivot)
-            
+            r1    = (2 * pivot) - prev_low
+            r2    = pivot + (prev_high - prev_low)
+            r3    = prev_high + 2 * (pivot - prev_low)
+            s1    = (2 * pivot) - prev_high
+            s2    = pivot - (prev_high - prev_low)
+            s3    = prev_low - 2 * (prev_high - pivot)
+
             self.logger.info(f"📍 Pivot Points (30m) calculated | PP: ₹{pivot:.2f}")
-            
+
             return {
                 'pivot':      round(pivot, 2),
                 'r1':         round(r1, 2),
@@ -480,95 +477,91 @@ class NiftyAnalyzer:
                 'prev_low':   round(prev_low, 2),
                 'prev_close': round(prev_close, 2)
             }
-            
+
         except Exception as e:
             self.logger.error(f"Error calculating pivot points: {e}")
             return {
                 'pivot': 24520.00, 'r1': 24590.00, 'r2': 24650.00, 'r3': 24720.00,
-                's1': 24450.00,    's2': 24390.00,  's3': 24320.00,
+                's1':    24450.00, 's2': 24390.00,  's3': 24320.00,
                 'prev_high': 24580.00, 'prev_low': 24420.00, 'prev_close': 24500.00
             }
-    
+
     def calculate_rsi(self, data, period=None):
         """Calculate RSI using Wilder's smoothing method (matches TradingView)"""
         if period is None:
             period = self.config['technical']['rsi_period']
-        
-        delta = data.diff()
-        gain  = delta.where(delta > 0, 0)
-        loss  = -delta.where(delta < 0, 0)
-        
+
+        delta    = data.diff()
+        gain     = delta.where(delta > 0, 0)
+        loss     = -delta.where(delta < 0, 0)
         avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
         avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
-        
-        rs  = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
+        rs       = avg_gain / avg_loss
+        rsi      = 100 - (100 / (1 + rs))
         return rsi
-    
+
     def calculate_support_resistance(self, df, current_price):
         """Calculate nearest support and resistance levels from price action"""
         recent_data = df.tail(300)
-        
         pivots_high = []
         pivots_low  = []
-        
+
         for i in range(5, len(recent_data) - 5):
             high = recent_data['High'].iloc[i]
             low  = recent_data['Low'].iloc[i]
-            
             if high == max(recent_data['High'].iloc[i-5:i+6]):
                 pivots_high.append(high)
             if low == min(recent_data['Low'].iloc[i-5:i+6]):
                 pivots_low.append(low)
-        
+
         resistances = sorted([p for p in pivots_high if p > current_price])
         resistances = list(dict.fromkeys(resistances))
-        
-        supports = sorted([p for p in pivots_low if p < current_price], reverse=True)
-        supports = list(dict.fromkeys(supports))
-        
+        supports    = sorted([p for p in pivots_low if p < current_price], reverse=True)
+        supports    = list(dict.fromkeys(supports))
+
         num_resistance = self.config['technical']['num_resistance_levels']
         num_support    = self.config['technical']['num_support_levels']
-        
+
         return {
             'resistances': resistances[:num_resistance],
             'supports':    supports[:num_support]
         }
-    
+
     def get_momentum_signal(self, momentum_pct):
         """Get momentum signal, bias, and CSS color variables based on percentage"""
         strong_threshold   = self.config['technical'].get('momentum_threshold_strong', 0.5)
         moderate_threshold = self.config['technical'].get('momentum_threshold_moderate', 0.2)
-        
+
+        # ── Deep Ocean palette for momentum boxes ──────────────────────────
         if momentum_pct > strong_threshold:
             return "Strong Upward", "Bullish", {
-                'bg': '#1e7e34', 'bg_dark': '#155724', 'text': '#ffffff', 'border': '#28a745'
+                'bg': '#004d2e', 'bg_dark': '#003320', 'text': '#00ff8c', 'border': '#00aa55'
             }
         elif momentum_pct > moderate_threshold:
             return "Moderate Upward", "Bullish", {
-                'bg': '#28a745', 'bg_dark': '#218838', 'text': '#ffffff', 'border': '#1e7e34'
+                'bg': '#00334a', 'bg_dark': '#00223a', 'text': '#00c8ff', 'border': '#0088bb'
             }
         elif momentum_pct < -strong_threshold:
             return "Strong Downward", "Bearish", {
-                'bg': '#c82333', 'bg_dark': '#bd2130', 'text': '#ffffff', 'border': '#dc3545'
+                'bg': '#4a0010', 'bg_dark': '#380008', 'text': '#ff6070', 'border': '#cc2233'
             }
         elif momentum_pct < -moderate_threshold:
             return "Moderate Downward", "Bearish", {
-                'bg': '#fd7e14', 'bg_dark': '#e8590c', 'text': '#ffffff', 'border': '#dc3545'
+                'bg': '#3a1500', 'bg_dark': '#280d00', 'text': '#ff8855', 'border': '#cc4400'
             }
         else:
             return "Sideways/Weak", "Neutral", {
-                'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+                'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
             }
-    
+
     def technical_analysis(self, df):
         """Perform complete technical analysis - 1 HOUR TIMEFRAME with DUAL MOMENTUM"""
         if df is None or df.empty:
             self.logger.warning("No technical data, using sample analysis")
             return self.get_sample_tech_analysis()
-        
+
         current_price = df['Close'].iloc[-1]
-        
+
         # 1-HOUR MOMENTUM
         if len(df) > 1:
             price_1h_ago        = df['Close'].iloc[-2]
@@ -577,39 +570,39 @@ class NiftyAnalyzer:
         else:
             price_change_1h     = 0
             price_change_pct_1h = 0
-        
+
         momentum_1h_signal, momentum_1h_bias, momentum_1h_colors = self.get_momentum_signal(price_change_pct_1h)
-        
+
         # 5-HOUR MOMENTUM
         if len(df) >= 5:
-            price_5h_ago  = df['Close'].iloc[-5]
-            momentum_5h   = current_price - price_5h_ago
+            price_5h_ago    = df['Close'].iloc[-5]
+            momentum_5h     = current_price - price_5h_ago
             momentum_5h_pct = (momentum_5h / price_5h_ago * 100)
         else:
             momentum_5h     = 0
             momentum_5h_pct = 0
-        
+
         momentum_5h_signal, momentum_5h_bias, momentum_5h_colors = self.get_momentum_signal(momentum_5h_pct)
-        
+
         self.logger.info(f"📊 1H Momentum: {price_change_pct_1h:+.2f}% - {momentum_1h_signal}")
         self.logger.info(f"📊 5H Momentum: {momentum_5h_pct:+.2f}% - {momentum_5h_signal}")
-        
-        df['RSI'] = self.calculate_rsi(df['Close'])
-        current_rsi = df['RSI'].iloc[-1]
+
+        df['RSI']      = self.calculate_rsi(df['Close'])
+        current_rsi    = df['RSI'].iloc[-1]
         self.logger.info(f"🎯 RSI(14) calculated: {current_rsi:.2f} (Wilder's method)")
-        
+
         ema_short = self.config['technical']['ema_short']
         ema_long  = self.config['technical']['ema_long']
-        
+
         df['EMA_Short'] = df['Close'].ewm(span=ema_short, adjust=False).mean()
         df['EMA_Long']  = df['Close'].ewm(span=ema_long,  adjust=False).mean()
-        
+
         ema_short_val = df['EMA_Short'].iloc[-1]
         ema_long_val  = df['EMA_Long'].iloc[-1]
-        
+
         sr_levels    = self.calculate_support_resistance(df, current_price)
         pivot_points = self.calculate_pivot_points(df, current_price)
-        
+
         if current_price > ema_short_val > ema_long_val:
             trend = "Strong Uptrend"
         elif current_price > ema_short_val:
@@ -620,10 +613,10 @@ class NiftyAnalyzer:
             trend = "Downtrend"
         else:
             trend = "Sideways"
-        
+
         rsi_ob = self.config['technical']['rsi_overbought']
         rsi_os = self.config['technical']['rsi_oversold']
-        
+
         if current_rsi > rsi_ob:
             rsi_signal = "Overbought - Bearish"
         elif current_rsi < rsi_os:
@@ -632,7 +625,7 @@ class NiftyAnalyzer:
             rsi_signal = "Bullish"
         else:
             rsi_signal = "Bearish"
-        
+
         return {
             'current_price':       round(current_price, 2),
             'rsi':                 round(current_rsi, 2),
@@ -655,59 +648,59 @@ class NiftyAnalyzer:
             'momentum_5h_bias':    momentum_5h_bias,
             'momentum_5h_colors':  momentum_5h_colors
         }
-    
+
     def get_sample_tech_analysis(self):
         """Return sample technical analysis"""
         return {
-            'current_price': 24520.50,
-            'rsi': 42.82,
-            'rsi_signal': 'Bearish',
-            'ema20': 24480.00,
-            'ema50': 24450.00,
-            'trend': 'Uptrend',
-            'tech_resistances': [24580.00, 24650.00],
-            'tech_supports':    [24420.00, 24380.00],
+            'current_price':       24520.50,
+            'rsi':                 42.82,
+            'rsi_signal':          'Bearish',
+            'ema20':               24480.00,
+            'ema50':               24450.00,
+            'trend':               'Uptrend',
+            'tech_resistances':    [24580.00, 24650.00],
+            'tech_supports':       [24420.00, 24380.00],
             'pivot_points': {
                 'pivot': 24520.00, 'r1': 24590.00, 'r2': 24650.00, 'r3': 24720.00,
-                's1': 24450.00,    's2': 24390.00,  's3': 24320.00,
+                's1':    24450.00, 's2': 24390.00,  's3': 24320.00,
                 'prev_high': 24580.00, 'prev_low': 24420.00, 'prev_close': 24500.00
             },
-            'timeframe': '1 Hour',
+            'timeframe':           '1 Hour',
             'price_change_1h':     -15.50,
             'price_change_pct_1h': -0.06,
             'momentum_1h_signal':  'Sideways/Weak',
             'momentum_1h_bias':    'Neutral',
-            'momentum_1h_colors':  {'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'},
+            'momentum_1h_colors':  {'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'},
             'momentum_5h':         -35.50,
             'momentum_5h_pct':     -0.14,
             'momentum_5h_signal':  'Moderate Downward',
             'momentum_5h_bias':    'Bearish',
-            'momentum_5h_colors':  {'bg': '#fd7e14', 'bg_dark': '#e8590c', 'text': '#ffffff', 'border': '#dc3545'}
+            'momentum_5h_colors':  {'bg': '#3a1500', 'bg_dark': '#280d00', 'text': '#ff8855', 'border': '#cc4400'}
         }
-    
+
     def generate_recommendation(self, oc_analysis, tech_analysis):
         """Generate trading recommendation WITH DUAL MOMENTUM FILTER"""
         if not oc_analysis or not tech_analysis:
             return {"recommendation": "Insufficient data", "bias": "Neutral",
                     "confidence": "Low", "reasons": [],
                     "bullish_signals": 0, "bearish_signals": 0}
-        
-        config     = self.config['recommendation']
-        oc_config  = self.config['option_chain']
+
+        config      = self.config['recommendation']
+        oc_config   = self.config['option_chain']
         tech_config = self.config['technical']
-        
+
         bullish_signals = 0
         bearish_signals = 0
         reasons = []
-        
+
         use_momentum = self.config['advanced'].get('use_momentum_filter', True)
-        
+
         if use_momentum:
             momentum_5h_pct    = tech_analysis.get('momentum_5h_pct', 0)
             weight_5h          = config.get('momentum_5h_weight', 2)
             strong_threshold   = tech_config.get('momentum_threshold_strong', 0.5)
             moderate_threshold = tech_config.get('momentum_threshold_moderate', 0.2)
-            
+
             if momentum_5h_pct > strong_threshold:
                 bullish_signals += weight_5h
                 reasons.append(f"🚀 5H Strong upward momentum: {momentum_5h_pct:+.2f}%")
@@ -720,17 +713,17 @@ class NiftyAnalyzer:
             elif momentum_5h_pct < -moderate_threshold:
                 bearish_signals += 1
                 reasons.append(f"📉 5H Negative momentum: {momentum_5h_pct:+.2f}%")
-            
+
             momentum_1h_pct = tech_analysis.get('price_change_pct_1h', 0)
             weight_1h       = config.get('momentum_1h_weight', 1)
-            
+
             if momentum_1h_pct > strong_threshold:
                 bullish_signals += weight_1h
                 reasons.append(f"⚡ 1H Strong upward move: {momentum_1h_pct:+.2f}%")
             elif momentum_1h_pct < -strong_threshold:
                 bearish_signals += weight_1h
                 reasons.append(f"⚡ 1H Strong downward move: {momentum_1h_pct:+.2f}%")
-        
+
         pcr = oc_analysis.get('pcr', 0)
         if pcr >= oc_config['pcr_very_bullish']:
             bullish_signals += 2
@@ -744,18 +737,18 @@ class NiftyAnalyzer:
         elif pcr < oc_config['pcr_bearish']:
             bearish_signals += 1
             reasons.append(f"PCR at {pcr} shows bearish bias")
-        
+
         if oc_analysis.get('oi_sentiment') == 'Bullish':
             bullish_signals += 1
             reasons.append("Put OI buildup > Call OI buildup (Bullish)")
         else:
             bearish_signals += 1
             reasons.append("Call OI buildup > Put OI buildup (Bearish)")
-        
+
         rsi    = tech_analysis.get('rsi', 50)
         rsi_os = tech_config['rsi_oversold']
         rsi_ob = tech_config['rsi_overbought']
-        
+
         if rsi < rsi_os:
             bullish_signals += 2
             reasons.append(f"RSI at {rsi:.1f} - Oversold (Bullish reversal)")
@@ -768,7 +761,7 @@ class NiftyAnalyzer:
         elif rsi > 55:
             bearish_signals += 1
             reasons.append(f"RSI at {rsi:.1f} - Above neutral")
-        
+
         trend = tech_analysis.get('trend', '')
         if 'Uptrend' in trend:
             bullish_signals += 1
@@ -776,7 +769,7 @@ class NiftyAnalyzer:
         elif 'Downtrend' in trend:
             bearish_signals += 1
             reasons.append(f"Trend: {trend}")
-        
+
         current_price = tech_analysis.get('current_price', 0)
         ema20         = tech_analysis.get('ema20', 0)
         if current_price > ema20:
@@ -785,13 +778,13 @@ class NiftyAnalyzer:
         else:
             bearish_signals += 1
             reasons.append("Price below EMA20 (Bearish)")
-        
-        signal_diff    = bullish_signals - bearish_signals
-        strong_buy_t   = config['strong_buy_threshold']
-        buy_t          = config['buy_threshold']
-        sell_t         = config['sell_threshold']
-        strong_sell_t  = config['strong_sell_threshold']
-        
+
+        signal_diff   = bullish_signals - bearish_signals
+        strong_buy_t  = config['strong_buy_threshold']
+        buy_t         = config['buy_threshold']
+        sell_t        = config['sell_threshold']
+        strong_sell_t = config['strong_sell_threshold']
+
         if signal_diff >= strong_buy_t:
             recommendation = "STRONG BUY"
             bias, confidence = "Bullish", "High"
@@ -807,7 +800,7 @@ class NiftyAnalyzer:
         else:
             recommendation = "NEUTRAL / WAIT"
             bias, confidence = "Neutral", "Low"
-        
+
         return {
             'recommendation':  recommendation,
             'bias':            bias,
@@ -816,15 +809,15 @@ class NiftyAnalyzer:
             'bearish_signals': bearish_signals,
             'reasons':         reasons
         }
-    
+
     def get_options_strategies(self, recommendation, oc_analysis, tech_analysis):
         """Generate options trading strategy recommendations"""
-        bias    = recommendation['bias']
-        avg_iv  = (oc_analysis.get('avg_call_iv', 15) + oc_analysis.get('avg_put_iv', 15)) / 2
-        
+        bias   = recommendation['bias']
+        avg_iv = (oc_analysis.get('avg_call_iv', 15) + oc_analysis.get('avg_put_iv', 15)) / 2
+
         high_volatility = avg_iv > 18
         strategies = []
-        
+
         if bias == 'Bullish':
             strategies.append({
                 'name':        'Long Call',
@@ -844,7 +837,7 @@ class NiftyAnalyzer:
                 'best_when':   'Moderately bullish, reduce cost',
                 'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐⭐'
             })
-        
+
         elif bias == 'Bearish':
             strategies.append({
                 'name':        'Long Put',
@@ -864,7 +857,7 @@ class NiftyAnalyzer:
                 'best_when':   'Moderately bearish, reduce cost',
                 'recommended': '⭐⭐⭐⭐⭐' if recommendation['confidence'] == 'Medium' else '⭐⭐⭐⭐'
             })
-        
+
         else:
             if high_volatility:
                 strategies.append({
@@ -886,24 +879,24 @@ class NiftyAnalyzer:
                     'best_when':   'Expect range-bound, less risk than straddle',
                     'recommended': '⭐⭐⭐⭐⭐'
                 })
-        
+
         return strategies
-    
+
     def get_detailed_strike_recommendations(self, oc_analysis, tech_analysis, recommendation):
         """Generate detailed strike price recommendations with LTP and profit calculations"""
-        current_price   = tech_analysis.get('current_price', 0)
-        bias            = recommendation['bias']
-        atm_strike      = round(current_price / 50) * 50
-        top_ce_strikes  = oc_analysis.get('top_ce_strikes', [])
-        top_pe_strikes  = oc_analysis.get('top_pe_strikes', [])
-        
+        current_price  = tech_analysis.get('current_price', 0)
+        bias           = recommendation['bias']
+        atm_strike     = round(current_price / 50) * 50
+        top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
+        top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
+
         def find_closest_strike(target_strike, strike_list):
             if not strike_list:
                 return None
             return min(strike_list, key=lambda x: abs(x['strike'] - target_strike))
-        
+
         strike_recommendations = []
-        
+
         if bias == 'Bullish':
             atm_ce = find_closest_strike(atm_strike, top_ce_strikes)
             if atm_ce:
@@ -924,7 +917,7 @@ class NiftyAnalyzer:
                     'oi':                 atm_ce['oi'],
                     'volume':             atm_ce['volume']
                 })
-            
+
             otm_target = atm_strike + 50
             otm_ce     = find_closest_strike(otm_target, top_ce_strikes)
             if otm_ce and otm_ce['strike'] != (atm_ce['strike'] if atm_ce else None):
@@ -945,7 +938,7 @@ class NiftyAnalyzer:
                     'oi':                 otm_ce['oi'],
                     'volume':             otm_ce['volume']
                 })
-            
+
             itm_target = atm_strike - 50
             itm_ce     = find_closest_strike(itm_target, top_ce_strikes)
             if itm_ce and otm_ce and len(strike_recommendations) >= 1:
@@ -969,7 +962,7 @@ class NiftyAnalyzer:
                     'oi':                 f"{itm_ce['oi']:,} / {otm_ce['oi']:,}",
                     'volume':             f"{itm_ce['volume']:,} / {otm_ce['volume']:,}"
                 })
-        
+
         elif bias == 'Bearish':
             atm_pe = find_closest_strike(atm_strike, top_pe_strikes)
             if atm_pe:
@@ -990,7 +983,7 @@ class NiftyAnalyzer:
                     'oi':                 atm_pe['oi'],
                     'volume':             atm_pe['volume']
                 })
-            
+
             otm_target = atm_strike - 50
             otm_pe     = find_closest_strike(otm_target, top_pe_strikes)
             if otm_pe and otm_pe['strike'] != (atm_pe['strike'] if atm_pe else None):
@@ -1011,7 +1004,7 @@ class NiftyAnalyzer:
                     'oi':                 otm_pe['oi'],
                     'volume':             otm_pe['volume']
                 })
-            
+
             itm_target = atm_strike + 50
             itm_pe     = find_closest_strike(itm_target, top_pe_strikes)
             if itm_pe and otm_pe and len(strike_recommendations) >= 1:
@@ -1035,11 +1028,11 @@ class NiftyAnalyzer:
                     'oi':                 f"{itm_pe['oi']:,} / {otm_pe['oi']:,}",
                     'volume':             f"{itm_pe['volume']:,} / {otm_pe['volume']:,}"
                 })
-        
+
         else:  # Neutral
             atm_ce = find_closest_strike(atm_strike, top_ce_strikes)
             atm_pe = find_closest_strike(atm_strike, top_pe_strikes)
-            
+
             if atm_ce and atm_pe:
                 actual_strike = atm_ce['strike']
                 total_premium = atm_ce['ltp'] + atm_pe['ltp']
@@ -1059,7 +1052,7 @@ class NiftyAnalyzer:
                     'oi':                 f"{atm_ce['oi']:,} / {atm_pe['oi']:,}",
                     'volume':             f"{atm_ce['volume']:,} / {atm_pe['volume']:,}"
                 })
-        
+
         if strike_recommendations:
             self.logger.info(f"✅ Generated {len(strike_recommendations)} strike recommendations")
         else:
@@ -1068,48 +1061,46 @@ class NiftyAnalyzer:
                 f"Available CE={[s['strike'] for s in top_ce_strikes[:3]]}, "
                 f"Available PE={[s['strike'] for s in top_pe_strikes[:3]]}"
             )
-        
+
         return strike_recommendations
-    
+
     def find_nearest_levels(self, current_price, pivot_points):
         """Find nearest support and resistance from pivot points"""
         all_resistances = [pivot_points['r1'], pivot_points['r2'], pivot_points['r3']]
         all_supports    = [pivot_points['s1'], pivot_points['s2'], pivot_points['s3']]
-        
-        resistances_above = [r for r in all_resistances if r > current_price]
+
+        resistances_above  = [r for r in all_resistances if r > current_price]
         nearest_resistance = min(resistances_above) if resistances_above else None
-        
-        supports_below = [s for s in all_supports if s < current_price]
+
+        supports_below  = [s for s in all_supports if s < current_price]
         nearest_support = max(supports_below) if supports_below else None
-        
+
         return {'nearest_resistance': nearest_resistance, 'nearest_support': nearest_support}
-    
+
     # =========================================================================
     # HELPER: safely format a profit value for display (FIX for ValueError)
     # =========================================================================
     @staticmethod
     def _fmt_profit(value, multiplier=1):
-        """Return a formatted profit string; handles both numeric and string values."""
         if isinstance(value, (int, float)):
             return f"₹{value * multiplier:.0f}"
         return str(value)
 
     @staticmethod
     def _fmt_profit_label(value, multiplier=1):
-        """Return 'Profit: ₹X' or the raw string."""
         if isinstance(value, (int, float)):
             return f"Profit: ₹{value * multiplier:.0f}"
         return str(value)
 
     # =========================================================================
-    # PIVOT POINTS WIDGET — Terminal Split Panel
+    # PIVOT POINTS WIDGET — Deep Ocean Terminal Split Panel
     # =========================================================================
     def _build_pivot_widget(self, pivot_points, current_price, nearest_levels):
         """
-        Build the Terminal Green Split Panel pivot widget HTML.
+        Build the Deep Ocean pivot widget HTML.
         Returns an HTML string to be embedded in the report.
         """
-        pp  = pivot_points
+        pp = pivot_points
 
         def dist(val):
             if val is None:
@@ -1123,16 +1114,13 @@ class NiftyAnalyzer:
         def is_nearest_s(val):
             return val == nearest_levels.get('nearest_support')
 
-        # Determine zone text
+        # Zone text
         nr = nearest_levels.get('nearest_resistance')
         ns = nearest_levels.get('nearest_support')
         if nr and ns:
             zone_text  = f"Between {self._nearest_level_name(pp, ns)} and {self._nearest_level_name(pp, nr)}"
             above_dist = current_price - (pp.get('pivot', current_price))
-            if above_dist >= 0:
-                zone_detail = f"+{above_dist:.2f} above PP"
-            else:
-                zone_detail = f"{above_dist:.2f} below PP"
+            zone_detail = f"+{above_dist:.2f} above PP" if above_dist >= 0 else f"{above_dist:.2f} below PP"
         elif nr:
             zone_text   = f"Below {self._nearest_level_name(pp, nr)}"
             zone_detail = f"Next R: &#8377;{nr}"
@@ -1143,9 +1131,9 @@ class NiftyAnalyzer:
             zone_text   = "At Pivot Zone"
             zone_detail = f"PP: &#8377;{pp.get('pivot','N/A')}"
 
-        # Gauge dot position: map current price between s1 and r1
-        s1_val = pp.get('s1', current_price - 100)
-        r1_val = pp.get('r1', current_price + 100)
+        # Gauge dot
+        s1_val      = pp.get('s1', current_price - 100)
+        r1_val      = pp.get('r1', current_price + 100)
         total_range = r1_val - s1_val
         if total_range > 0:
             dot_pct = ((current_price - s1_val) / total_range) * 100
@@ -1153,7 +1141,6 @@ class NiftyAnalyzer:
         else:
             dot_pct = 50
 
-        # Build resistance rows (R3 top → R1 bottom, dimming by distance)
         res_levels = [
             ('R3', pp.get('r3'), 'r3', False),
             ('R2', pp.get('r2'), 'r2', False),
@@ -1166,10 +1153,10 @@ class NiftyAnalyzer:
         ]
 
         def res_row(lbl, val, cls, is_r1):
-            near_tag = ' <span class="pv-near-tag">NEAREST R</span>' if is_nearest_r(val) else ''
+            near_tag  = ' <span class="pv-near-tag">NEAREST R</span>' if is_nearest_r(val) else ''
             icon_html = '<span class="pv-icon pv-icon-r">&#9650;</span>' if is_r1 else '<span class="pv-icon-spacer"></span>'
-            border = 'border-left:3px solid rgba(255,68,68,0.5);' if is_r1 else ''
-            bg = 'background:rgba(255,68,68,0.025);' if is_r1 else ''
+            border    = 'border-left:3px solid rgba(255,96,112,0.5);' if is_r1 else ''
+            bg        = 'background:rgba(255,60,80,0.025);' if is_r1 else ''
             return f'''
                 <div class="pv-lv-row pv-{cls}" style="{border}{bg}">
                     <span class="pv-lbl">{lbl}</span>
@@ -1178,10 +1165,10 @@ class NiftyAnalyzer:
                 </div>'''
 
         def sup_row(lbl, val, cls, is_s1):
-            near_tag = ' <span class="pv-near-tag pv-near-tag-s">NEAREST S</span>' if is_nearest_s(val) else ''
+            near_tag  = ' <span class="pv-near-tag pv-near-tag-s">NEAREST S</span>' if is_nearest_s(val) else ''
             icon_html = '<span class="pv-icon pv-icon-s">&#9660;</span>' if is_s1 else '<span class="pv-icon-spacer"></span>'
-            border = 'border-right:3px solid rgba(0,255,65,0.5);' if is_s1 else ''
-            bg = 'background:rgba(0,255,65,0.025);' if is_s1 else ''
+            border    = 'border-right:3px solid rgba(0,200,140,0.5);' if is_s1 else ''
+            bg        = 'background:rgba(0,200,140,0.025);' if is_s1 else ''
             return f'''
                 <div class="pv-lv-row pv-{cls}" style="{border}{bg}">
                     {icon_html}
@@ -1193,182 +1180,174 @@ class NiftyAnalyzer:
         sup_rows_html = ''.join([sup_row(l, v, c, n) for l, v, c, n in sup_levels])
 
         widget_html = f'''
-        <!-- ═══ PIVOT POINTS WIDGET — Terminal Split Panel ═══ -->
+        <!-- ═══ PIVOT POINTS WIDGET — Deep Ocean Split Panel ═══ -->
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
 
             .pv-widget {{
-                background: #000a00;
-                border: 1px solid #003300;
-                border-radius: 10px;
+                background: linear-gradient(160deg, #020b18 0%, #041428 100%);
+                border: 1px solid #0a3d5c;
+                border-radius: 12px;
                 overflow: hidden;
-                font-family: 'IBM Plex Mono', 'Courier New', monospace;
-                box-shadow: 0 0 0 1px #001a00, 0 0 40px rgba(0,150,0,.07), 0 16px 50px rgba(0,0,0,.9);
+                font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+                box-shadow: 0 0 0 1px #041428, 0 0 40px rgba(0,150,220,.07), 0 16px 50px rgba(0,0,0,.9);
                 position: relative;
                 width: 100%;
             }}
             .pv-widget::before {{
                 content: '';
                 position: absolute; inset: 0;
-                background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,.006) 2px, rgba(0,255,0,.006) 4px);
+                background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,168,255,.004) 2px, rgba(0,168,255,.004) 4px);
                 pointer-events: none; z-index: 20; border-radius: inherit;
             }}
-            /* Header */
             .pv-hdr {{
                 display: flex; align-items: center; justify-content: space-between;
-                padding: 11px 18px; background: #000d00; border-bottom: 1px solid #002200;
+                padding: 12px 18px;
+                background: linear-gradient(135deg, #020e1c, #031525);
+                border-bottom: 1px solid #0d3a52;
             }}
             .pv-hdr-l {{ display: flex; align-items: center; gap: 10px; }}
             .pv-icon-wrap {{
                 width: 32px; height: 32px; border-radius: 7px;
-                background: #001800; border: 1px solid #009900;
+                background: rgba(0,168,255,0.1); border: 1px solid #0a5a7a;
                 display: flex; align-items: center; justify-content: center;
-                font-size: .9rem; box-shadow: 0 0 10px rgba(0,170,0,.22);
+                font-size: .9rem; box-shadow: 0 0 10px rgba(0,168,255,.2);
             }}
-            .pv-title {{ font-size: .78rem; font-weight: 700; color: #00ff41; letter-spacing: 1px; }}
-            .pv-sub   {{ font-size: .46rem; color: #004400; margin-top: 1px; letter-spacing: .5px; }}
+            .pv-title {{ font-size: .82rem; font-weight: 700; color: #00c8ff; letter-spacing: 1.5px; }}
+            .pv-sub   {{ font-size: .50rem; color: #1a5a7a; margin-top: 1px; letter-spacing: .5px; }}
             .pv-badge {{
                 font-size: .52rem; padding: 3px 10px; border-radius: 20px;
-                background: #001000; border: 1px solid #005500;
-                color: #009900; letter-spacing: 1.5px; font-weight: 700;
+                background: rgba(0,100,160,0.2); border: 1px solid #0a5a7a;
+                color: #0088bb; letter-spacing: 1.5px; font-weight: 700;
             }}
-            /* Gauge */
-            .pv-gauge {{ padding: 10px 18px 8px; border-bottom: 1px solid #001800; background: #000c00; }}
+            .pv-gauge {{ padding: 10px 18px 8px; border-bottom: 1px solid #061e2e; background: rgba(2,14,28,0.6); }}
             .pv-gauge-track {{
                 height: 7px; border-radius: 20px; position: relative; overflow: visible;
-                background: #001000; border: 1px solid #003300;
+                background: #041428; border: 1px solid #0a3d5c;
             }}
-            .pv-gfl {{ position:absolute; left:0; top:0; bottom:0; width:{dot_pct:.1f}%; border-radius:20px 0 0 20px; background:linear-gradient(90deg,rgba(0,255,65,.25),transparent); }}
-            .pv-gfr {{ position:absolute; right:0; top:0; bottom:0; width:{100-dot_pct:.1f}%; border-radius:0 20px 20px 0; background:linear-gradient(90deg,transparent,rgba(255,68,68,.18)); }}
+            .pv-gfl {{ position:absolute; left:0; top:0; bottom:0; width:{dot_pct:.1f}%; border-radius:20px 0 0 20px; background:linear-gradient(90deg,rgba(0,200,140,.3),transparent); }}
+            .pv-gfr {{ position:absolute; right:0; top:0; bottom:0; width:{100-dot_pct:.1f}%; border-radius:0 20px 20px 0; background:linear-gradient(90deg,transparent,rgba(255,60,80,.2)); }}
             .pv-gdot {{
                 position:absolute; left:{dot_pct:.1f}%; top:50%; transform:translate(-50%,-50%);
-                width:14px; height:14px; background:#00ff41; border-radius:50%;
-                border:2px solid #000; z-index:2;
-                box-shadow: 0 0 0 2px #00ff41, 0 0 16px rgba(0,255,65,.65);
+                width:14px; height:14px; background:#00c8ff; border-radius:50%;
+                border:2px solid #020b18; z-index:2;
+                box-shadow: 0 0 0 2px #00c8ff, 0 0 16px rgba(0,200,255,.65);
                 animation: pv-pulse 2s ease-in-out infinite;
             }}
             @keyframes pv-pulse {{ 0%,100%{{opacity:1}} 50%{{opacity:.35}} }}
-            .pv-glabels {{ display:flex; justify-content:space-between; margin-top:5px; font-size:.56rem; }}
-            .pv-gl-s  {{ color:#00aa00; }}
-            .pv-gl-ltp{{ color:#00ff41; font-weight:700; }}
-            .pv-gl-r  {{ color:#ff4444; }}
-            /* Zone */
+            .pv-glabels {{ display:flex; justify-content:space-between; margin-top:5px; font-size:.58rem; }}
+            .pv-gl-s  {{ color:#00aa55; font-weight:600; }}
+            .pv-gl-ltp{{ color:#00c8ff; font-weight:700; }}
+            .pv-gl-r  {{ color:#ff6070; font-weight:600; }}
             .pv-zone {{
                 margin: 8px 14px;
                 padding: 6px 12px;
-                background: rgba(100,130,0,.1); border: 1px solid #334400; border-radius: 4px;
+                background: rgba(0,80,140,0.12); border: 1px solid #0a3d5c; border-radius: 6px;
                 display: flex; align-items: center; gap: 8px;
             }}
-            .pv-zdot  {{ width:7px; height:7px; border-radius:50%; background:#ccff00; flex-shrink:0; box-shadow:0 0 7px #ccff00; animation:pv-pulse 2s ease-in-out infinite; }}
-            .pv-ztxt  {{ font-size:.64rem; color:#ccff00; font-weight:700; }}
-            .pv-zval  {{ margin-left:auto; font-size:.54rem; color:#556600; white-space:nowrap; }}
-            /* Prev candle */
-            .pv-candle {{ display:flex; margin:0 14px 8px; border:1px solid #002200; border-radius:4px; overflow:hidden; background:#000d00; }}
-            .pv-ci {{ flex:1; padding:6px 10px; border-right:1px solid #001800; }}
+            .pv-zdot  {{ width:7px; height:7px; border-radius:50%; background:#00c8ff; flex-shrink:0; box-shadow:0 0 7px #00c8ff; animation:pv-pulse 2s ease-in-out infinite; }}
+            .pv-ztxt  {{ font-size:.66rem; color:#00c8ff; font-weight:700; letter-spacing:.5px; }}
+            .pv-zval  {{ margin-left:auto; font-size:.56rem; color:#1a5a7a; white-space:nowrap; }}
+            .pv-candle {{ display:flex; margin:0 14px 8px; border:1px solid #0a3050; border-radius:6px; overflow:hidden; background:rgba(2,14,28,0.5); }}
+            .pv-ci {{ flex:1; padding:6px 10px; border-right:1px solid #061e2e; }}
             .pv-ci:last-child {{ border-right:none; }}
-            .pv-ci-lbl {{ font-size:.46rem; color:#003300; letter-spacing:1.5px; margin-bottom:2px; text-transform:uppercase; }}
-            .pv-ci-val {{ font-size:.76rem; font-weight:700; }}
-            .pv-ci-h .pv-ci-val {{ color:#ff4444; }}
-            .pv-ci-l .pv-ci-val {{ color:#00ff41; }}
-            .pv-ci-c .pv-ci-val {{ color:#00cc33; }}
-            /* Column headers */
+            .pv-ci-lbl {{ font-size:.48rem; color:#1a4a6a; letter-spacing:1.5px; margin-bottom:2px; text-transform:uppercase; }}
+            .pv-ci-val {{ font-size:.78rem; font-weight:700; }}
+            .pv-ci-h .pv-ci-val {{ color:#ff6070; }}
+            .pv-ci-l .pv-ci-val {{ color:#00ff8c; }}
+            .pv-ci-c .pv-ci-val {{ color:#00c8ff; }}
             .pv-col-hdr {{
                 display: grid; grid-template-columns: 1fr 130px 1fr;
-                border-top: 1px solid #002200; border-bottom: 1px solid #002200;
-                background: #000d00;
+                border-top: 1px solid #0a3050; border-bottom: 1px solid #0a3050;
+                background: rgba(2,14,28,0.7);
             }}
             .pv-hdr-res, .pv-hdr-sup {{
                 display: grid; grid-template-columns: 60px 1fr 80px;
                 padding: 6px 14px; gap: 6px;
             }}
-            .pv-hdr-res {{ border-right: 1px solid #002200; }}
+            .pv-hdr-res {{ border-right: 1px solid #0a3050; }}
             .pv-hdr-sup {{ direction: rtl; }}
             .pv-hdr-res span, .pv-hdr-sup span, .pv-hdr-pp span {{
-                font-size: .46rem; color: #003300; text-transform: uppercase; letter-spacing: 1.5px;
+                font-size: .46rem; color: #1a4a6a; text-transform: uppercase; letter-spacing: 1.5px;
             }}
             .pv-hdr-pp {{
                 display: flex; align-items: center; justify-content: center;
-                border-left: 1px solid #002200; border-right: 1px solid #002200;
+                border-left: 1px solid #0a3050; border-right: 1px solid #0a3050;
                 padding: 6px 8px;
             }}
-            /* Split panel */
             .pv-split {{ display: grid; grid-template-columns: 1fr 130px 1fr; }}
-            .pv-col-res {{ display:flex; flex-direction:column; border-right:1px solid #002200; }}
+            .pv-col-res {{ display:flex; flex-direction:column; border-right:1px solid #0a3050; }}
             .pv-col-sup {{ display:flex; flex-direction:column; }}
-            /* Level rows */
             .pv-lv-row {{
                 display: grid; grid-template-columns: 55px 1fr 26px;
                 align-items: center; height: 42px; padding: 0 14px; gap: 6px;
-                border-bottom: 1px solid #000f00; transition: background .15s; cursor: default;
+                border-bottom: 1px solid #061e2e; transition: background .15s; cursor: default;
             }}
             .pv-lv-row:last-child {{ border-bottom: none; }}
-            .pv-lv-row:hover {{ background: #001600 !important; }}
-            /* Support rows reverse */
+            .pv-lv-row:hover {{ background: rgba(0,100,180,0.08) !important; }}
             .pv-col-sup .pv-lv-row {{ grid-template-columns: 26px 1fr 55px; }}
-            .pv-lbl   {{ font-size: .66rem; font-weight: 700; letter-spacing: 1px; }}
-            .pv-price {{ font-size: .72rem; font-weight: 600; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }}
+            .pv-lbl   {{ font-size: .68rem; font-weight: 700; letter-spacing: 1px; }}
+            .pv-price {{ font-size: .74rem; font-weight: 600; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }}
             .pv-icon  {{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.5rem; font-weight:800; flex-shrink:0; }}
             .pv-icon-spacer {{ width:22px; flex-shrink:0; }}
-            .pv-icon-r {{ background:rgba(255,68,68,.12); color:#ff4444; border:1px solid rgba(255,68,68,.4); }}
-            .pv-icon-s {{ background:rgba(0,255,65,.12); color:#00ff41; border:1px solid rgba(0,255,65,.4); }}
+            .pv-icon-r {{ background:rgba(255,96,112,.12); color:#ff6070; border:1px solid rgba(255,96,112,.4); }}
+            .pv-icon-s {{ background:rgba(0,200,140,.12); color:#00ff8c; border:1px solid rgba(0,200,140,.4); }}
             .pv-near-tag {{
-                font-size:.4rem; padding:1px 5px; border-radius:8px; border:1px solid;
+                font-size:.40rem; padding:1px 5px; border-radius:8px; border:1px solid;
                 font-weight:800; letter-spacing:.5px; white-space:nowrap;
-                background:rgba(255,68,68,.1); color:#ff4444; border-color:rgba(255,68,68,.4);
+                background:rgba(255,96,112,.1); color:#ff6070; border-color:rgba(255,96,112,.4);
             }}
-            .pv-near-tag-s {{ background:rgba(0,255,65,.1); color:#00ff41; border-color:rgba(0,255,65,.4); }}
-            /* Resistance row colours */
-            .pv-r3 .pv-lbl, .pv-r3 .pv-price {{ color:rgba(255,68,68,.32); }}
-            .pv-r2 .pv-lbl, .pv-r2 .pv-price {{ color:rgba(255,68,68,.58); }}
-            .pv-r1 .pv-lbl, .pv-r1 .pv-price {{ color:#ff8080; }}
-            .pv-r1 .pv-lbl {{ color:#ff4444; }}
-            /* Support row colours */
-            .pv-s1 .pv-lbl, .pv-s1 .pv-price {{ color:#80ff90; }}
-            .pv-s1 .pv-lbl {{ color:#00ff41; }}
-            .pv-s2 .pv-lbl, .pv-s2 .pv-price {{ color:rgba(0,255,65,.58); }}
-            .pv-s3 .pv-lbl, .pv-s3 .pv-price {{ color:rgba(0,255,65,.32); }}
-            /* Pivot center column */
+            .pv-near-tag-s {{ background:rgba(0,200,140,.1); color:#00ff8c; border-color:rgba(0,200,140,.4); }}
+            /* Resistance colours */
+            .pv-r3 .pv-lbl, .pv-r3 .pv-price {{ color:rgba(255,96,112,.30); }}
+            .pv-r2 .pv-lbl, .pv-r2 .pv-price {{ color:rgba(255,96,112,.55); }}
+            .pv-r1 .pv-lbl, .pv-r1 .pv-price {{ color:#ff9090; }}
+            .pv-r1 .pv-lbl {{ color:#ff6070; }}
+            /* Support colours */
+            .pv-s1 .pv-lbl, .pv-s1 .pv-price {{ color:#80ffcc; }}
+            .pv-s1 .pv-lbl {{ color:#00ff8c; }}
+            .pv-s2 .pv-lbl, .pv-s2 .pv-price {{ color:rgba(0,200,140,.55); }}
+            .pv-s3 .pv-lbl, .pv-s3 .pv-price {{ color:rgba(0,200,140,.30); }}
             .pv-col-pp {{
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
                 gap: 4px; padding: 12px 8px;
-                border-left: 1px solid #002200; border-right: 1px solid #002200;
-                background: rgba(100,130,0,.05);
+                border-left: 1px solid #0a3050; border-right: 1px solid #0a3050;
+                background: rgba(0,80,140,0.06);
             }}
-            .pv-pp-tag   {{ font-size:.44rem; color:#556600; letter-spacing:2px; text-transform:uppercase; }}
-            .pv-pp-val   {{ font-size:.95rem; font-weight:700; color:#ccff00; line-height:1; }}
-            .pv-pp-dist  {{ font-size:.52rem; color:#668800; }}
-            .pv-pp-line  {{ width:26px; height:1px; background:#334400; margin:3px 0; }}
+            .pv-pp-tag  {{ font-size:.44rem; color:#1a5a7a; letter-spacing:2px; text-transform:uppercase; }}
+            .pv-pp-val  {{ font-size:.98rem; font-weight:700; color:#00c8ff; line-height:1; text-shadow:0 0 12px rgba(0,200,255,.4); }}
+            .pv-pp-dist {{ font-size:.52rem; color:#2a7a9a; }}
+            .pv-pp-line {{ width:26px; height:1px; background:#0a3d5c; margin:3px 0; }}
             .pv-ltp-block {{
                 display: flex; flex-direction: column; align-items: center; gap: 2px;
-                background: rgba(0,60,0,.35); border: 1px solid #003300;
-                border-radius: 4px; padding: 4px 12px; margin-top: 1px;
+                background: rgba(0,80,140,0.2); border: 1px solid #0a3d5c;
+                border-radius: 6px; padding: 4px 12px; margin-top: 1px;
             }}
-            .pv-ltp-tag {{ font-size:.4rem; color:#005500; letter-spacing:2px; text-transform:uppercase; }}
-            .pv-ltp-val {{ font-size:.72rem; font-weight:700; color:#00ff41; }}
-            .pv-ltp-dot {{ width:5px; height:5px; border-radius:50%; background:#00ff41; animation:pv-pulse 2s ease-in-out infinite; box-shadow:0 0 5px #00ff41; }}
-            /* Footer */
+            .pv-ltp-tag {{ font-size:.40rem; color:#1a5a7a; letter-spacing:2px; text-transform:uppercase; }}
+            .pv-ltp-val {{ font-size:.76rem; font-weight:700; color:#00c8ff; text-shadow:0 0 8px rgba(0,200,255,.5); }}
+            .pv-ltp-dot {{ width:5px; height:5px; border-radius:50%; background:#00c8ff; animation:pv-pulse 2s ease-in-out infinite; box-shadow:0 0 5px #00c8ff; }}
             .pv-footer {{
                 display: flex; justify-content: space-between; align-items: center;
-                padding: 8px 18px; background: #000d00; border-top: 1px solid #002200;
+                padding: 8px 18px;
+                background: linear-gradient(135deg, #020e1c, #031525);
+                border-top: 1px solid #0a3050;
             }}
-            .pv-footer .pv-f-mthd {{ font-size:.48rem; color:#002800; letter-spacing:1.5px; }}
-            .pv-footer .pv-f-ltp  {{ font-size:.62rem; font-weight:700; color:#00ff41; letter-spacing:.5px; }}
+            .pv-footer .pv-f-mthd {{ font-size:.48rem; color:#0d3a52; letter-spacing:1.5px; }}
+            .pv-footer .pv-f-ltp  {{ font-size:.64rem; font-weight:700; color:#00c8ff; letter-spacing:.5px; text-shadow:0 0 8px rgba(0,200,255,.4); }}
         </style>
 
         <div class="pv-widget">
-            <!-- Header -->
             <div class="pv-hdr">
                 <div class="pv-hdr-l">
-                    <div class="pv-icon-wrap">&#128205;</div>
+                    <div class="pv-icon-wrap">📍</div>
                     <div>
-                        <div class="pv-title">Pivot Points</div>
+                        <div class="pv-title">PIVOT POINTS</div>
                         <div class="pv-sub">Traditional Method &middot; Auto-calculated</div>
                     </div>
                 </div>
                 <div class="pv-badge">30 MIN</div>
             </div>
 
-            <!-- Gauge -->
             <div class="pv-gauge">
                 <div class="pv-gauge-track">
                     <div class="pv-gfl"></div>
@@ -1377,35 +1356,32 @@ class NiftyAnalyzer:
                 </div>
                 <div class="pv-glabels">
                     <span class="pv-gl-s">S1 &#8377;{pp.get('s1','N/A')}</span>
-                    <span class="pv-gl-ltp">&#9650; &#8377;{current_price} LTP</span>
+                    <span class="pv-gl-ltp">▲ &#8377;{current_price} LTP</span>
                     <span class="pv-gl-r">R1 &#8377;{pp.get('r1','N/A')}</span>
                 </div>
             </div>
 
-            <!-- Zone -->
             <div class="pv-zone">
                 <div class="pv-zdot"></div>
                 <span class="pv-ztxt">{zone_text}</span>
                 <span class="pv-zval">{zone_detail}</span>
             </div>
 
-            <!-- Prev Candle -->
             <div class="pv-candle">
                 <div class="pv-ci pv-ci-h">
-                    <div class="pv-ci-lbl">&#9650; Prev High</div>
+                    <div class="pv-ci-lbl">▲ Prev High</div>
                     <div class="pv-ci-val">&#8377;{pp.get('prev_high','N/A')}</div>
                 </div>
                 <div class="pv-ci pv-ci-l">
-                    <div class="pv-ci-lbl">&#9660; Prev Low</div>
+                    <div class="pv-ci-lbl">▼ Prev Low</div>
                     <div class="pv-ci-val">&#8377;{pp.get('prev_low','N/A')}</div>
                 </div>
                 <div class="pv-ci pv-ci-c">
-                    <div class="pv-ci-lbl">&#9679; Prev Close</div>
+                    <div class="pv-ci-lbl">● Prev Close</div>
                     <div class="pv-ci-val">&#8377;{pp.get('prev_close','N/A')}</div>
                 </div>
             </div>
 
-            <!-- Column Headers -->
             <div class="pv-col-hdr">
                 <div class="pv-hdr-res">
                     <span>Level</span><span>Price</span><span style="text-align:right">Dist</span>
@@ -1416,12 +1392,8 @@ class NiftyAnalyzer:
                 </div>
             </div>
 
-            <!-- Split Panel -->
             <div class="pv-split">
-                <!-- Resistance side -->
                 <div class="pv-col-res">{res_rows_html}</div>
-
-                <!-- Pivot center -->
                 <div class="pv-col-pp">
                     <div class="pv-pp-tag">Pivot Point</div>
                     <div class="pv-pp-val">&#8377;{pp.get('pivot','N/A')}</div>
@@ -1433,12 +1405,9 @@ class NiftyAnalyzer:
                         <div class="pv-ltp-dot"></div>
                     </div>
                 </div>
-
-                <!-- Support side -->
                 <div class="pv-col-sup">{sup_rows_html}</div>
             </div>
 
-            <!-- Footer -->
             <div class="pv-footer">
                 <span class="pv-f-mthd">Traditional &middot; 30 Min Candle</span>
                 <span class="pv-f-ltp">LTP &#8377;{current_price}</span>
@@ -1458,54 +1427,70 @@ class NiftyAnalyzer:
         }
         return mapping.get(value, str(value))
 
+    # =========================================================================
+    # HTML REPORT — Deep Ocean Trading Desk Theme
+    # =========================================================================
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create professional HTML report"""
+        """Create professional HTML report — Deep Ocean Trading Desk Theme"""
         now_ist = self.format_ist_time()
-        
-        colors = self.config['report'].get('colors', {})
-        rec    = recommendation['recommendation']
-        
+
+        rec = recommendation['recommendation']
+
+        # ── Recommendation box colour (ocean palette) ──────────────────────
         if 'STRONG BUY' in rec:
-            rec_color = colors.get('strong_buy', '#28a745')
+            rec_color     = '#004d2e'
+            rec_text_col  = '#00ff8c'
+            rec_border    = '#00aa55'
+            rec_glow      = 'rgba(0,200,140,0.25)'
         elif 'BUY' in rec:
-            rec_color = colors.get('buy', '#5cb85c')
+            rec_color     = '#003348'
+            rec_text_col  = '#00c8ff'
+            rec_border    = '#0088bb'
+            rec_glow      = 'rgba(0,170,255,0.2)'
         elif 'STRONG SELL' in rec:
-            rec_color = colors.get('strong_sell', '#dc3545')
+            rec_color     = '#4a0010'
+            rec_text_col  = '#ff6070'
+            rec_border    = '#cc2233'
+            rec_glow      = 'rgba(220,50,70,0.25)'
         elif 'SELL' in rec:
-            rec_color = colors.get('sell', '#f0ad4e')
+            rec_color     = '#3a1500'
+            rec_text_col  = '#ff8855'
+            rec_border    = '#cc4400'
+            rec_glow      = 'rgba(200,80,0,0.2)'
         else:
-            rec_color = colors.get('neutral', '#ffc107')
-        
+            rec_color     = '#0a1e2e'
+            rec_text_col  = '#5a9ab5'
+            rec_border    = '#0d3a52'
+            rec_glow      = 'rgba(0,100,160,0.15)'
+
         title      = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
         strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
-        
+
         strike_recommendations = self.get_detailed_strike_recommendations(
             oc_analysis, tech_analysis, recommendation
         )
-        
+
         pivot_points   = tech_analysis.get('pivot_points', {})
         current_price  = tech_analysis.get('current_price', 0)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
-
-        # Build the Terminal Split Panel pivot widget
         pivot_widget_html = self._build_pivot_widget(pivot_points, current_price, nearest_levels)
-        
+
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
         momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
-            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+            'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
         })
-        
+
         momentum_5h_pct    = tech_analysis.get('momentum_5h_pct', 0)
         momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
         momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
-            'bg': '#6c757d', 'bg_dark': '#5a6268', 'text': '#ffffff', 'border': '#495057'
+            'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
         })
-        
-        # ---- Build CE rows ----
+
         top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
         top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
-        
+
+        # ── CE rows ──────────────────────────────────────────────────────────
         ce_rows_html = ''
         for idx, strike in enumerate(top_ce_strikes, 1):
             badge_class = f"badge-{strike['type'].lower()}"
@@ -1520,8 +1505,8 @@ class NiftyAnalyzer:
                         <td>{strike['iv']:.2f}%</td>
                         <td>{strike['volume']:,}</td>
                     </tr>"""
-        
-        # ---- Build PE rows ----
+
+        # ── PE rows ──────────────────────────────────────────────────────────
         pe_rows_html = ''
         for idx, strike in enumerate(top_pe_strikes, 1):
             badge_class = f"badge-{strike['type'].lower()}"
@@ -1536,8 +1521,8 @@ class NiftyAnalyzer:
                         <td>{strike['iv']:.2f}%</td>
                         <td>{strike['volume']:,}</td>
                     </tr>"""
-        
-        # ---- Build strategies HTML ----
+
+        # ── Strategies HTML ──────────────────────────────────────────────────
         strategies_html = ''
         for strategy in strategies:
             strategies_html += f"""
@@ -1554,166 +1539,412 @@ class NiftyAnalyzer:
                         <p class="recommendation-stars"><strong>Recommended:</strong> {strategy['recommended']}</p>
                     </div>
                 </div>"""
-        
+
+        # ══════════════════════════════════════════════════════════════════════
+        # HTML TEMPLATE — DEEP OCEAN TRADING DESK
+        # ══════════════════════════════════════════════════════════════════════
         html = f"""<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
+        /* ── Reset & Base ──────────────────────────────────────────────── */
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1e1e2e 0%, #27273f 100%);
-            color: #e4e4e7; padding: 15px; line-height: 1.6;
+            font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+            background: linear-gradient(160deg, #010810 0%, #020c1a 50%, #010e14 100%);
+            color: #80b8d8;
+            padding: 15px;
+            line-height: 1.6;
+            min-height: 100vh;
         }}
+
+        /* Subtle scan-line overlay */
+        body::before {{
+            content: '';
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: repeating-linear-gradient(
+                0deg, transparent, transparent 2px,
+                rgba(0,168,255,.003) 2px, rgba(0,168,255,.003) 4px
+            );
+        }}
+
         .container {{
-            max-width: 1400px; margin: 0 auto; background: #1a1a2e;
-            border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            padding: 30px; border: 1px solid #2d2d44;
+            position: relative; z-index: 1;
+            max-width: 1400px; margin: 0 auto;
+            background: linear-gradient(160deg, #020b18 0%, #031525 100%);
+            border-radius: 16px;
+            box-shadow: 0 0 0 1px #041428, 0 0 60px rgba(0,150,220,.08), 0 24px 80px rgba(0,0,0,.8);
+            padding: 30px;
+            border: 1px solid #0a3d5c;
         }}
+
+        /* ── Header ────────────────────────────────────────────────────── */
         .header {{
-            text-align: center; border-bottom: 3px solid #6366f1; padding-bottom: 20px;
-            margin-bottom: 30px; background: linear-gradient(135deg, #2d2d44 0%, #1f1f35 100%);
-            padding: 25px; border-radius: 12px;
+            text-align: center;
+            background: linear-gradient(135deg, #020e1c 0%, #031a2c 100%);
+            padding: 28px 25px;
+            border-radius: 12px;
+            margin-bottom: 28px;
+            border: 1px solid #0a3d5c;
+            position: relative;
+            overflow: hidden;
         }}
-        .header h1 {{ color: #818cf8; font-size: 28px; font-weight: 700; margin-bottom: 12px; }}
-        .timestamp {{ color: #a1a1aa; font-size: 13px; font-weight: 600; margin-top: 10px; }}
+        .header::after {{
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent 5%, #0088bb 30%, #00c8ff 50%, #0088bb 70%, transparent 95%);
+        }}
+        .header::before {{
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, #00c8ff20, transparent);
+        }}
+        .header h1 {{
+            font-family: 'Orbitron', monospace;
+            color: #00c8ff;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 30px rgba(0,200,255,.5);
+        }}
+        .timestamp {{ color: #2a6a8a; font-size: 12px; font-weight: 600; margin-top: 10px; letter-spacing: 1px; }}
         .timeframe-badge {{
             display: inline-block;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white; padding: 6px 16px; border-radius: 20px;
-            font-size: 12px; font-weight: 700; margin-top: 10px;
+            background: rgba(0,100,160,0.2);
+            border: 1px solid #0a5a7a;
+            color: #00c8ff;
+            padding: 5px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 10px;
+            letter-spacing: 2px;
         }}
-        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }}
+
+        /* ── Momentum Boxes ─────────────────────────────────────────────── */
+        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
         .momentum-box {{
             background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
-            color: var(--momentum-text); padding: 20px; border-radius: 12px; text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid var(--momentum-border);
+            color: var(--momentum-text);
+            padding: 22px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 28px rgba(0,0,0,.5);
+            border: 1px solid var(--momentum-border);
+            position: relative;
+            overflow: hidden;
         }}
-        .momentum-box h3 {{ font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; opacity: 0.9; }}
-        .momentum-box .value {{ font-size: 36px; font-weight: 900; margin: 10px 0; }}
-        .momentum-box .signal {{ font-size: 13px; font-weight: 600; opacity: 0.95; }}
+        .momentum-box::after {{
+            content: '';
+            position: absolute; top: 0; left: 20%; right: 20%; height: 1px;
+            background: var(--momentum-border);
+            opacity: 0.5;
+        }}
+        .momentum-box h3 {{
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            opacity: 0.85;
+        }}
+        .momentum-box .value {{
+            font-family: 'Orbitron', monospace;
+            font-size: 34px;
+            font-weight: 900;
+            margin: 10px 0;
+            text-shadow: 0 0 20px currentColor;
+        }}
+        .momentum-box .signal {{ font-size: 13px; font-weight: 600; opacity: 0.9; letter-spacing: .5px; }}
+
+        /* ── Recommendation Box ─────────────────────────────────────────── */
         .recommendation-box {{
-            background: linear-gradient(135deg, {rec_color} 0%, {rec_color}dd 100%);
-            color: white; padding: 20px; border-radius: 12px; text-align: center;
-            margin-bottom: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid {rec_color};
+            background: linear-gradient(135deg, {rec_color} 0%, {rec_color}cc 100%);
+            color: {rec_text_col};
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 22px;
+            box-shadow: 0 8px 32px {rec_glow}, 0 0 0 1px {rec_border}44;
+            border: 1px solid {rec_border};
+            position: relative;
+            overflow: hidden;
         }}
-        .recommendation-box h2 {{ font-size: 30px; font-weight: 800; margin-bottom: 8px; }}
-        .recommendation-box .subtitle {{ font-size: 15px; opacity: 0.95; font-weight: 500; }}
+        .recommendation-box::before {{
+            content: 'SIGNAL';
+            position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+            font-size: 9px; letter-spacing: 4px; color: {rec_border}99;
+        }}
+        .recommendation-box h2 {{
+            font-family: 'Orbitron', monospace;
+            font-size: 30px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 30px {rec_glow};
+        }}
+        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.85; font-weight: 500; letter-spacing: .5px; }}
         .signal-badge {{
-            display: inline-block; padding: 6px 14px; border-radius: 20px;
-            font-size: 12px; font-weight: 700; margin: 8px 4px 0 4px;
+            display: inline-block;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin: 8px 4px 0 4px;
+            letter-spacing: 1px;
         }}
-        .bullish {{ background: #22c55e; color: #fff; }}
-        .bearish {{ background: #ef4444; color: #fff; }}
-        .section {{ margin-bottom: 25px; }}
+        .bullish {{ background: rgba(0,200,140,.15); border: 1px solid #00aa55; color: #00ff8c; }}
+        .bearish {{ background: rgba(255,60,80,.15); border: 1px solid #cc2233; color: #ff6070; }}
+
+        /* ── Sections ───────────────────────────────────────────────────── */
+        .section {{ margin-bottom: 24px; }}
         .section-title {{
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            color: white; padding: 12px 20px; border-radius: 10px;
-            font-size: 16px; font-weight: 700; margin-bottom: 15px;
+            background: linear-gradient(135deg, #031a2c 0%, #020e1c 100%);
+            color: #00c8ff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border: 1px solid #0a3d5c;
+            border-left: 4px solid #00c8ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }}
-        .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }}
+        .section-title::before {{ content: '▸'; color: #00aaff; }}
+
+        /* ── Data Grid ──────────────────────────────────────────────────── */
+        .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }}
         .data-item {{
-            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
-            padding: 16px; border-radius: 10px; border-left: 4px solid #6366f1;
+            background: rgba(0,100,170,.06);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #0a2a3a;
+            border-left: 3px solid #0a5a7a;
+            transition: border-color .2s;
         }}
-        .data-item .label {{ color: #a1a1aa; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }}
-        .data-item .value {{ color: #f4f4f5; font-size: 18px; font-weight: 700; }}
-        .levels {{ display: flex; flex-wrap: wrap; gap: 20px; }}
+        .data-item:hover {{ border-left-color: #00c8ff; }}
+        .data-item .label {{
+            color: #1a5a7a;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }}
+        .data-item .value {{ color: #80d8ff; font-size: 18px; font-weight: 700; }}
+
+        /* ── Levels ─────────────────────────────────────────────────────── */
+        .levels {{ display: flex; flex-wrap: wrap; gap: 16px; }}
         .levels-box {{
-            flex: 1; min-width: 280px;
-            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
-            padding: 16px; border-radius: 10px;
+            flex: 1;
+            min-width: 260px;
+            background: rgba(0,80,140,.06);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #0a2a3a;
         }}
-        .levels-box.resistance {{ border-left: 4px solid #ef4444; }}
-        .levels-box.support {{ border-left: 4px solid #22c55e; }}
-        .levels-box h4 {{ font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #f4f4f5; }}
+        .levels-box.resistance {{ border-left: 4px solid #ff6070; }}
+        .levels-box.support    {{ border-left: 4px solid #00ff8c; }}
+        .levels-box h4 {{ font-size: 13px; font-weight: 700; margin-bottom: 10px; color: #80b8d8; letter-spacing: 1px; }}
         .levels-box ul {{ list-style: none; padding: 0; }}
-        .levels-box li {{ margin: 6px 0; font-size: 14px; color: #d4d4d8; padding-left: 20px; position: relative; }}
-        .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #6366f1; font-weight: bold; }}
-        .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }}
-        .oi-section {{
-            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
-            padding: 16px; border-radius: 10px;
+        .levels-box li {{
+            margin: 6px 0; font-size: 14px; color: #5a8aaa;
+            padding-left: 18px; position: relative;
         }}
-        .oi-section h4 {{ font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 12px; color: #f4f4f5; }}
-        .oi-section.calls {{ border-top: 4px solid #22c55e; }}
-        .oi-section.puts  {{ border-top: 4px solid #ef4444; }}
+        .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #00aaff; font-weight: bold; }}
+        .levels-box.resistance li {{ color: #cc8888; }}
+        .levels-box.support    li {{ color: #44cc88; }}
+
+        /* ── OI Grid ────────────────────────────────────────────────────── */
+        .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }}
+        .oi-section {{
+            background: rgba(0,80,140,.06);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #0a2a3a;
+        }}
+        .oi-section h4 {{ font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 12px; color: #80b8d8; letter-spacing: 1px; }}
+        .oi-section.calls {{ border-top: 3px solid #00aa55; }}
+        .oi-section.puts  {{ border-top: 3px solid #cc2233; }}
         .oi-container {{ overflow-x: auto; }}
         .oi-table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
-        .oi-table th {{ background: #6366f1; color: white; padding: 8px 6px; text-align: center; font-weight: 700; font-size: 11px; white-space: nowrap; }}
-        .oi-table td {{ padding: 8px 6px; border-bottom: 1px solid #3d3d54; text-align: center; color: #e4e4e7; }}
-        .oi-table tbody tr:hover {{ background: #3d3d54; }}
-        .badge-itm {{ background: #22c55e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
-        .badge-atm {{ background: #f59e0b; color: #000; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
-        .badge-otm {{ background: #71717a; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
+        .oi-table th {{
+            background: rgba(0,100,160,.2);
+            color: #2a8aaa;
+            padding: 8px 6px;
+            text-align: center;
+            border-bottom: 1px solid #0a3050;
+            font-size: 10px;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }}
+        .oi-table td {{
+            padding: 8px 6px;
+            border-bottom: 1px solid #061820;
+            text-align: center;
+            color: #5a8aaa;
+        }}
+        .oi-table tbody tr:hover {{ background: rgba(0,150,220,.05); }}
+        .badge-itm {{ background: rgba(0,200,100,.15); color: #00dd77; border: 1px solid #00aa55; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
+        .badge-atm {{ background: rgba(255,180,0,.12); color: #ffcc00; border: 1px solid #cc9900; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
+        .badge-otm {{ background: rgba(80,120,160,.12); color: #6a9ab8; border: 1px solid #3a6a88; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
+
+        /* ── Analysis Reasons ───────────────────────────────────────────── */
         .reasons {{
-            background: linear-gradient(135deg, #422006 0%, #451a03 100%);
-            border-left: 4px solid #f59e0b; padding: 16px; border-radius: 10px;
+            background: rgba(0,80,140,.08);
+            border-left: 4px solid #0088bb;
+            padding: 16px;
+            border-radius: 0 10px 10px 0;
+            border: 1px solid #0a3050;
+            border-left: 4px solid #0088bb;
         }}
-        .reasons strong {{ color: #fbbf24; font-size: 15px; }}
-        .reasons ul {{ margin: 10px 0 0 0; padding-left: 25px; }}
-        .reasons li {{ margin: 6px 0; color: #fde047; font-size: 13px; line-height: 1.6; }}
-        .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-top: 15px; }}
+        .reasons strong {{ color: #00c8ff; font-size: 14px; letter-spacing: 1px; }}
+        .reasons ul {{ margin: 10px 0 0 0; padding-left: 22px; }}
+        .reasons li {{ margin: 6px 0; color: #3a8aaa; font-size: 13px; line-height: 1.6; }}
+
+        /* ── Strike Cards ───────────────────────────────────────────────── */
+        .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-top: 14px; }}
         .strike-card {{
-            background: linear-gradient(135deg, #2d2d44 0%, #252538 100%);
-            border: 2px solid #3d3d54; border-radius: 12px; padding: 18px;
+            background: rgba(0,80,140,.06);
+            border: 1px solid #0a2a3a;
+            border-radius: 12px;
+            padding: 18px;
         }}
-        .strike-header {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #6366f1; padding-bottom: 10px; margin-bottom: 15px; }}
-        .strike-header h4 {{ color: #818cf8; font-size: 17px; font-weight: 700; }}
-        .strike-badge {{ padding: 5px 12px; border-radius: 15px; font-size: 11px; font-weight: 700; }}
-        .strike-badge.atm {{ background: #f59e0b; color: #000; }}
-        .strike-badge.itm {{ background: #22c55e; color: white; }}
-        .strike-badge.otm {{ background: #71717a; color: white; }}
-        .strike-badge.itm-otm {{ background: linear-gradient(90deg, #22c55e 50%, #71717a 50%); color: white; }}
-        .strike-badge.atm-atm {{ background: #ef4444; color: white; }}
-        .strike-details {{ background: #3d3d54; padding: 12px; border-radius: 8px; margin-bottom: 15px; }}
-        .strike-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #52525b; }}
+        .strike-header {{
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #0a3050;
+            padding-bottom: 10px; margin-bottom: 14px;
+        }}
+        .strike-header h4 {{ color: #00c8ff; font-size: 16px; font-weight: 700; letter-spacing: 1px; }}
+        .strike-badge {{ padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }}
+        .strike-badge.atm     {{ background: rgba(255,180,0,.12); color: #ffcc00; border: 1px solid #cc9900; }}
+        .strike-badge.itm     {{ background: rgba(0,200,100,.12); color: #00dd77; border: 1px solid #00aa55; }}
+        .strike-badge.otm     {{ background: rgba(80,120,160,.12); color: #6a9ab8; border: 1px solid #3a6a88; }}
+        .strike-badge.itm-otm {{ background: rgba(0,150,200,.12); color: #44aacc; border: 1px solid #0088aa; }}
+        .strike-badge.atm-atm {{ background: rgba(200,80,0,.12); color: #ff8844; border: 1px solid #cc5500; }}
+        .strike-details {{
+            background: rgba(0,60,110,.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            border: 1px solid #0a2a3a;
+        }}
+        .strike-row {{ display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #0a2a3a; }}
         .strike-row:last-child {{ border-bottom: none; }}
-        .strike-row .label {{ color: #a1a1aa; font-size: 12px; font-weight: 600; }}
-        .strike-row .value {{ color: #f4f4f5; font-size: 13px; font-weight: 700; }}
-        .strike-row .premium {{ color: #818cf8; font-size: 15px; font-weight: 800; }}
-        .profit-targets {{ background: linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%); padding: 15px; border-radius: 8px; margin-bottom: 12px; }}
-        .profit-targets h5 {{ color: #818cf8; font-size: 14px; font-weight: 700; margin-bottom: 12px; }}
-        .target-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }}
-        .target-box {{ background: #2d2d44; padding: 10px; border-radius: 8px; text-align: center; border: 2px solid #3d3d54; }}
-        .target-box.target-1 {{ border-color: #22c55e; }}
-        .target-box.target-2 {{ border-color: #06b6d4; }}
-        .target-box.stop-loss-box {{ border-color: #ef4444; }}
-        .target-label {{ font-size: 10px; color: #a1a1aa; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }}
-        .target-price {{ font-size: 15px; color: #f4f4f5; font-weight: 800; margin-bottom: 5px; }}
-        .target-profit {{ font-size: 11px; color: #86efac; font-weight: 600; }}
-        .target-box.stop-loss-box .target-profit {{ color: #fca5a5; }}
-        .trade-example {{ background: #422006; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; font-size: 11px; line-height: 1.6; color: #fde047; }}
-        .no-recommendations {{ background: #7f1d1d; border: 1px solid #ef4444; border-radius: 8px; padding: 25px; text-align: center; color: #fca5a5; font-size: 14px; }}
-        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }}
-        .strategy-card {{ background: linear-gradient(135deg, #2d2d44 0%, #252538 100%); border: 2px solid #3d3d54; border-radius: 10px; padding: 16px; }}
-        .strategy-header {{ border-bottom: 2px solid #6366f1; padding-bottom: 8px; margin-bottom: 10px; }}
-        .strategy-header h4 {{ color: #818cf8; font-size: 15px; font-weight: 700; }}
-        .strategy-type {{ display: inline-block; background: #1e3a8a; color: #93c5fd; padding: 3px 8px; border-radius: 10px; font-size: 10px; margin-top: 5px; font-weight: 600; }}
-        .strategy-body p {{ margin: 8px 0; font-size: 13px; line-height: 1.5; color: #d4d4d8; }}
-        .recommendation-stars {{ color: #fbbf24; font-size: 14px; font-weight: 700; }}
-        .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #3d3d54; color: #a1a1aa; font-size: 12px; line-height: 1.8; }}
+        .strike-row .label {{ color: #2a6a8a; font-size: 12px; font-weight: 600; }}
+        .strike-row .value {{ color: #80b8d8; font-size: 13px; font-weight: 700; }}
+        .strike-row .premium {{ color: #00c8ff; font-size: 15px; font-weight: 800; text-shadow: 0 0 10px rgba(0,200,255,.4); }}
+        .profit-targets {{
+            background: rgba(0,50,100,.15);
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #0a2a3a;
+        }}
+        .profit-targets h5 {{ color: #00c8ff; font-size: 13px; font-weight: 700; margin-bottom: 12px; letter-spacing: 1px; }}
+        .target-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }}
+        .target-box {{
+            background: rgba(0,60,110,.15);
+            padding: 10px;
+            border-radius: 7px;
+            text-align: center;
+            border: 1px solid #0a2a3a;
+        }}
+        .target-box.target-1   {{ border-color: #00aa5580; }}
+        .target-box.target-2   {{ border-color: #0088bb80; }}
+        .target-box.stop-loss-box {{ border-color: #cc223380; }}
+        .target-label {{ font-size: 9px; color: #2a6a8a; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; letter-spacing: 1px; }}
+        .target-price {{ font-size: 14px; color: #80b8d8; font-weight: 800; margin-bottom: 4px; }}
+        .target-profit {{ font-size: 10px; color: #00aa55; font-weight: 600; }}
+        .target-box.stop-loss-box .target-profit {{ color: #cc5566; }}
+        .trade-example {{
+            background: rgba(0,80,140,.08);
+            border: 1px solid #0a3050;
+            border-radius: 7px;
+            padding: 10px 12px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #3a7a9a;
+        }}
+        .trade-example strong {{ color: #00c8ff; }}
+        .no-recommendations {{
+            background: rgba(200,50,70,.06);
+            border: 1px solid #cc223360;
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            color: #885566;
+            font-size: 13px;
+        }}
+
+        /* ── Strategies ─────────────────────────────────────────────────── */
+        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }}
+        .strategy-card {{
+            background: rgba(0,80,140,.06);
+            border: 1px solid #0a2a3a;
+            border-radius: 10px;
+            padding: 16px;
+        }}
+        .strategy-header {{ border-bottom: 1px solid #0a3050; padding-bottom: 8px; margin-bottom: 10px; }}
+        .strategy-header h4 {{ color: #00c8ff; font-size: 14px; font-weight: 700; letter-spacing: 1px; }}
+        .strategy-type {{
+            display: inline-block;
+            background: rgba(0,100,160,.15);
+            color: #3a8aaa;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            margin-top: 4px;
+            font-weight: 600;
+            border: 1px solid #0a3050;
+            letter-spacing: .5px;
+        }}
+        .strategy-body p {{ margin: 7px 0; font-size: 13px; line-height: 1.5; color: #4a7a9a; }}
+        .strategy-body strong {{ color: #2a8aaa; }}
+        .recommendation-stars {{ color: #cc9900; font-size: 13px; font-weight: 700; }}
+
+        /* ── Footer ─────────────────────────────────────────────────────── */
+        .footer {{
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #0a3050;
+            color: #1a4a6a;
+            font-size: 11px;
+            line-height: 1.8;
+            letter-spacing: .5px;
+        }}
+
+        /* ── Responsive ─────────────────────────────────────────────────── */
         @media (max-width: 768px) {{
             .momentum-container {{ grid-template-columns: 1fr; }}
-            .oi-grid {{ grid-template-columns: 1fr; }}
+            .oi-grid            {{ grid-template-columns: 1fr; }}
             .strike-recommendations {{ grid-template-columns: 1fr; }}
-            .target-grid {{ grid-template-columns: 1fr; }}
-            .levels {{ flex-direction: column; }}
+            .target-grid        {{ grid-template-columns: 1fr; }}
+            .levels             {{ flex-direction: column; }}
         }}
     </style>
 </head>
 <body>
 <div class="container">
+
+    <!-- ── HEADER ──────────────────────────────────────────────────────── -->
     <div class="header">
         <h1>&#128202; {title}</h1>
-        <div class="timeframe-badge">&#9201;&#65039; 1-HOUR TIMEFRAME</div>
+        <div class="timeframe-badge">&#9201; 1-HOUR TIMEFRAME</div>
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- DUAL MOMENTUM -->
+    <!-- ── DUAL MOMENTUM ────────────────────────────────────────────────── -->
     <div class="momentum-container">
         <div class="momentum-box" style="--momentum-bg:{momentum_1h_colors['bg']};--momentum-bg-dark:{momentum_1h_colors['bg_dark']};--momentum-text:{momentum_1h_colors['text']};--momentum-border:{momentum_1h_colors['border']};">
             <h3>&#9889; 1H Momentum</h3>
@@ -1727,19 +1958,19 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- RECOMMENDATION -->
+    <!-- ── RECOMMENDATION ───────────────────────────────────────────────── -->
     <div class="recommendation-box">
         <h2>{recommendation['recommendation']}</h2>
-        <div class="subtitle">Market Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}</div>
+        <div class="subtitle">Market Bias: {recommendation['bias']} &nbsp;|&nbsp; Confidence: {recommendation['confidence']}</div>
         <div style="margin-top:12px;">
-            <span class="signal-badge bullish">Bullish: {recommendation['bullish_signals']}</span>
-            <span class="signal-badge bearish">Bearish: {recommendation['bearish_signals']}</span>
+            <span class="signal-badge bullish">&#9650; Bullish: {recommendation['bullish_signals']}</span>
+            <span class="signal-badge bearish">&#9660; Bearish: {recommendation['bearish_signals']}</span>
         </div>
     </div>
 
-    <!-- TECHNICAL ANALYSIS -->
+    <!-- ── TECHNICAL ANALYSIS ───────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#128200; Technical Analysis (1H)</div>
+        <div class="section-title">Technical Analysis (1H)</div>
         <div class="data-grid">
             <div class="data-item"><div class="label">Current Price</div><div class="value">&#8377;{tech_analysis.get('current_price','N/A')}</div></div>
             <div class="data-item"><div class="label">RSI (14)</div><div class="value">{tech_analysis.get('rsi','N/A')}</div></div>
@@ -1750,36 +1981,36 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- SUPPORT & RESISTANCE -->
+    <!-- ── SUPPORT & RESISTANCE ──────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#127919; Support &amp; Resistance (1H)</div>
+        <div class="section-title">Support &amp; Resistance (1H)</div>
         <div class="levels">
             <div class="levels-box resistance">
-                <h4>&#128308; Resistance</h4>
+                <h4>&#128308; Resistance Levels</h4>
                 <ul>{''.join([f'<li>R{i+1}: &#8377;{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}</ul>
             </div>
             <div class="levels-box support">
-                <h4>&#128994; Support</h4>
+                <h4>&#128994; Support Levels</h4>
                 <ul>{''.join([f'<li>S{i+1}: &#8377;{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
             </div>
         </div>
     </div>
 
-    <!-- PIVOT POINTS — Terminal Split Panel Widget -->
+    <!-- ── PIVOT POINTS ──────────────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#128205; Pivot Points (Traditional - 30 Min)</div>
+        <div class="section-title">Pivot Points (Traditional - 30 Min)</div>
         {pivot_widget_html}
     </div>
 
-    <!-- OPTION CHAIN -->
+    <!-- ── OPTION CHAIN ──────────────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#128202; Option Chain Analysis</div>
+        <div class="section-title">Option Chain Analysis</div>
         <div class="data-grid">
             <div class="data-item"><div class="label">Put-Call Ratio</div><div class="value">{oc_analysis.get('pcr','N/A')}</div></div>
             <div class="data-item"><div class="label">Max Pain</div><div class="value">&#8377;{oc_analysis.get('max_pain','N/A')}</div></div>
             <div class="data-item"><div class="label">OI Sentiment</div><div class="value">{oc_analysis.get('oi_sentiment','N/A')}</div></div>
         </div>
-        <div style="margin-top:20px;">
+        <div style="margin-top:16px;">
             <div class="levels">
                 <div class="levels-box resistance">
                     <h4>&#128308; OI Resistance</h4>
@@ -1793,12 +2024,12 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- TOP OI -->
+    <!-- ── TOP OI ────────────────────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#128293; Top 10 Open Interest (5 CE + 5 PE)</div>
+        <div class="section-title">Top 10 Open Interest (5 CE + 5 PE)</div>
         <div class="oi-grid">
             <div class="oi-section calls">
-                <h4>&#128222; Top 5 Call Options (CE)</h4>
+                <h4>&#128308; Top 5 Call Options (CE)</h4>
                 <div class="oi-container">
                     <table class="oi-table">
                         <thead><tr><th>#</th><th>Strike</th><th>Type</th><th>OI</th><th>Chng OI</th><th>LTP</th><th>IV</th><th>Volume</th></tr></thead>
@@ -1807,7 +2038,7 @@ class NiftyAnalyzer:
                 </div>
             </div>
             <div class="oi-section puts">
-                <h4>&#128201; Top 5 Put Options (PE)</h4>
+                <h4>&#128994; Top 5 Put Options (PE)</h4>
                 <div class="oi-container">
                     <table class="oi-table">
                         <thead><tr><th>#</th><th>Strike</th><th>Type</th><th>OI</th><th>Chng OI</th><th>LTP</th><th>IV</th><th>Volume</th></tr></thead>
@@ -1818,47 +2049,47 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ANALYSIS SUMMARY -->
+    <!-- ── ANALYSIS SUMMARY ──────────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#128161; Analysis Summary</div>
+        <div class="section-title">Analysis Summary</div>
         <div class="reasons">
-            <strong>Key Factors:</strong>
+            <strong>&#128161; Key Factors:</strong>
             <ul>{''.join([f'<li>{reason}</li>' for reason in recommendation.get('reasons', [])])}</ul>
         </div>
     </div>
 
-    <!-- STRIKE RECOMMENDATIONS -->
+    <!-- ── STRIKE RECOMMENDATIONS ────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#128176; Detailed Strike Recommendations with Profit Targets</div>
-        <p style="color:#a1a1aa;margin-bottom:15px;font-size:14px;line-height:1.6;">
-            <strong style="color:#e4e4e7;">Based on {recommendation['bias']} bias with current Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
-            These are actionable trades with specific strike prices, LTP, and profit calculations.
+        <div class="section-title">Detailed Strike Recommendations with Profit Targets</div>
+        <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;line-height:1.6;">
+            <strong style="color:#3a8aaa;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
+            Actionable trades with specific strike prices, LTP, and profit calculations.
         </p>
         <div class="strike-recommendations">"""
-        
-        # ---- Strike cards ----
+
+        # ── Strike cards ─────────────────────────────────────────────────────
         if strike_recommendations:
             for rec_item in strike_recommendations:
-                ltp        = rec_item['ltp']
-                max_loss   = rec_item['max_loss']
-                stop_loss  = rec_item['stop_loss']
-                target_1   = rec_item['target_1']
-                target_2   = rec_item['target_2']
-                p_at_t1    = rec_item['profit_at_target_1']
-                p_at_t2    = rec_item['profit_at_target_2']
+                ltp       = rec_item['ltp']
+                max_loss  = rec_item['max_loss']
+                stop_loss = rec_item['stop_loss']
+                target_1  = rec_item['target_1']
+                target_2  = rec_item['target_2']
+                p_at_t1   = rec_item['profit_at_target_1']
+                p_at_t2   = rec_item['profit_at_target_2']
 
-                p_at_t1_label  = self._fmt_profit_label(p_at_t1)
-                p_at_t2_label  = self._fmt_profit_label(p_at_t2)
-                example_t1     = self._fmt_profit(p_at_t1, 50)
-                example_t2     = self._fmt_profit(p_at_t2, 50)
+                p_at_t1_label = self._fmt_profit_label(p_at_t1)
+                p_at_t2_label = self._fmt_profit_label(p_at_t2)
+                example_t1    = self._fmt_profit(p_at_t1, 50)
+                example_t2    = self._fmt_profit(p_at_t2, 50)
 
                 if isinstance(p_at_t2, (int, float)):
-                    profit_color = '#22c55e' if p_at_t2 > 100 else ('#f59e0b' if p_at_t2 > 50 else '#ef4444')
+                    card_border = '#00aa5580' if p_at_t2 > 100 else ('#cc990080' if p_at_t2 > 50 else '#cc223380')
                 else:
-                    profit_color = '#6366f1'
+                    card_border = '#0088bb80'
 
                 html += f"""
-            <div class="strike-card" style="border-left:4px solid {profit_color};">
+            <div class="strike-card" style="border-left:4px solid {card_border};">
                 <div class="strike-header">
                     <h4>{rec_item['strategy']}</h4>
                     <span class="strike-badge {rec_item['option_type'].lower().replace('/', '-')}">{rec_item['option_type']}</span>
@@ -1900,81 +2131,84 @@ class NiftyAnalyzer:
             <div class="no-recommendations">
                 <p><strong>&#9888;&#65039; No specific strike recommendations available at this time.</strong><br>Check the general strategies below.</p>
             </div>"""
-        
+
         html += f"""
         </div>
     </div>
 
-    <!-- OPTIONS STRATEGIES -->
+    <!-- ── OPTIONS STRATEGIES ────────────────────────────────────────────── -->
     <div class="section">
-        <div class="section-title">&#127919; Options Strategies</div>
-        <p style="color:#a1a1aa;margin-bottom:15px;font-size:13px;">Based on {recommendation['bias']} bias:</p>
+        <div class="section-title">Options Strategies</div>
+        <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;letter-spacing:.5px;">
+            Based on <strong style="color:#3a8aaa;">{recommendation['bias']}</strong> bias:
+        </p>
         <div class="strategies-grid">{strategies_html}</div>
     </div>
 
+    <!-- ── FOOTER ────────────────────────────────────────────────────────── -->
     <div class="footer">
-        <p><strong>Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer | Dual Momentum Analysis (1H + 5H) | Professional Edition</p>
+        <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Dual Momentum Analysis (1H + 5H)</p>
     </div>
+
 </div>
 </body>
 </html>"""
-        
+
         return html
-    
+
     def send_email(self, html_content):
         """Send email with HTML report"""
-        email_config   = self.config['email']
+        email_config    = self.config['email']
         recipient_email = email_config['recipient']
         sender_email    = email_config['sender']
         sender_password = email_config['app_password']
         subject_prefix  = email_config.get('subject_prefix', 'Nifty 1H Analysis')
-        
+
         ist_time     = self.get_ist_time()
         subject_time = ist_time.strftime('%Y-%m-%d %H:%M IST')
-        
+
         try:
-            msg = MIMEMultipart('alternative')
+            msg            = MIMEMultipart('alternative')
             msg['Subject'] = f"{subject_prefix} - {subject_time}"
             msg['From']    = sender_email
             msg['To']      = recipient_email
-            
             msg.attach(MIMEText(html_content, 'html'))
-            
+
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
             server.login(sender_email, sender_password)
             server.send_message(msg)
             server.quit()
-            
+
             self.logger.info(f"✅ Email sent successfully to {recipient_email}")
             return True
         except Exception as e:
             self.logger.error(f"❌ Error sending email: {e}")
             return False
-    
+
     def run_analysis(self):
         """Run complete analysis with DUAL MOMENTUM DETECTION"""
         self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum...")
         self.logger.info("=" * 60)
-        
+
         oc_df, spot_price = self.fetch_option_chain()
-        
+
         if oc_df is not None and spot_price is not None:
             oc_analysis = self.analyze_option_chain(oc_df, spot_price)
         else:
             oc_analysis = self.get_sample_oc_analysis()
-        
+
         tech_df = self.fetch_technical_data()
-        
+
         if tech_df is not None and not tech_df.empty:
             tech_analysis = self.technical_analysis(tech_df)
         else:
             tech_analysis = self.get_sample_tech_analysis()
-        
+
         self.logger.info("🎯 Generating Trading Recommendation with Dual Momentum...")
         recommendation = self.generate_recommendation(oc_analysis, tech_analysis)
-        
+
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
         self.logger.info(f"📈 Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}")
@@ -1983,40 +2217,40 @@ class NiftyAnalyzer:
         self.logger.info(f"📊 5H Momentum: {tech_analysis.get('momentum_5h_pct', 0):+.2f}% - {tech_analysis.get('momentum_5h_signal')}")
         self.logger.info(f"📍 Pivot Point: ₹{tech_analysis.get('pivot_points', {}).get('pivot', 'N/A')}")
         self.logger.info("=" * 60)
-        
+
         html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation)
-        
+
         if self.config['report']['save_local']:
-            report_dir = self.config['report']['local_dir']
+            report_dir      = self.config['report']['local_dir']
             os.makedirs(report_dir, exist_ok=True)
             ist_time        = self.get_ist_time()
             filename_format = self.config['report']['filename_format']
             report_filename = os.path.join(report_dir, ist_time.strftime(filename_format))
-            
+
             with open(report_filename, 'w', encoding='utf-8') as f:
                 f.write(html_report)
             self.logger.info(f"💾 Report saved as: {report_filename}")
-        
+
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
-        
-        self.logger.info("✅ Dual Momentum Analysis Complete!")
-        
+
+        self.logger.info("✅ Deep Ocean Theme — Analysis Complete!")
+
         return {
-            'oc_analysis':   oc_analysis,
-            'tech_analysis': tech_analysis,
+            'oc_analysis':    oc_analysis,
+            'tech_analysis':  tech_analysis,
             'recommendation': recommendation,
-            'html_report':   html_report
+            'html_report':    html_report
         }
 
 
 if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
-    
-    print(f"\n✅ Analysis Complete!")
+
+    print(f"\n✅ Analysis Complete! (Deep Ocean Theme)")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
     print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
     print(f"5H Momentum:    {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
-    print(f"Check your email for the detailed report!")
+    print(f"Check your email or ./reports/ for the detailed report!")
