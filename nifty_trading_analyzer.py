@@ -3666,9 +3666,218 @@ class NiftyAnalyzer:
             box-shadow: 0 0 8px var(--momentum-border);
             transition: width 0.6s ease;
         }}
+        /* ══════════════════════════════════════════
+           RESPONSIVE DESIGN — COMPREHENSIVE BREAKPOINTS
+        ══════════════════════════════════════════ */
+
+        /* ── TABLET: 1024px ── */
+        @media (max-width: 1024px) {{
+            .container {{
+                padding: 20px;
+            }}
+            .header h1 {{
+                font-size: 20px;
+                letter-spacing: 3px;
+            }}
+            .momentum-container {{
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }}
+            .data-grid {{
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            }}
+            .strategies-grid {{
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }}
+            .recommendation-box h2 {{
+                font-size: 22px;
+            }}
+        }}
+
+        /* ── SMALL TABLET / LARGE PHONE: 768px ── */
         @media (max-width: 768px) {{
-            .momentum-container {{ grid-template-columns: 1fr; }}
-            .momentum-box .value {{ font-size: 26px; }}
+            body {{ padding: 8px; }}
+            .container {{
+                padding: 16px;
+                border-radius: 2px;
+            }}
+            .header {{
+                padding: 24px 14px 20px;
+            }}
+            .header h1 {{
+                font-size: 16px;
+                letter-spacing: 2px;
+            }}
+            /* hide corner diamonds on small screens */
+            .header-corner-tl, .header-corner-tr,
+            .header-corner-bl, .header-corner-br {{
+                display: none;
+            }}
+            .timeframe-badge {{
+                font-size: 9px;
+                letter-spacing: 2px;
+            }}
+            .timeframe-badge::before,
+            .timeframe-badge::after {{
+                width: 30px;
+            }}
+
+            /* Momentum: stack all 3 into 1 column */
+            .momentum-container {{
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }}
+            .momentum-box .value {{
+                font-size: 28px;
+            }}
+            .momentum-box {{
+                padding: 16px;
+            }}
+
+            /* Recommendation */
+            .recommendation-box {{
+                padding: 18px 14px;
+            }}
+            .recommendation-box h2 {{
+                font-size: 20px;
+                letter-spacing: 2px;
+            }}
+            .recommendation-box .subtitle {{
+                font-size: 12px;
+            }}
+
+            /* Section titles */
+            .section-title {{
+                font-size: 11px;
+                letter-spacing: 2px;
+                padding: 12px 14px;
+            }}
+            /* hide flanking lines on narrow screens — they collapse poorly */
+            .section-title .st-line,
+            .section-title .st-line-r {{
+                display: none;
+            }}
+
+            /* Data grid */
+            .data-grid {{
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }}
+            .data-item {{
+                padding: 12px 10px;
+            }}
+            .data-item .value {{
+                font-size: 15px;
+            }}
+
+            /* Strategy cards */
+            .strategies-grid {{
+                grid-template-columns: 1fr;
+            }}
+
+            /* Signal badges */
+            .signal-badge {{
+                font-size: 10px;
+                padding: 4px 10px;
+            }}
+        }}
+
+        /* ── MOBILE: 480px ── */
+        @media (max-width: 480px) {{
+            body {{ padding: 4px; }}
+            .container {{
+                padding: 12px 10px;
+            }}
+            .header {{
+                padding: 20px 10px 16px;
+            }}
+            .header h1 {{
+                font-size: 13px;
+                letter-spacing: 1px;
+            }}
+            .timeframe-badge {{
+                font-size: 8px;
+                gap: 6px;
+            }}
+            .timeframe-badge::before,
+            .timeframe-badge::after {{
+                width: 16px;
+            }}
+            .timestamp {{
+                font-size: 10px;
+            }}
+
+            /* Momentum */
+            .momentum-box .value {{
+                font-size: 24px;
+            }}
+            .momentum-box h3 {{
+                font-size: 9px;
+                letter-spacing: 2px;
+            }}
+            .momentum-box .signal {{
+                font-size: 10px;
+            }}
+
+            /* Recommendation */
+            .recommendation-box h2 {{
+                font-size: 17px;
+                letter-spacing: 1px;
+            }}
+            .recommendation-box .subtitle {{
+                font-size: 11px;
+            }}
+
+            /* Section */
+            .section-title {{
+                font-size: 10px;
+                letter-spacing: 1.5px;
+                padding: 10px 12px;
+                justify-content: center;
+            }}
+
+            /* Data grid: single column on very small */
+            .data-grid {{
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }}
+            .data-item .value {{
+                font-size: 16px;
+            }}
+            .data-item .label {{
+                font-size: 8px;
+            }}
+
+            /* Reasons */
+            .reasons li {{
+                font-size: 12px;
+            }}
+            .reasons strong {{
+                font-size: 12px;
+            }}
+
+            /* Footer */
+            .footer {{
+                font-size: 9px;
+                letter-spacing: 0.5px;
+                line-height: 1.6;
+            }}
+        }}
+
+        /* ── ULTRA-WIDE: 1600px+ ── */
+        @media (min-width: 1600px) {{
+            .container {{
+                padding: 40px;
+            }}
+            .header h1 {{
+                font-size: 28px;
+            }}
+            .momentum-box .value {{
+                font-size: 38px;
+            }}
+            .data-grid {{
+                grid-template-columns: repeat(6, 1fr);
+            }}
         }}
     </style>
 </head>
