@@ -1,13 +1,12 @@
 """
 Nifty Option Chain & Technical Analysis for Day Trading
-THEME: DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
+THEME:  DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
+PIVOT:  WIDGET 01 — NEON RUNWAY  |  High-contrast · Bright Cyan · Vivid R/S colour labels
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
-FIXED: Using curl-cffi for NSE API to bypass anti-scraping
-UPDATED: Deep Ocean Trading Desk theme (Dark Navy / Cyan / Aqua)
-BUGFIX: ValueError: Unknown format code 'f' for object of type 'str' - fixed in create_html_report
-UPDATED: Terminal Split Panel Pivot Points Widget (v2) — Ocean theme
+FIXED:  Using curl-cffi for NSE API to bypass anti-scraping
+BUGFIX: ValueError: Unknown format code 'f' for object of type 'str'
 """
 
 import pandas as pd
@@ -1093,11 +1092,14 @@ class NiftyAnalyzer:
         return str(value)
 
     # =========================================================================
-    # PIVOT POINTS WIDGET — Deep Ocean Terminal Split Panel
+    # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01)
+    # Dark Navy · Bright Cyan · Full-contrast price labels
     # =========================================================================
     def _build_pivot_widget(self, pivot_points, current_price, nearest_levels):
         """
-        Build the Deep Ocean pivot widget HTML.
+        Build the Neon Runway pivot widget HTML — Widget 01.
+        High-contrast: white/bright price text, glowing cyan LTP,
+        vivid red R levels, vivid green S levels. Zero dim text.
         Returns an HTML string to be embedded in the report.
         """
         pp = pivot_points
@@ -1114,12 +1116,12 @@ class NiftyAnalyzer:
         def is_nearest_s(val):
             return val == nearest_levels.get('nearest_support')
 
-        # Zone text
+        # ── Zone text ────────────────────────────────────────────────────────
         nr = nearest_levels.get('nearest_resistance')
         ns = nearest_levels.get('nearest_support')
         if nr and ns:
-            zone_text  = f"Between {self._nearest_level_name(pp, ns)} and {self._nearest_level_name(pp, nr)}"
-            above_dist = current_price - (pp.get('pivot', current_price))
+            zone_text   = f"Between {self._nearest_level_name(pp, ns)} and {self._nearest_level_name(pp, nr)}"
+            above_dist  = current_price - pp.get('pivot', current_price)
             zone_detail = f"+{above_dist:.2f} above PP" if above_dist >= 0 else f"{above_dist:.2f} below PP"
         elif nr:
             zone_text   = f"Below {self._nearest_level_name(pp, nr)}"
@@ -1131,7 +1133,7 @@ class NiftyAnalyzer:
             zone_text   = "At Pivot Zone"
             zone_detail = f"PP: &#8377;{pp.get('pivot','N/A')}"
 
-        # Gauge dot
+        # ── Gauge dot position (S1 → R1 range) ──────────────────────────────
         s1_val      = pp.get('s1', current_price - 100)
         r1_val      = pp.get('r1', current_price + 100)
         total_range = r1_val - s1_val
@@ -1141,279 +1143,347 @@ class NiftyAnalyzer:
         else:
             dot_pct = 50
 
-        res_levels = [
-            ('R3', pp.get('r3'), 'r3', False),
-            ('R2', pp.get('r2'), 'r2', False),
-            ('R1', pp.get('r1'), 'r1', True),
-        ]
-        sup_levels = [
-            ('S1', pp.get('s1'), 's1', True),
-            ('S2', pp.get('s2'), 's2', False),
-            ('S3', pp.get('s3'), 's3', False),
-        ]
+        # ── Build resistance rows (R3 → R1, top to bottom) ──────────────────
+        def res_row(lbl, val, opacity_name):
+            """opacity_name: 'r3' | 'r2' | 'r1'"""
+            is_r1   = (lbl == 'R1')
+            is_near = is_nearest_r(val)
 
-        def res_row(lbl, val, cls, is_r1):
-            near_tag  = ' <span class="pv-near-tag">NEAREST R</span>' if is_nearest_r(val) else ''
-            icon_html = '<span class="pv-icon pv-icon-r">&#9650;</span>' if is_r1 else '<span class="pv-icon-spacer"></span>'
-            border    = 'border-left:3px solid rgba(255,96,112,0.5);' if is_r1 else ''
-            bg        = 'background:rgba(255,60,80,0.025);' if is_r1 else ''
+            # colour varies by level — R1 is fully vivid
+            if opacity_name == 'r1':
+                name_col  = '#ff6070'
+                price_col = '#ffcccc'
+                price_sz  = '18px'
+                row_bg    = 'background:rgba(255,60,80,0.06);border-left:3px solid rgba(255,96,112,0.6);'
+            elif opacity_name == 'r2':
+                name_col  = 'rgba(255,96,112,0.80)'
+                price_col = 'rgba(255,180,180,0.80)'
+                price_sz  = '16px'
+                row_bg    = ''
+            else:  # r3
+                name_col  = 'rgba(255,96,112,0.50)'
+                price_col = 'rgba(255,180,180,0.50)'
+                price_sz  = '15px'
+                row_bg    = ''
+
+            near_html = ''
+            if is_near:
+                near_html = '<span class="w1-near-tag w1-near-r">NEAREST&nbsp;R</span>'
+
+            icon_html = ''
+            if is_r1:
+                icon_html = f'<span class="w1-icon w1-icon-r">&#9650;</span>'
+
             return f'''
-                <div class="pv-lv-row pv-{cls}" style="{border}{bg}">
-                    <span class="pv-lbl">{lbl}</span>
-                    <span class="pv-price">&#8377;{val}{near_tag}</span>
+                <div class="w1-level-row" style="{row_bg}">
+                    <span class="w1-lv-name" style="color:{name_col};">{lbl}</span>
+                    <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="w1-lv-price" style="color:{price_col};font-size:{price_sz};">&#8377;{val}</span>
+                        {near_html}
+                    </span>
                     {icon_html}
                 </div>'''
 
-        def sup_row(lbl, val, cls, is_s1):
-            near_tag  = ' <span class="pv-near-tag pv-near-tag-s">NEAREST S</span>' if is_nearest_s(val) else ''
-            icon_html = '<span class="pv-icon pv-icon-s">&#9660;</span>' if is_s1 else '<span class="pv-icon-spacer"></span>'
-            border    = 'border-right:3px solid rgba(0,200,140,0.5);' if is_s1 else ''
-            bg        = 'background:rgba(0,200,140,0.025);' if is_s1 else ''
+        # ── Build support rows (S1 → S3, top to bottom) ──────────────────────
+        def sup_row(lbl, val, opacity_name):
+            is_s1   = (lbl == 'S1')
+            is_near = is_nearest_s(val)
+
+            if opacity_name == 's1':
+                name_col  = '#00ff8c'
+                price_col = '#ccffee'
+                price_sz  = '18px'
+                row_bg    = 'background:rgba(0,200,140,0.06);border-right:3px solid rgba(0,255,140,0.6);'
+            elif opacity_name == 's2':
+                name_col  = 'rgba(0,255,140,0.80)'
+                price_col = 'rgba(180,255,220,0.80)'
+                price_sz  = '16px'
+                row_bg    = ''
+            else:  # s3
+                name_col  = 'rgba(0,255,140,0.50)'
+                price_col = 'rgba(180,255,220,0.50)'
+                price_sz  = '15px'
+                row_bg    = ''
+
+            near_html = ''
+            if is_near:
+                near_html = '<span class="w1-near-tag w1-near-s">NEAREST&nbsp;S</span>'
+
+            icon_html = ''
+            if is_s1:
+                icon_html = f'<span class="w1-icon w1-icon-s">&#9660;</span>'
+
+            # Support column: icon | price+near | label  (right-justified)
             return f'''
-                <div class="pv-lv-row pv-{cls}" style="{border}{bg}">
+                <div class="w1-level-row w1-sup-row" style="{row_bg}">
                     {icon_html}
-                    <span class="pv-price" style="text-align:right">&#8377;{val}{near_tag}</span>
-                    <span class="pv-lbl" style="text-align:right">{lbl}</span>
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+                        {near_html}
+                        <span class="w1-lv-price" style="color:{price_col};font-size:{price_sz};">&#8377;{val}</span>
+                    </span>
+                    <span class="w1-lv-name" style="color:{name_col};text-align:right;">{lbl}</span>
                 </div>'''
 
-        res_rows_html = ''.join([res_row(l, v, c, n) for l, v, c, n in res_levels])
-        sup_rows_html = ''.join([sup_row(l, v, c, n) for l, v, c, n in sup_levels])
+        res_rows_html = (
+            res_row('R3', pp.get('r3', 'N/A'), 'r3') +
+            res_row('R2', pp.get('r2', 'N/A'), 'r2') +
+            res_row('R1', pp.get('r1', 'N/A'), 'r1')
+        )
+        sup_rows_html = (
+            sup_row('S1', pp.get('s1', 'N/A'), 's1') +
+            sup_row('S2', pp.get('s2', 'N/A'), 's2') +
+            sup_row('S3', pp.get('s3', 'N/A'), 's3')
+        )
+
+        pp_dist_str = dist(pp.get('pivot'))
 
         widget_html = f'''
-        <!-- ═══ PIVOT POINTS WIDGET — Deep Ocean Split Panel ═══ -->
+        <!-- ═══ PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01) ═══ -->
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
 
-            .pv-widget {{
-                background: linear-gradient(160deg, #020b18 0%, #041428 100%);
-                border: 1px solid #0a3d5c;
-                border-radius: 12px;
+            /* ── Container ─────────────────────────────────────────────── */
+            .w1-pv {{
+                background: #02080f;
+                border: 1px solid #0a2a40;
+                border-radius: 14px;
                 overflow: hidden;
-                font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-                box-shadow: 0 0 0 1px #041428, 0 0 40px rgba(0,150,220,.07), 0 16px 50px rgba(0,0,0,.9);
-                position: relative;
+                font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+                box-shadow: 0 0 0 1px #041020, 0 20px 60px rgba(0,0,0,.95);
                 width: 100%;
             }}
-            .pv-widget::before {{
-                content: '';
-                position: absolute; inset: 0;
-                background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,168,255,.004) 2px, rgba(0,168,255,.004) 4px);
-                pointer-events: none; z-index: 20; border-radius: inherit;
-            }}
-            .pv-hdr {{
+
+            /* ── Header ────────────────────────────────────────────────── */
+            .w1-hdr {{
+                background: linear-gradient(135deg, #031525, #020e1c);
+                padding: 14px 20px;
                 display: flex; align-items: center; justify-content: space-between;
-                padding: 12px 18px;
-                background: linear-gradient(135deg, #020e1c, #031525);
-                border-bottom: 1px solid #0d3a52;
+                border-bottom: 2px solid #00c8ff;
             }}
-            .pv-hdr-l {{ display: flex; align-items: center; gap: 10px; }}
-            .pv-icon-wrap {{
-                width: 32px; height: 32px; border-radius: 7px;
-                background: rgba(0,168,255,0.1); border: 1px solid #0a5a7a;
-                display: flex; align-items: center; justify-content: center;
-                font-size: .9rem; box-shadow: 0 0 10px rgba(0,168,255,.2);
+            .w1-hdr-title  {{ font-size: 15px; font-weight: 700; color: #ffffff; letter-spacing: 2px; }}
+            .w1-hdr-sub    {{ font-size: 11px; color: #3a8aaa; margin-top: 3px; letter-spacing: .5px; }}
+            .w1-hdr-badge  {{
+                background: #00c8ff; color: #000000;
+                font-size: 10px; font-weight: 700;
+                padding: 4px 14px; border-radius: 20px; letter-spacing: 2px;
             }}
-            .pv-title {{ font-size: .82rem; font-weight: 700; color: #00c8ff; letter-spacing: 1.5px; }}
-            .pv-sub   {{ font-size: .50rem; color: #1a5a7a; margin-top: 1px; letter-spacing: .5px; }}
-            .pv-badge {{
-                font-size: .52rem; padding: 3px 10px; border-radius: 20px;
-                background: rgba(0,100,160,0.2); border: 1px solid #0a5a7a;
-                color: #0088bb; letter-spacing: 1.5px; font-weight: 700;
+
+            /* ── Gauge ─────────────────────────────────────────────────── */
+            .w1-gauge {{ padding: 16px 20px 4px; background: #020c18; border-bottom: 1px solid #0a2030; }}
+            .w1-gauge-track {{
+                height: 10px; border-radius: 20px; position: relative; overflow: visible;
+                background: linear-gradient(90deg,
+                    rgba(0,255,140,.12) 0%, rgba(0,255,140,.35) 30%,
+                    rgba(255,255,255,.06) 50%,
+                    rgba(255,96,112,.35) 70%, rgba(255,96,112,.12) 100%);
+                border: 1px solid #0a3050;
             }}
-            .pv-gauge {{ padding: 10px 18px 8px; border-bottom: 1px solid #061e2e; background: rgba(2,14,28,0.6); }}
-            .pv-gauge-track {{
-                height: 7px; border-radius: 20px; position: relative; overflow: visible;
-                background: #041428; border: 1px solid #0a3d5c;
+            .w1-gdot {{
+                position: absolute; left: {dot_pct:.1f}%; top: 50%;
+                transform: translate(-50%, -50%);
+                width: 18px; height: 18px;
+                background: #00c8ff; border-radius: 50%;
+                border: 3px solid #02080f;
+                box-shadow: 0 0 0 2px #00c8ff, 0 0 20px rgba(0,200,255,.9);
+                animation: w1-pulse 2s ease-in-out infinite;
+                z-index: 2;
             }}
-            .pv-gfl {{ position:absolute; left:0; top:0; bottom:0; width:{dot_pct:.1f}%; border-radius:20px 0 0 20px; background:linear-gradient(90deg,rgba(0,200,140,.3),transparent); }}
-            .pv-gfr {{ position:absolute; right:0; top:0; bottom:0; width:{100-dot_pct:.1f}%; border-radius:0 20px 20px 0; background:linear-gradient(90deg,transparent,rgba(255,60,80,.2)); }}
-            .pv-gdot {{
-                position:absolute; left:{dot_pct:.1f}%; top:50%; transform:translate(-50%,-50%);
-                width:14px; height:14px; background:#00c8ff; border-radius:50%;
-                border:2px solid #020b18; z-index:2;
-                box-shadow: 0 0 0 2px #00c8ff, 0 0 16px rgba(0,200,255,.65);
-                animation: pv-pulse 2s ease-in-out infinite;
+            @keyframes w1-pulse {{
+                0%,100% {{ box-shadow: 0 0 0 2px #00c8ff, 0 0 20px rgba(0,200,255,.9); }}
+                50%      {{ box-shadow: 0 0 0 3px #00c8ff, 0 0 32px rgba(0,200,255,1); }}
             }}
-            @keyframes pv-pulse {{ 0%,100%{{opacity:1}} 50%{{opacity:.35}} }}
-            .pv-glabels {{ display:flex; justify-content:space-between; margin-top:5px; font-size:.58rem; }}
-            .pv-gl-s  {{ color:#00aa55; font-weight:600; }}
-            .pv-gl-ltp{{ color:#00c8ff; font-weight:700; }}
-            .pv-gl-r  {{ color:#ff6070; font-weight:600; }}
-            .pv-zone {{
-                margin: 8px 14px;
-                padding: 6px 12px;
-                background: rgba(0,80,140,0.12); border: 1px solid #0a3d5c; border-radius: 6px;
-                display: flex; align-items: center; gap: 8px;
+            .w1-gauge-labels {{
+                display: flex; justify-content: space-between;
+                margin-top: 10px; padding-bottom: 10px;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 13px; font-weight: 700;
             }}
-            .pv-zdot  {{ width:7px; height:7px; border-radius:50%; background:#00c8ff; flex-shrink:0; box-shadow:0 0 7px #00c8ff; animation:pv-pulse 2s ease-in-out infinite; }}
-            .pv-ztxt  {{ font-size:.66rem; color:#00c8ff; font-weight:700; letter-spacing:.5px; }}
-            .pv-zval  {{ margin-left:auto; font-size:.56rem; color:#1a5a7a; white-space:nowrap; }}
-            .pv-candle {{ display:flex; margin:0 14px 8px; border:1px solid #0a3050; border-radius:6px; overflow:hidden; background:rgba(2,14,28,0.5); }}
-            .pv-ci {{ flex:1; padding:6px 10px; border-right:1px solid #061e2e; }}
-            .pv-ci:last-child {{ border-right:none; }}
-            .pv-ci-lbl {{ font-size:.48rem; color:#1a4a6a; letter-spacing:1.5px; margin-bottom:2px; text-transform:uppercase; }}
-            .pv-ci-val {{ font-size:.78rem; font-weight:700; }}
-            .pv-ci-h .pv-ci-val {{ color:#ff6070; }}
-            .pv-ci-l .pv-ci-val {{ color:#00ff8c; }}
-            .pv-ci-c .pv-ci-val {{ color:#00c8ff; }}
-            .pv-col-hdr {{
-                display: grid; grid-template-columns: 1fr 130px 1fr;
-                border-top: 1px solid #0a3050; border-bottom: 1px solid #0a3050;
-                background: rgba(2,14,28,0.7);
+            .w1-gl-s   {{ color: #00ff8c; }}
+            .w1-gl-ltp {{ color: #ffffff; font-size: 14px; }}
+            .w1-gl-r   {{ color: #ff6070; }}
+
+            /* ── Zone banner ───────────────────────────────────────────── */
+            .w1-zone {{
+                margin: 10px 16px;
+                padding: 10px 16px;
+                background: rgba(0,200,255,0.07);
+                border: 1px solid #0a5a7a;
+                border-radius: 8px;
+                display: flex; align-items: center; gap: 10px;
             }}
-            .pv-hdr-res, .pv-hdr-sup {{
-                display: grid; grid-template-columns: 60px 1fr 80px;
-                padding: 6px 14px; gap: 6px;
+            .w1-zone-dot {{
+                width: 9px; height: 9px; border-radius: 50%;
+                background: #00c8ff; flex-shrink: 0;
+                box-shadow: 0 0 10px #00c8ff;
+                animation: w1-pulse 2s ease-in-out infinite;
             }}
-            .pv-hdr-res {{ border-right: 1px solid #0a3050; }}
-            .pv-hdr-sup {{ direction: rtl; }}
-            .pv-hdr-res span, .pv-hdr-sup span, .pv-hdr-pp span {{
-                font-size: .46rem; color: #1a4a6a; text-transform: uppercase; letter-spacing: 1.5px;
+            .w1-zone-text {{ font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: .5px; }}
+            .w1-zone-val  {{ margin-left: auto; font-size: 12px; color: #00c8ff; font-family: 'IBM Plex Mono'; white-space: nowrap; }}
+
+            /* ── Previous candle strip ─────────────────────────────────── */
+            .w1-candle {{
+                display: flex; margin: 0 16px 14px;
+                border: 1px solid #0a2a40; border-radius: 8px; overflow: hidden;
             }}
-            .pv-hdr-pp {{
-                display: flex; align-items: center; justify-content: center;
-                border-left: 1px solid #0a3050; border-right: 1px solid #0a3050;
-                padding: 6px 8px;
+            .w1-ci {{ flex: 1; padding: 10px 14px; border-right: 1px solid #0a2030; }}
+            .w1-ci:last-child {{ border-right: none; }}
+            .w1-ci-lbl {{
+                font-size: 10px; color: #3a8aaa;
+                letter-spacing: 1.5px; margin-bottom: 5px; text-transform: uppercase;
             }}
-            .pv-split {{ display: grid; grid-template-columns: 1fr 130px 1fr; }}
-            .pv-col-res {{ display:flex; flex-direction:column; border-right:1px solid #0a3050; }}
-            .pv-col-sup {{ display:flex; flex-direction:column; }}
-            .pv-lv-row {{
-                display: grid; grid-template-columns: 55px 1fr 26px;
-                align-items: center; height: 42px; padding: 0 14px; gap: 6px;
-                border-bottom: 1px solid #061e2e; transition: background .15s; cursor: default;
+            .w1-ci-val {{ font-size: 15px; font-weight: 700; font-family: 'IBM Plex Mono'; }}
+            .w1-ci-h .w1-ci-val {{ color: #ff8090; }}
+            .w1-ci-l .w1-ci-val {{ color: #80ffcc; }}
+            .w1-ci-c .w1-ci-val {{ color: #80d8ff; }}
+
+            /* ── Split grid layout ─────────────────────────────────────── */
+            .w1-grid {{
+                display: grid; grid-template-columns: 1fr auto 1fr;
+                border-top: 1px solid #0a2030;
             }}
-            .pv-lv-row:last-child {{ border-bottom: none; }}
-            .pv-lv-row:hover {{ background: rgba(0,100,180,0.08) !important; }}
-            .pv-col-sup .pv-lv-row {{ grid-template-columns: 26px 1fr 55px; }}
-            .pv-lbl   {{ font-size: .68rem; font-weight: 700; letter-spacing: 1px; }}
-            .pv-price {{ font-size: .74rem; font-weight: 600; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }}
-            .pv-icon  {{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.5rem; font-weight:800; flex-shrink:0; }}
-            .pv-icon-spacer {{ width:22px; flex-shrink:0; }}
-            .pv-icon-r {{ background:rgba(255,96,112,.12); color:#ff6070; border:1px solid rgba(255,96,112,.4); }}
-            .pv-icon-s {{ background:rgba(0,200,140,.12); color:#00ff8c; border:1px solid rgba(0,200,140,.4); }}
-            .pv-near-tag {{
-                font-size:.40rem; padding:1px 5px; border-radius:8px; border:1px solid;
-                font-weight:800; letter-spacing:.5px; white-space:nowrap;
-                background:rgba(255,96,112,.1); color:#ff6070; border-color:rgba(255,96,112,.4);
+            .w1-col-res {{ border-right: 1px solid #0a2030; }}
+            .w1-col-sup {{ }}
+
+            /* ── Level rows ────────────────────────────────────────────── */
+            .w1-level-row {{
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 13px 18px; border-bottom: 1px solid #061520;
+                gap: 8px; min-height: 54px; transition: background .15s;
+                cursor: default;
             }}
-            .pv-near-tag-s {{ background:rgba(0,200,140,.1); color:#00ff8c; border-color:rgba(0,200,140,.4); }}
-            /* Resistance colours */
-            .pv-r3 .pv-lbl, .pv-r3 .pv-price {{ color:rgba(255,96,112,.30); }}
-            .pv-r2 .pv-lbl, .pv-r2 .pv-price {{ color:rgba(255,96,112,.55); }}
-            .pv-r1 .pv-lbl, .pv-r1 .pv-price {{ color:#ff9090; }}
-            .pv-r1 .pv-lbl {{ color:#ff6070; }}
-            /* Support colours */
-            .pv-s1 .pv-lbl, .pv-s1 .pv-price {{ color:#80ffcc; }}
-            .pv-s1 .pv-lbl {{ color:#00ff8c; }}
-            .pv-s2 .pv-lbl, .pv-s2 .pv-price {{ color:rgba(0,200,140,.55); }}
-            .pv-s3 .pv-lbl, .pv-s3 .pv-price {{ color:rgba(0,200,140,.30); }}
-            .pv-col-pp {{
+            .w1-level-row:last-child {{ border-bottom: none; }}
+            .w1-level-row:hover {{ background: rgba(0,100,160,0.07) !important; }}
+            .w1-sup-row {{ flex-direction: row-reverse; }}
+
+            .w1-lv-name  {{ font-size: 14px; font-weight: 700; letter-spacing: 1px; min-width: 26px; flex-shrink: 0; }}
+            .w1-lv-price {{ font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: .5px; }}
+            .w1-icon     {{ width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }}
+            .w1-icon-r   {{ background: rgba(255,96,112,.15); color: #ff6070; border: 1px solid rgba(255,96,112,.5); }}
+            .w1-icon-s   {{ background: rgba(0,255,140,.15); color: #00ff8c; border: 1px solid rgba(0,255,140,.5); }}
+
+            /* ── NEAREST tags ──────────────────────────────────────────── */
+            .w1-near-tag {{
+                font-size: 10px; padding: 2px 8px; border-radius: 6px;
+                font-weight: 800; letter-spacing: .5px; white-space: nowrap;
+            }}
+            .w1-near-r {{ background: rgba(255,96,112,.18); color: #ff6070; border: 1px solid rgba(255,96,112,.55); }}
+            .w1-near-s {{ background: rgba(0,255,140,.18); color: #00ff8c; border: 1px solid rgba(0,255,140,.55); }}
+
+            /* ── Pivot centre column ───────────────────────────────────── */
+            .w1-pivot-col {{
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
-                gap: 4px; padding: 12px 8px;
-                border-left: 1px solid #0a3050; border-right: 1px solid #0a3050;
-                background: rgba(0,80,140,0.06);
+                padding: 18px 16px; gap: 6px;
+                background: rgba(0,200,255,.04);
+                border-left: 1px solid #0a2030;
+                border-right: 1px solid #0a2030;
+                min-width: 148px;
             }}
-            .pv-pp-tag  {{ font-size:.44rem; color:#1a5a7a; letter-spacing:2px; text-transform:uppercase; }}
-            .pv-pp-val  {{ font-size:.98rem; font-weight:700; color:#00c8ff; line-height:1; text-shadow:0 0 12px rgba(0,200,255,.4); }}
-            .pv-pp-dist {{ font-size:.52rem; color:#2a7a9a; }}
-            .pv-pp-line {{ width:26px; height:1px; background:#0a3d5c; margin:3px 0; }}
-            .pv-ltp-block {{
-                display: flex; flex-direction: column; align-items: center; gap: 2px;
-                background: rgba(0,80,140,0.2); border: 1px solid #0a3d5c;
-                border-radius: 6px; padding: 4px 12px; margin-top: 1px;
+            .w1-pp-tag  {{ font-size: 10px; color: #3a8aaa; letter-spacing: 2px; text-transform: uppercase; }}
+            .w1-pp-val  {{
+                font-size: 20px; font-weight: 700; color: #00c8ff;
+                font-family: 'IBM Plex Mono', monospace;
+                text-shadow: 0 0 14px rgba(0,200,255,.6);
+                text-align: center;
             }}
-            .pv-ltp-tag {{ font-size:.40rem; color:#1a5a7a; letter-spacing:2px; text-transform:uppercase; }}
-            .pv-ltp-val {{ font-size:.76rem; font-weight:700; color:#00c8ff; text-shadow:0 0 8px rgba(0,200,255,.5); }}
-            .pv-ltp-dot {{ width:5px; height:5px; border-radius:50%; background:#00c8ff; animation:pv-pulse 2s ease-in-out infinite; box-shadow:0 0 5px #00c8ff; }}
-            .pv-footer {{
+            .w1-pp-dist {{ font-size: 12px; color: #3a8aaa; font-family: 'IBM Plex Mono'; }}
+            .w1-pp-sep  {{ width: 36px; height: 1px; background: #0a3050; margin: 3px 0; }}
+            .w1-ltp-chip {{
+                background: #00c8ff; color: #000000;
+                border-radius: 8px; padding: 7px 18px;
+                text-align: center; margin-top: 4px;
+            }}
+            .w1-ltp-chip-lbl {{ font-size: 9px; font-weight: 700; letter-spacing: 2px; }}
+            .w1-ltp-chip-val {{ font-size: 15px; font-weight: 700; font-family: 'IBM Plex Mono'; }}
+
+            /* ── Footer ────────────────────────────────────────────────── */
+            .w1-footer {{
                 display: flex; justify-content: space-between; align-items: center;
-                padding: 8px 18px;
-                background: linear-gradient(135deg, #020e1c, #031525);
-                border-top: 1px solid #0a3050;
+                padding: 10px 20px;
+                background: #020c18; border-top: 1px solid #0a2030;
+                font-family: 'IBM Plex Mono', monospace; font-size: 12px;
             }}
-            .pv-footer .pv-f-mthd {{ font-size:.48rem; color:#0d3a52; letter-spacing:1.5px; }}
-            .pv-footer .pv-f-ltp  {{ font-size:.64rem; font-weight:700; color:#00c8ff; letter-spacing:.5px; text-shadow:0 0 8px rgba(0,200,255,.4); }}
+            .w1-footer-l {{ color: #2a6a8a; letter-spacing: 1px; }}
+            .w1-footer-r {{ color: #00c8ff; font-weight: 700; text-shadow: 0 0 8px rgba(0,200,255,.5); }}
         </style>
 
-        <div class="pv-widget">
-            <div class="pv-hdr">
-                <div class="pv-hdr-l">
-                    <div class="pv-icon-wrap">📍</div>
-                    <div>
-                        <div class="pv-title">PIVOT POINTS</div>
-                        <div class="pv-sub">Traditional Method &middot; Auto-calculated</div>
+        <div class="w1-pv">
+
+            <!-- Header -->
+            <div class="w1-hdr">
+                <div>
+                    <div class="w1-hdr-title">&#128205; PIVOT POINTS</div>
+                    <div class="w1-hdr-sub">Traditional Method &middot; 30 Min &middot; Auto-calculated</div>
+                </div>
+                <div class="w1-hdr-badge">30 MIN</div>
+            </div>
+
+            <!-- Gauge -->
+            <div class="w1-gauge">
+                <div class="w1-gauge-track">
+                    <div class="w1-gdot"></div>
+                </div>
+                <div class="w1-gauge-labels">
+                    <span class="w1-gl-s">S1 &#8377;{pp.get('s1','N/A')}</span>
+                    <span class="w1-gl-ltp">&#9650; &#8377;{current_price} LTP</span>
+                    <span class="w1-gl-r">R1 &#8377;{pp.get('r1','N/A')}</span>
+                </div>
+            </div>
+
+            <!-- Zone banner -->
+            <div class="w1-zone">
+                <div class="w1-zone-dot"></div>
+                <span class="w1-zone-text">{zone_text}</span>
+                <span class="w1-zone-val">{zone_detail}</span>
+            </div>
+
+            <!-- Previous candle -->
+            <div class="w1-candle">
+                <div class="w1-ci w1-ci-h">
+                    <div class="w1-ci-lbl">&#9650; PREV HIGH</div>
+                    <div class="w1-ci-val">&#8377;{pp.get('prev_high','N/A')}</div>
+                </div>
+                <div class="w1-ci w1-ci-l">
+                    <div class="w1-ci-lbl">&#9660; PREV LOW</div>
+                    <div class="w1-ci-val">&#8377;{pp.get('prev_low','N/A')}</div>
+                </div>
+                <div class="w1-ci w1-ci-c">
+                    <div class="w1-ci-lbl">&#9679; PREV CLOSE</div>
+                    <div class="w1-ci-val">&#8377;{pp.get('prev_close','N/A')}</div>
+                </div>
+            </div>
+
+            <!-- Split grid: R levels | Pivot centre | S levels -->
+            <div class="w1-grid">
+
+                <div class="w1-col-res">
+                    {res_rows_html}
+                </div>
+
+                <div class="w1-pivot-col">
+                    <div class="w1-pp-tag">PIVOT POINT</div>
+                    <div class="w1-pp-val">&#8377;{pp.get('pivot','N/A')}</div>
+                    <div class="w1-pp-dist">{pp_dist_str} from LTP</div>
+                    <div class="w1-pp-sep"></div>
+                    <div class="w1-ltp-chip">
+                        <div class="w1-ltp-chip-lbl">LTP</div>
+                        <div class="w1-ltp-chip-val">&#8377;{current_price}</div>
                     </div>
                 </div>
-                <div class="pv-badge">30 MIN</div>
+
+                <div class="w1-col-sup">
+                    {sup_rows_html}
+                </div>
+
             </div>
 
-            <div class="pv-gauge">
-                <div class="pv-gauge-track">
-                    <div class="pv-gfl"></div>
-                    <div class="pv-gfr"></div>
-                    <div class="pv-gdot"></div>
-                </div>
-                <div class="pv-glabels">
-                    <span class="pv-gl-s">S1 &#8377;{pp.get('s1','N/A')}</span>
-                    <span class="pv-gl-ltp">▲ &#8377;{current_price} LTP</span>
-                    <span class="pv-gl-r">R1 &#8377;{pp.get('r1','N/A')}</span>
-                </div>
+            <!-- Footer -->
+            <div class="w1-footer">
+                <span class="w1-footer-l">Traditional &middot; 30 Min Candle</span>
+                <span class="w1-footer-r">LTP &#8377;{current_price}</span>
             </div>
 
-            <div class="pv-zone">
-                <div class="pv-zdot"></div>
-                <span class="pv-ztxt">{zone_text}</span>
-                <span class="pv-zval">{zone_detail}</span>
-            </div>
-
-            <div class="pv-candle">
-                <div class="pv-ci pv-ci-h">
-                    <div class="pv-ci-lbl">▲ Prev High</div>
-                    <div class="pv-ci-val">&#8377;{pp.get('prev_high','N/A')}</div>
-                </div>
-                <div class="pv-ci pv-ci-l">
-                    <div class="pv-ci-lbl">▼ Prev Low</div>
-                    <div class="pv-ci-val">&#8377;{pp.get('prev_low','N/A')}</div>
-                </div>
-                <div class="pv-ci pv-ci-c">
-                    <div class="pv-ci-lbl">● Prev Close</div>
-                    <div class="pv-ci-val">&#8377;{pp.get('prev_close','N/A')}</div>
-                </div>
-            </div>
-
-            <div class="pv-col-hdr">
-                <div class="pv-hdr-res">
-                    <span>Level</span><span>Price</span><span style="text-align:right">Dist</span>
-                </div>
-                <div class="pv-hdr-pp"><span>Pivot</span></div>
-                <div class="pv-hdr-sup">
-                    <span>Level</span><span>Price</span><span style="text-align:right">Dist</span>
-                </div>
-            </div>
-
-            <div class="pv-split">
-                <div class="pv-col-res">{res_rows_html}</div>
-                <div class="pv-col-pp">
-                    <div class="pv-pp-tag">Pivot Point</div>
-                    <div class="pv-pp-val">&#8377;{pp.get('pivot','N/A')}</div>
-                    <div class="pv-pp-dist">{dist(pp.get('pivot'))} from LTP</div>
-                    <div class="pv-pp-line"></div>
-                    <div class="pv-ltp-block">
-                        <div class="pv-ltp-tag">LTP</div>
-                        <div class="pv-ltp-val">&#8377;{current_price}</div>
-                        <div class="pv-ltp-dot"></div>
-                    </div>
-                </div>
-                <div class="pv-col-sup">{sup_rows_html}</div>
-            </div>
-
-            <div class="pv-footer">
-                <span class="pv-f-mthd">Traditional &middot; 30 Min Candle</span>
-                <span class="pv-f-ltp">LTP &#8377;{current_price}</span>
-            </div>
         </div>
-        <!-- ═══ END PIVOT WIDGET ═══ -->
+        <!-- ═══ END NEON RUNWAY PIVOT WIDGET ═══ -->
         '''
         return widget_html
 
@@ -2148,7 +2218,7 @@ class NiftyAnalyzer:
     <!-- ── FOOTER ────────────────────────────────────────────────────────── -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Dual Momentum Analysis (1H + 5H)</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Dual Momentum (1H + 5H)</p>
     </div>
 
 </div>
@@ -2234,7 +2304,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
 
-        self.logger.info("✅ Deep Ocean Theme — Analysis Complete!")
+        self.logger.info("✅ Deep Ocean · Neon Runway Pivot Widget — Analysis Complete!")
 
         return {
             'oc_analysis':    oc_analysis,
@@ -2248,7 +2318,7 @@ if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
 
-    print(f"\n✅ Analysis Complete! (Deep Ocean Theme)")
+    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot Widget)")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
     print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
