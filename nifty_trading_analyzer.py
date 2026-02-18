@@ -2,6 +2,7 @@
 Nifty Option Chain & Technical Analysis for Day Trading
 THEME:  DEEP OCEAN TRADING DESK — Dark Navy · Cyan · Aqua Green
 PIVOT:  WIDGET 01 — NEON RUNWAY  |  High-contrast · Bright Cyan · Vivid R/S colour labels
+S/R:    WIDGET 04 — BLOOMBERG TABLE  |  Black · Gold/Amber · Distance column · Strength dots · Table layout
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
@@ -1092,16 +1093,9 @@ class NiftyAnalyzer:
         return str(value)
 
     # =========================================================================
-    # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01)
-    # Dark Navy · Bright Cyan · Full-contrast price labels
+    # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01) — UNCHANGED
     # =========================================================================
     def _build_pivot_widget(self, pivot_points, current_price, nearest_levels):
-        """
-        Build the Neon Runway pivot widget HTML — Widget 01.
-        High-contrast: white/bright price text, glowing cyan LTP,
-        vivid red R levels, vivid green S levels. Zero dim text.
-        Returns an HTML string to be embedded in the report.
-        """
         pp = pivot_points
 
         def dist(val):
@@ -1116,7 +1110,6 @@ class NiftyAnalyzer:
         def is_nearest_s(val):
             return val == nearest_levels.get('nearest_support')
 
-        # ── Zone text ────────────────────────────────────────────────────────
         nr = nearest_levels.get('nearest_resistance')
         ns = nearest_levels.get('nearest_support')
         if nr and ns:
@@ -1133,7 +1126,6 @@ class NiftyAnalyzer:
             zone_text   = "At Pivot Zone"
             zone_detail = f"PP: &#8377;{pp.get('pivot','N/A')}"
 
-        # ── Gauge dot position (S1 → R1 range) ──────────────────────────────
         s1_val      = pp.get('s1', current_price - 100)
         r1_val      = pp.get('r1', current_price + 100)
         total_range = r1_val - s1_val
@@ -1143,13 +1135,10 @@ class NiftyAnalyzer:
         else:
             dot_pct = 50
 
-        # ── Build resistance rows (R3 → R1, top to bottom) ──────────────────
         def res_row(lbl, val, opacity_name):
-            """opacity_name: 'r3' | 'r2' | 'r1'"""
             is_r1   = (lbl == 'R1')
             is_near = is_nearest_r(val)
 
-            # colour varies by level — R1 is fully vivid
             if opacity_name == 'r1':
                 name_col  = '#ff6070'
                 price_col = '#ffcccc'
@@ -1160,7 +1149,7 @@ class NiftyAnalyzer:
                 price_col = 'rgba(255,180,180,0.80)'
                 price_sz  = '16px'
                 row_bg    = ''
-            else:  # r3
+            else:
                 name_col  = 'rgba(255,96,112,0.50)'
                 price_col = 'rgba(255,180,180,0.50)'
                 price_sz  = '15px'
@@ -1184,7 +1173,6 @@ class NiftyAnalyzer:
                     {icon_html}
                 </div>'''
 
-        # ── Build support rows (S1 → S3, top to bottom) ──────────────────────
         def sup_row(lbl, val, opacity_name):
             is_s1   = (lbl == 'S1')
             is_near = is_nearest_s(val)
@@ -1199,7 +1187,7 @@ class NiftyAnalyzer:
                 price_col = 'rgba(180,255,220,0.80)'
                 price_sz  = '16px'
                 row_bg    = ''
-            else:  # s3
+            else:
                 name_col  = 'rgba(0,255,140,0.50)'
                 price_col = 'rgba(180,255,220,0.50)'
                 price_sz  = '15px'
@@ -1213,7 +1201,6 @@ class NiftyAnalyzer:
             if is_s1:
                 icon_html = f'<span class="w1-icon w1-icon-s">&#9660;</span>'
 
-            # Support column: icon | price+near | label  (right-justified)
             return f'''
                 <div class="w1-level-row w1-sup-row" style="{row_bg}">
                     {icon_html}
@@ -1242,7 +1229,6 @@ class NiftyAnalyzer:
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
 
-            /* ── Container ─────────────────────────────────────────────── */
             .w1-pv {{
                 background: #02080f;
                 border: 1px solid #0a2a40;
@@ -1252,8 +1238,6 @@ class NiftyAnalyzer:
                 box-shadow: 0 0 0 1px #041020, 0 20px 60px rgba(0,0,0,.95);
                 width: 100%;
             }}
-
-            /* ── Header ────────────────────────────────────────────────── */
             .w1-hdr {{
                 background: linear-gradient(135deg, #031525, #020e1c);
                 padding: 14px 20px;
@@ -1267,8 +1251,6 @@ class NiftyAnalyzer:
                 font-size: 10px; font-weight: 700;
                 padding: 4px 14px; border-radius: 20px; letter-spacing: 2px;
             }}
-
-            /* ── Gauge ─────────────────────────────────────────────────── */
             .w1-gauge {{ padding: 16px 20px 4px; background: #020c18; border-bottom: 1px solid #0a2030; }}
             .w1-gauge-track {{
                 height: 10px; border-radius: 20px; position: relative; overflow: visible;
@@ -1301,8 +1283,6 @@ class NiftyAnalyzer:
             .w1-gl-s   {{ color: #00ff8c; }}
             .w1-gl-ltp {{ color: #ffffff; font-size: 14px; }}
             .w1-gl-r   {{ color: #ff6070; }}
-
-            /* ── Zone banner ───────────────────────────────────────────── */
             .w1-zone {{
                 margin: 10px 16px;
                 padding: 10px 16px;
@@ -1319,8 +1299,6 @@ class NiftyAnalyzer:
             }}
             .w1-zone-text {{ font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: .5px; }}
             .w1-zone-val  {{ margin-left: auto; font-size: 12px; color: #00c8ff; font-family: 'IBM Plex Mono'; white-space: nowrap; }}
-
-            /* ── Previous candle strip ─────────────────────────────────── */
             .w1-candle {{
                 display: flex; margin: 0 16px 14px;
                 border: 1px solid #0a2a40; border-radius: 8px; overflow: hidden;
@@ -1335,16 +1313,11 @@ class NiftyAnalyzer:
             .w1-ci-h .w1-ci-val {{ color: #ff8090; }}
             .w1-ci-l .w1-ci-val {{ color: #80ffcc; }}
             .w1-ci-c .w1-ci-val {{ color: #80d8ff; }}
-
-            /* ── Split grid layout ─────────────────────────────────────── */
             .w1-grid {{
                 display: grid; grid-template-columns: 1fr auto 1fr;
                 border-top: 1px solid #0a2030;
             }}
             .w1-col-res {{ border-right: 1px solid #0a2030; }}
-            .w1-col-sup {{ }}
-
-            /* ── Level rows ────────────────────────────────────────────── */
             .w1-level-row {{
                 display: flex; align-items: center; justify-content: space-between;
                 padding: 13px 18px; border-bottom: 1px solid #061520;
@@ -1354,22 +1327,17 @@ class NiftyAnalyzer:
             .w1-level-row:last-child {{ border-bottom: none; }}
             .w1-level-row:hover {{ background: rgba(0,100,160,0.07) !important; }}
             .w1-sup-row {{ flex-direction: row-reverse; }}
-
             .w1-lv-name  {{ font-size: 14px; font-weight: 700; letter-spacing: 1px; min-width: 26px; flex-shrink: 0; }}
             .w1-lv-price {{ font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: .5px; }}
             .w1-icon     {{ width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }}
             .w1-icon-r   {{ background: rgba(255,96,112,.15); color: #ff6070; border: 1px solid rgba(255,96,112,.5); }}
             .w1-icon-s   {{ background: rgba(0,255,140,.15); color: #00ff8c; border: 1px solid rgba(0,255,140,.5); }}
-
-            /* ── NEAREST tags ──────────────────────────────────────────── */
             .w1-near-tag {{
                 font-size: 10px; padding: 2px 8px; border-radius: 6px;
                 font-weight: 800; letter-spacing: .5px; white-space: nowrap;
             }}
             .w1-near-r {{ background: rgba(255,96,112,.18); color: #ff6070; border: 1px solid rgba(255,96,112,.55); }}
             .w1-near-s {{ background: rgba(0,255,140,.18); color: #00ff8c; border: 1px solid rgba(0,255,140,.55); }}
-
-            /* ── Pivot centre column ───────────────────────────────────── */
             .w1-pivot-col {{
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
                 padding: 18px 16px; gap: 6px;
@@ -1394,8 +1362,6 @@ class NiftyAnalyzer:
             }}
             .w1-ltp-chip-lbl {{ font-size: 9px; font-weight: 700; letter-spacing: 2px; }}
             .w1-ltp-chip-val {{ font-size: 15px; font-weight: 700; font-family: 'IBM Plex Mono'; }}
-
-            /* ── Footer ────────────────────────────────────────────────── */
             .w1-footer {{
                 display: flex; justify-content: space-between; align-items: center;
                 padding: 10px 20px;
@@ -1407,8 +1373,6 @@ class NiftyAnalyzer:
         </style>
 
         <div class="w1-pv">
-
-            <!-- Header -->
             <div class="w1-hdr">
                 <div>
                     <div class="w1-hdr-title">&#128205; PIVOT POINTS</div>
@@ -1416,8 +1380,6 @@ class NiftyAnalyzer:
                 </div>
                 <div class="w1-hdr-badge">30 MIN</div>
             </div>
-
-            <!-- Gauge -->
             <div class="w1-gauge">
                 <div class="w1-gauge-track">
                     <div class="w1-gdot"></div>
@@ -1428,15 +1390,11 @@ class NiftyAnalyzer:
                     <span class="w1-gl-r">R1 &#8377;{pp.get('r1','N/A')}</span>
                 </div>
             </div>
-
-            <!-- Zone banner -->
             <div class="w1-zone">
                 <div class="w1-zone-dot"></div>
                 <span class="w1-zone-text">{zone_text}</span>
                 <span class="w1-zone-val">{zone_detail}</span>
             </div>
-
-            <!-- Previous candle -->
             <div class="w1-candle">
                 <div class="w1-ci w1-ci-h">
                     <div class="w1-ci-lbl">&#9650; PREV HIGH</div>
@@ -1451,14 +1409,8 @@ class NiftyAnalyzer:
                     <div class="w1-ci-val">&#8377;{pp.get('prev_close','N/A')}</div>
                 </div>
             </div>
-
-            <!-- Split grid: R levels | Pivot centre | S levels -->
             <div class="w1-grid">
-
-                <div class="w1-col-res">
-                    {res_rows_html}
-                </div>
-
+                <div class="w1-col-res">{res_rows_html}</div>
                 <div class="w1-pivot-col">
                     <div class="w1-pp-tag">PIVOT POINT</div>
                     <div class="w1-pp-val">&#8377;{pp.get('pivot','N/A')}</div>
@@ -1469,19 +1421,12 @@ class NiftyAnalyzer:
                         <div class="w1-ltp-chip-val">&#8377;{current_price}</div>
                     </div>
                 </div>
-
-                <div class="w1-col-sup">
-                    {sup_rows_html}
-                </div>
-
+                <div class="w1-col-sup">{sup_rows_html}</div>
             </div>
-
-            <!-- Footer -->
             <div class="w1-footer">
                 <span class="w1-footer-l">Traditional &middot; 30 Min Candle</span>
                 <span class="w1-footer-r">LTP &#8377;{current_price}</span>
             </div>
-
         </div>
         <!-- ═══ END NEON RUNWAY PIVOT WIDGET ═══ -->
         '''
@@ -1498,6 +1443,439 @@ class NiftyAnalyzer:
         return mapping.get(value, str(value))
 
     # =========================================================================
+    # WIDGET 04 — BLOOMBERG TABLE  |  Support & Resistance (1H)
+    # Black · Gold/Amber · Distance column · Strength dots · Table layout
+    # =========================================================================
+    def _build_sr_bloomberg_widget(self, tech_resistances, tech_supports, current_price):
+        """
+        Bloomberg-style dark table widget for Support & Resistance levels.
+        Black background · Gold/Amber accents · Distance column · Strength dots.
+        """
+
+        def strength_dots(distance_pct, level_type):
+            """Return strength dot HTML based on proximity (closer = stronger)"""
+            abs_dist = abs(distance_pct)
+            if abs_dist <= 0.3:
+                filled = 5
+            elif abs_dist <= 0.6:
+                filled = 4
+            elif abs_dist <= 1.0:
+                filled = 3
+            elif abs_dist <= 1.5:
+                filled = 2
+            else:
+                filled = 1
+
+            dot_color = '#ff4d6d' if level_type == 'R' else '#00e676'
+            empty_color = '#1a1a2e'
+
+            dots_html = ''
+            for i in range(5):
+                if i < filled:
+                    dots_html += f'<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:{dot_color};margin:0 2px;box-shadow:0 0 6px {dot_color}88;"></span>'
+                else:
+                    dots_html += f'<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:{empty_color};border:1px solid #2a2a3e;margin:0 2px;"></span>'
+            return dots_html
+
+        def build_resistance_rows(resistances):
+            rows = ''
+            for idx, level in enumerate(resistances):
+                label     = f"R{idx + 1}"
+                dist      = level - current_price
+                dist_pct  = (dist / current_price) * 100
+                dist_str  = f"+{dist:.1f}"
+                dist_pct_str = f"+{dist_pct:.2f}%"
+                dots      = strength_dots(dist_pct, 'R')
+                # Fade higher resistances slightly
+                row_opacity = '1' if idx == 0 else ('0.82' if idx == 1 else '0.65')
+                price_size  = '20px' if idx == 0 else ('17px' if idx == 1 else '15px')
+                gold_shade  = '#ffd700' if idx == 0 else ('#e8b800' if idx == 1 else '#c99a00')
+                rows += f'''
+                <tr class="w4-row w4-row-r" style="opacity:{row_opacity};">
+                    <td class="w4-td-label">
+                        <span class="w4-badge w4-badge-r">{label}</span>
+                    </td>
+                    <td class="w4-td-price">
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:{price_size};font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
+                            &#8377;{level:,.1f}
+                        </span>
+                    </td>
+                    <td class="w4-td-dist">
+                        <span class="w4-dist w4-dist-r">{dist_str}</span>
+                        <span class="w4-dist-pct w4-dist-pct-r">{dist_pct_str}</span>
+                    </td>
+                    <td class="w4-td-strength">
+                        <div class="w4-dots">{dots}</div>
+                    </td>
+                    <td class="w4-td-bar">
+                        <div class="w4-bar-track">
+                            <div class="w4-bar-fill w4-bar-r" style="width:{min(100, dist_pct * 30):.0f}%;"></div>
+                        </div>
+                    </td>
+                </tr>'''
+            return rows
+
+        def build_support_rows(supports):
+            rows = ''
+            for idx, level in enumerate(supports):
+                label     = f"S{idx + 1}"
+                dist      = current_price - level
+                dist_pct  = (dist / current_price) * 100
+                dist_str  = f"-{dist:.1f}"
+                dist_pct_str = f"-{dist_pct:.2f}%"
+                dots      = strength_dots(dist_pct, 'S')
+                row_opacity = '1' if idx == 0 else ('0.82' if idx == 1 else '0.65')
+                price_size  = '20px' if idx == 0 else ('17px' if idx == 1 else '15px')
+                rows += f'''
+                <tr class="w4-row w4-row-s" style="opacity:{row_opacity};">
+                    <td class="w4-td-label">
+                        <span class="w4-badge w4-badge-s">{label}</span>
+                    </td>
+                    <td class="w4-td-price">
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:{price_size};font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
+                            &#8377;{level:,.1f}
+                        </span>
+                    </td>
+                    <td class="w4-td-dist">
+                        <span class="w4-dist w4-dist-s">{dist_str}</span>
+                        <span class="w4-dist-pct w4-dist-pct-s">{dist_pct_str}</span>
+                    </td>
+                    <td class="w4-td-strength">
+                        <div class="w4-dots">{dots}</div>
+                    </td>
+                    <td class="w4-td-bar">
+                        <div class="w4-bar-track">
+                            <div class="w4-bar-fill w4-bar-s" style="width:{min(100, dist_pct * 30):.0f}%;"></div>
+                        </div>
+                    </td>
+                </tr>'''
+            return rows
+
+        resistance_rows_html = build_resistance_rows(tech_resistances)
+        support_rows_html    = build_support_rows(tech_supports)
+
+        widget_html = f'''
+        <!-- ═══ SUPPORT & RESISTANCE — WIDGET 04 BLOOMBERG TABLE ═══ -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+
+            /* ── Outer shell ───────────────────────────────────────────── */
+            .w4-wrap {{
+                font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+                background: #000000;
+                border: 1px solid #1a1a1a;
+                border-radius: 14px;
+                overflow: hidden;
+                box-shadow:
+                    0 0 0 1px #0d0d0d,
+                    0 0 40px rgba(255, 180, 0, 0.04),
+                    0 24px 60px rgba(0,0,0,0.95);
+            }}
+
+            /* ── Header bar ────────────────────────────────────────────── */
+            .w4-header {{
+                background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
+                border-bottom: 1px solid #1e1e1e;
+                padding: 0;
+                display: flex;
+            }}
+            .w4-hdr-half {{
+                flex: 1;
+                padding: 14px 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }}
+            .w4-hdr-half.resistance-hdr {{
+                border-right: 1px solid #1e1e1e;
+                border-bottom: 2px solid #ff4d6d;
+            }}
+            .w4-hdr-half.support-hdr {{
+                border-bottom: 2px solid #00e676;
+            }}
+            .w4-hdr-dot {{
+                width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+            }}
+            .w4-hdr-dot.r-dot {{
+                background: #ff4d6d;
+                box-shadow: 0 0 8px #ff4d6d;
+            }}
+            .w4-hdr-dot.s-dot {{
+                background: #00e676;
+                box-shadow: 0 0 8px #00e676;
+            }}
+            .w4-hdr-title {{
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 2.5px;
+                text-transform: uppercase;
+            }}
+            .w4-hdr-title.r-title {{ color: #ff4d6d; }}
+            .w4-hdr-title.s-title {{ color: #00e676; }}
+            .w4-hdr-tf {{
+                margin-left: auto;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 1.5px;
+                color: #3a3a4a;
+            }}
+
+            /* ── LTP bar ───────────────────────────────────────────────── */
+            .w4-ltp-bar {{
+                background: #0a0800;
+                border-bottom: 1px solid #1e1e1e;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px 20px;
+                gap: 12px;
+            }}
+            .w4-ltp-line {{
+                flex: 1; height: 1px;
+                background: linear-gradient(90deg, transparent, #2a2000, transparent);
+            }}
+            .w4-ltp-chip {{
+                background: linear-gradient(135deg, #1a1200, #221800);
+                border: 1px solid #ffd70044;
+                border-radius: 8px;
+                padding: 8px 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }}
+            .w4-ltp-label {{
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                color: #8a7200;
+                text-transform: uppercase;
+            }}
+            .w4-ltp-value {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 18px;
+                font-weight: 800;
+                color: #ffd700;
+                letter-spacing: -0.5px;
+                text-shadow: 0 0 16px rgba(255,215,0,0.5);
+            }}
+            .w4-ltp-arrow {{
+                width: 0; height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+            }}
+            .w4-ltp-arrow.up   {{ border-bottom: 8px solid #00e676; }}
+            .w4-ltp-arrow.down {{ border-top: 8px solid #ff4d6d; }}
+
+            /* ── Split grid ─────────────────────────────────────────────── */
+            .w4-body {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }}
+            .w4-col {{
+                padding: 4px 0;
+            }}
+            .w4-col.r-col {{ border-right: 1px solid #111; }}
+
+            /* ── Col header row ─────────────────────────────────────────── */
+            .w4-col-hdr {{
+                display: grid;
+                grid-template-columns: 44px 1fr 90px 80px 1fr;
+                padding: 6px 14px;
+                border-bottom: 1px solid #111;
+                gap: 0;
+            }}
+            .w4-col-hdr span {{
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                color: #333;
+            }}
+
+            /* ── Table ──────────────────────────────────────────────────── */
+            .w4-table {{
+                width: 100%;
+                border-collapse: collapse;
+            }}
+            .w4-row {{
+                transition: background 0.15s;
+                cursor: default;
+            }}
+            .w4-row:hover {{ background: rgba(255,215,0,0.03); }}
+            .w4-row-r {{ border-bottom: 1px solid #0f0f0f; }}
+            .w4-row-s {{ border-bottom: 1px solid #0f0f0f; }}
+            .w4-row:last-child {{ border-bottom: none; }}
+
+            /* ── Table cells ────────────────────────────────────────────── */
+            .w4-td-label   {{ padding: 14px 6px 14px 16px; width: 48px; vertical-align: middle; }}
+            .w4-td-price   {{ padding: 14px 8px; vertical-align: middle; }}
+            .w4-td-dist    {{ padding: 14px 8px; vertical-align: middle; white-space: nowrap; text-align: right; }}
+            .w4-td-strength{{ padding: 14px 8px; vertical-align: middle; text-align: center; }}
+            .w4-td-bar     {{ padding: 14px 14px 14px 4px; vertical-align: middle; width: 60px; }}
+
+            /* ── Badges ─────────────────────────────────────────────────── */
+            .w4-badge {{
+                display: inline-flex; align-items: center; justify-content: center;
+                width: 32px; height: 32px;
+                border-radius: 7px;
+                font-size: 12px; font-weight: 800;
+                letter-spacing: 0.5px;
+            }}
+            .w4-badge-r {{
+                background: rgba(255,77,109,0.12);
+                border: 1px solid rgba(255,77,109,0.45);
+                color: #ff4d6d;
+            }}
+            .w4-badge-s {{
+                background: rgba(0,230,118,0.12);
+                border: 1px solid rgba(0,230,118,0.45);
+                color: #00e676;
+            }}
+
+            /* ── Distance text ──────────────────────────────────────────── */
+            .w4-dist {{
+                display: block;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 13px;
+                font-weight: 700;
+            }}
+            .w4-dist-pct {{
+                display: block;
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 10px;
+                font-weight: 600;
+                margin-top: 2px;
+            }}
+            .w4-dist-r     {{ color: #ff8099; }}
+            .w4-dist-pct-r {{ color: rgba(255,128,153,0.65); }}
+            .w4-dist-s     {{ color: #33ffaa; }}
+            .w4-dist-pct-s {{ color: rgba(51,255,170,0.65); }}
+
+            /* ── Strength dots wrapper ───────────────────────────────────── */
+            .w4-dots {{ display: flex; align-items: center; justify-content: center; }}
+
+            /* ── Mini bar ───────────────────────────────────────────────── */
+            .w4-bar-track {{
+                height: 4px;
+                background: #111;
+                border-radius: 2px;
+                overflow: hidden;
+            }}
+            .w4-bar-fill {{
+                height: 100%;
+                border-radius: 2px;
+                min-width: 4px;
+            }}
+            .w4-bar-r {{ background: linear-gradient(90deg, #ff4d6d44, #ff4d6d); }}
+            .w4-bar-s {{ background: linear-gradient(90deg, #00e67644, #00e676); }}
+
+            /* ── Footer ─────────────────────────────────────────────────── */
+            .w4-footer {{
+                background: #060606;
+                border-top: 1px solid #111;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 20px;
+            }}
+            .w4-footer-left {{
+                font-size: 10px;
+                color: #2a2a2a;
+                letter-spacing: 1px;
+                font-weight: 600;
+            }}
+            .w4-footer-right {{
+                font-size: 10px;
+                color: #8a7200;
+                font-family: 'IBM Plex Mono', monospace;
+                font-weight: 700;
+            }}
+            .w4-footer-dot {{
+                width: 5px; height: 5px; border-radius: 50%;
+                background: #ffd700;
+                display: inline-block; margin-right: 6px;
+                box-shadow: 0 0 6px #ffd700;
+                animation: w4-blink 2s ease-in-out infinite;
+            }}
+            @keyframes w4-blink {{
+                0%,100% {{ opacity: 1; }}
+                50%      {{ opacity: 0.4; }}
+            }}
+        </style>
+
+        <div class="w4-wrap">
+
+            <!-- Header -->
+            <div class="w4-header">
+                <div class="w4-hdr-half resistance-hdr">
+                    <div class="w4-hdr-dot r-dot"></div>
+                    <span class="w4-hdr-title r-title">RESISTANCE LEVELS</span>
+                    <span class="w4-hdr-tf">1H TIMEFRAME</span>
+                </div>
+                <div class="w4-hdr-half support-hdr">
+                    <div class="w4-hdr-dot s-dot"></div>
+                    <span class="w4-hdr-title s-title">SUPPORT LEVELS</span>
+                    <span class="w4-hdr-tf">1H TIMEFRAME</span>
+                </div>
+            </div>
+
+            <!-- LTP strip -->
+            <div class="w4-ltp-bar">
+                <div class="w4-ltp-line"></div>
+                <div class="w4-ltp-chip">
+                    <span class="w4-ltp-label">LTP</span>
+                    <span class="w4-ltp-value">&#8377;{current_price:,.1f}</span>
+                </div>
+                <div class="w4-ltp-line"></div>
+            </div>
+
+            <!-- Column sub-headers -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #111;">
+                <div class="w4-col-hdr" style="border-right:1px solid #111;">
+                    <span></span>
+                    <span>PRICE</span>
+                    <span style="text-align:right;">DISTANCE</span>
+                    <span style="text-align:center;">STRENGTH</span>
+                    <span></span>
+                </div>
+                <div class="w4-col-hdr">
+                    <span></span>
+                    <span>PRICE</span>
+                    <span style="text-align:right;">DISTANCE</span>
+                    <span style="text-align:center;">STRENGTH</span>
+                    <span></span>
+                </div>
+            </div>
+
+            <!-- Body: R table | S table -->
+            <div class="w4-body">
+                <div class="w4-col r-col">
+                    <table class="w4-table">
+                        <tbody>{resistance_rows_html}</tbody>
+                    </table>
+                </div>
+                <div class="w4-col s-col">
+                    <table class="w4-table">
+                        <tbody>{support_rows_html}</tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="w4-footer">
+                <span class="w4-footer-left">WIDGET 04 &middot; BLOOMBERG TABLE &middot; PRICE ACTION S/R</span>
+                <span class="w4-footer-right">
+                    <span class="w4-footer-dot"></span>
+                    LTP &#8377;{current_price:,.1f}
+                </span>
+            </div>
+
+        </div>
+        <!-- ═══ END BLOOMBERG TABLE S/R WIDGET ═══ -->
+        '''
+        return widget_html
+
+    # =========================================================================
     # HTML REPORT — Deep Ocean Trading Desk Theme
     # =========================================================================
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
@@ -1506,7 +1884,6 @@ class NiftyAnalyzer:
 
         rec = recommendation['recommendation']
 
-        # ── Recommendation box colour (ocean palette) ──────────────────────
         if 'STRONG BUY' in rec:
             rec_color     = '#004d2e'
             rec_text_col  = '#00ff8c'
@@ -1545,6 +1922,11 @@ class NiftyAnalyzer:
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         pivot_widget_html = self._build_pivot_widget(pivot_points, current_price, nearest_levels)
 
+        # Bloomberg S/R widget
+        tech_resistances = tech_analysis.get('tech_resistances', [])
+        tech_supports    = tech_analysis.get('tech_supports', [])
+        sr_widget_html   = self._build_sr_bloomberg_widget(tech_resistances, tech_supports, current_price)
+
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
         momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
@@ -1560,7 +1942,6 @@ class NiftyAnalyzer:
         top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
         top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
 
-        # ── CE rows ──────────────────────────────────────────────────────────
         ce_rows_html = ''
         for idx, strike in enumerate(top_ce_strikes, 1):
             badge_class = f"badge-{strike['type'].lower()}"
@@ -1576,7 +1957,6 @@ class NiftyAnalyzer:
                         <td>{strike['volume']:,}</td>
                     </tr>"""
 
-        # ── PE rows ──────────────────────────────────────────────────────────
         pe_rows_html = ''
         for idx, strike in enumerate(top_pe_strikes, 1):
             badge_class = f"badge-{strike['type'].lower()}"
@@ -1592,7 +1972,6 @@ class NiftyAnalyzer:
                         <td>{strike['volume']:,}</td>
                     </tr>"""
 
-        # ── Strategies HTML ──────────────────────────────────────────────────
         strategies_html = ''
         for strategy in strategies:
             strategies_html += f"""
@@ -1610,9 +1989,6 @@ class NiftyAnalyzer:
                     </div>
                 </div>"""
 
-        # ══════════════════════════════════════════════════════════════════════
-        # HTML TEMPLATE — DEEP OCEAN TRADING DESK
-        # ══════════════════════════════════════════════════════════════════════
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1621,7 +1997,6 @@ class NiftyAnalyzer:
     <title>{title}</title>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        /* ── Reset & Base ──────────────────────────────────────────────── */
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{
             font-family: 'Rajdhani', 'Segoe UI', sans-serif;
@@ -1631,8 +2006,6 @@ class NiftyAnalyzer:
             line-height: 1.6;
             min-height: 100vh;
         }}
-
-        /* Subtle scan-line overlay */
         body::before {{
             content: '';
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -1641,7 +2014,6 @@ class NiftyAnalyzer:
                 rgba(0,168,255,.003) 2px, rgba(0,168,255,.003) 4px
             );
         }}
-
         .container {{
             position: relative; z-index: 1;
             max-width: 1400px; margin: 0 auto;
@@ -1651,8 +2023,6 @@ class NiftyAnalyzer:
             padding: 30px;
             border: 1px solid #0a3d5c;
         }}
-
-        /* ── Header ────────────────────────────────────────────────────── */
         .header {{
             text-align: center;
             background: linear-gradient(135deg, #020e1c 0%, #031a2c 100%);
@@ -1695,8 +2065,6 @@ class NiftyAnalyzer:
             margin-top: 10px;
             letter-spacing: 2px;
         }}
-
-        /* ── Momentum Boxes ─────────────────────────────────────────────── */
         .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
         .momentum-box {{
             background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
@@ -1731,8 +2099,6 @@ class NiftyAnalyzer:
             text-shadow: 0 0 20px currentColor;
         }}
         .momentum-box .signal {{ font-size: 13px; font-weight: 600; opacity: 0.9; letter-spacing: .5px; }}
-
-        /* ── Recommendation Box ─────────────────────────────────────────── */
         .recommendation-box {{
             background: linear-gradient(135deg, {rec_color} 0%, {rec_color}cc 100%);
             color: {rec_text_col};
@@ -1770,8 +2136,6 @@ class NiftyAnalyzer:
         }}
         .bullish {{ background: rgba(0,200,140,.15); border: 1px solid #00aa55; color: #00ff8c; }}
         .bearish {{ background: rgba(255,60,80,.15); border: 1px solid #cc2233; color: #ff6070; }}
-
-        /* ── Sections ───────────────────────────────────────────────────── */
         .section {{ margin-bottom: 24px; }}
         .section-title {{
             background: linear-gradient(135deg, #031a2c 0%, #020e1c 100%);
@@ -1790,8 +2154,6 @@ class NiftyAnalyzer:
             gap: 10px;
         }}
         .section-title::before {{ content: '▸'; color: #00aaff; }}
-
-        /* ── Data Grid ──────────────────────────────────────────────────── */
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }}
         .data-item {{
             background: rgba(0,100,170,.06);
@@ -1811,8 +2173,6 @@ class NiftyAnalyzer:
             margin-bottom: 6px;
         }}
         .data-item .value {{ color: #80d8ff; font-size: 18px; font-weight: 700; }}
-
-        /* ── Levels ─────────────────────────────────────────────────────── */
         .levels {{ display: flex; flex-wrap: wrap; gap: 16px; }}
         .levels-box {{
             flex: 1;
@@ -1833,8 +2193,6 @@ class NiftyAnalyzer:
         .levels-box li:before {{ content: "▸"; position: absolute; left: 0; color: #00aaff; font-weight: bold; }}
         .levels-box.resistance li {{ color: #cc8888; }}
         .levels-box.support    li {{ color: #44cc88; }}
-
-        /* ── OI Grid ────────────────────────────────────────────────────── */
         .oi-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }}
         .oi-section {{
             background: rgba(0,80,140,.06);
@@ -1867,8 +2225,6 @@ class NiftyAnalyzer:
         .badge-itm {{ background: rgba(0,200,100,.15); color: #00dd77; border: 1px solid #00aa55; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
         .badge-atm {{ background: rgba(255,180,0,.12); color: #ffcc00; border: 1px solid #cc9900; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
         .badge-otm {{ background: rgba(80,120,160,.12); color: #6a9ab8; border: 1px solid #3a6a88; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
-
-        /* ── Analysis Reasons ───────────────────────────────────────────── */
         .reasons {{
             background: rgba(0,80,140,.08);
             border-left: 4px solid #0088bb;
@@ -1880,8 +2236,6 @@ class NiftyAnalyzer:
         .reasons strong {{ color: #00c8ff; font-size: 14px; letter-spacing: 1px; }}
         .reasons ul {{ margin: 10px 0 0 0; padding-left: 22px; }}
         .reasons li {{ margin: 6px 0; color: #3a8aaa; font-size: 13px; line-height: 1.6; }}
-
-        /* ── Strike Cards ───────────────────────────────────────────────── */
         .strike-recommendations {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-top: 14px; }}
         .strike-card {{
             background: rgba(0,80,140,.06);
@@ -1955,8 +2309,6 @@ class NiftyAnalyzer:
             color: #885566;
             font-size: 13px;
         }}
-
-        /* ── Strategies ─────────────────────────────────────────────────── */
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }}
         .strategy-card {{
             background: rgba(0,80,140,.06);
@@ -1981,8 +2333,6 @@ class NiftyAnalyzer:
         .strategy-body p {{ margin: 7px 0; font-size: 13px; line-height: 1.5; color: #4a7a9a; }}
         .strategy-body strong {{ color: #2a8aaa; }}
         .recommendation-stars {{ color: #cc9900; font-size: 13px; font-weight: 700; }}
-
-        /* ── Footer ─────────────────────────────────────────────────────── */
         .footer {{
             text-align: center;
             margin-top: 30px;
@@ -1993,8 +2343,6 @@ class NiftyAnalyzer:
             line-height: 1.8;
             letter-spacing: .5px;
         }}
-
-        /* ── Responsive ─────────────────────────────────────────────────── */
         @media (max-width: 768px) {{
             .momentum-container {{ grid-template-columns: 1fr; }}
             .oi-grid            {{ grid-template-columns: 1fr; }}
@@ -2007,14 +2355,14 @@ class NiftyAnalyzer:
 <body>
 <div class="container">
 
-    <!-- ── HEADER ──────────────────────────────────────────────────────── -->
+    <!-- HEADER -->
     <div class="header">
         <h1>&#128202; {title}</h1>
         <div class="timeframe-badge">&#9201; 1-HOUR TIMEFRAME</div>
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- ── DUAL MOMENTUM ────────────────────────────────────────────────── -->
+    <!-- DUAL MOMENTUM -->
     <div class="momentum-container">
         <div class="momentum-box" style="--momentum-bg:{momentum_1h_colors['bg']};--momentum-bg-dark:{momentum_1h_colors['bg_dark']};--momentum-text:{momentum_1h_colors['text']};--momentum-border:{momentum_1h_colors['border']};">
             <h3>&#9889; 1H Momentum</h3>
@@ -2028,7 +2376,7 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── RECOMMENDATION ───────────────────────────────────────────────── -->
+    <!-- RECOMMENDATION -->
     <div class="recommendation-box">
         <h2>{recommendation['recommendation']}</h2>
         <div class="subtitle">Market Bias: {recommendation['bias']} &nbsp;|&nbsp; Confidence: {recommendation['confidence']}</div>
@@ -2038,7 +2386,7 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── TECHNICAL ANALYSIS ───────────────────────────────────────────── -->
+    <!-- TECHNICAL ANALYSIS -->
     <div class="section">
         <div class="section-title">Technical Analysis (1H)</div>
         <div class="data-grid">
@@ -2051,28 +2399,19 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── SUPPORT & RESISTANCE ──────────────────────────────────────────── -->
+    <!-- SUPPORT & RESISTANCE — WIDGET 04 BLOOMBERG TABLE -->
     <div class="section">
         <div class="section-title">Support &amp; Resistance (1H)</div>
-        <div class="levels">
-            <div class="levels-box resistance">
-                <h4>&#128308; Resistance Levels</h4>
-                <ul>{''.join([f'<li>R{i+1}: &#8377;{r}</li>' for i, r in enumerate(tech_analysis.get('tech_resistances', []))])}</ul>
-            </div>
-            <div class="levels-box support">
-                <h4>&#128994; Support Levels</h4>
-                <ul>{''.join([f'<li>S{i+1}: &#8377;{s}</li>' for i, s in enumerate(tech_analysis.get('tech_supports', []))])}</ul>
-            </div>
-        </div>
+        {sr_widget_html}
     </div>
 
-    <!-- ── PIVOT POINTS ──────────────────────────────────────────────────── -->
+    <!-- PIVOT POINTS -->
     <div class="section">
         <div class="section-title">Pivot Points (Traditional - 30 Min)</div>
         {pivot_widget_html}
     </div>
 
-    <!-- ── OPTION CHAIN ──────────────────────────────────────────────────── -->
+    <!-- OPTION CHAIN -->
     <div class="section">
         <div class="section-title">Option Chain Analysis</div>
         <div class="data-grid">
@@ -2094,7 +2433,7 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── TOP OI ────────────────────────────────────────────────────────── -->
+    <!-- TOP OI -->
     <div class="section">
         <div class="section-title">Top 10 Open Interest (5 CE + 5 PE)</div>
         <div class="oi-grid">
@@ -2119,7 +2458,7 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── ANALYSIS SUMMARY ──────────────────────────────────────────────── -->
+    <!-- ANALYSIS SUMMARY -->
     <div class="section">
         <div class="section-title">Analysis Summary</div>
         <div class="reasons">
@@ -2128,7 +2467,7 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── STRIKE RECOMMENDATIONS ────────────────────────────────────────── -->
+    <!-- STRIKE RECOMMENDATIONS -->
     <div class="section">
         <div class="section-title">Detailed Strike Recommendations with Profit Targets</div>
         <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;line-height:1.6;">
@@ -2137,7 +2476,6 @@ class NiftyAnalyzer:
         </p>
         <div class="strike-recommendations">"""
 
-        # ── Strike cards ─────────────────────────────────────────────────────
         if strike_recommendations:
             for rec_item in strike_recommendations:
                 ltp       = rec_item['ltp']
@@ -2206,7 +2544,7 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ── OPTIONS STRATEGIES ────────────────────────────────────────────── -->
+    <!-- OPTIONS STRATEGIES -->
     <div class="section">
         <div class="section-title">Options Strategies</div>
         <p style="color:#1a5a7a;margin-bottom:14px;font-size:13px;letter-spacing:.5px;">
@@ -2215,10 +2553,10 @@ class NiftyAnalyzer:
         <div class="strategies-grid">{strategies_html}</div>
     </div>
 
-    <!-- ── FOOTER ────────────────────────────────────────────────────────── -->
+    <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Dual Momentum (1H + 5H)</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;|&nbsp; Deep Ocean Theme &nbsp;|&nbsp; Neon Runway Pivot &nbsp;|&nbsp; Bloomberg S/R Table &nbsp;|&nbsp; Dual Momentum (1H + 5H)</p>
     </div>
 
 </div>
@@ -2304,7 +2642,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
 
-        self.logger.info("✅ Deep Ocean · Neon Runway Pivot Widget — Analysis Complete!")
+        self.logger.info("✅ Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table — Analysis Complete!")
 
         return {
             'oc_analysis':    oc_analysis,
@@ -2318,7 +2656,7 @@ if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
 
-    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot Widget)")
+    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table)")
     print(f"Recommendation: {result['recommendation']['recommendation']}")
     print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
     print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
