@@ -2,13 +2,38 @@ name: Nifty Trading Analyzer
 
 on:
   schedule:
-  
-   - cron: '7,31,55 8,10,12,14 * * 1-5'  # 08:07, 08:31, 08:55... up to 14:55
-   - cron: '19,43 9,11,13,15 * * 1-5'    # 09:19, 09:43... up to 15:43
-   - cron: '0 16 * * 1-5'               # 16:00 (4:00 PM)
-  
+    # 04:08 UTC = 09:38 IST (Start)
+    # 04:35 UTC = 10:05 IST
+    - cron: '8,35 4 * * 1-5'
+    
+    # 05:02 UTC = 10:32 IST
+    # 05:29 UTC = 10:59 IST
+    # 05:56 UTC = 11:26 IST
+    - cron: '2,29,56 5 * * 1-5'
+    
+    # 06:23 UTC = 11:53 IST
+    # 06:50 UTC = 12:20 IST
+    - cron: '23,50 6 * * 1-5'
+    
+    # 07:17 UTC = 12:47 IST
+    # 07:44 UTC = 01:14 IST
+    - cron: '17,44 7 * * 1-5'
+    
+    # 08:11 UTC = 01:41 IST
+    # 08:38 UTC = 02:08 IST
+    - cron: '11,38 8 * * 1-5'
+    
+    # 09:05 UTC = 02:35 IST
+    # 09:32 UTC = 03:02 IST
+    # 09:59 UTC = 03:29 IST
+    - cron: '5,32,59 9 * * 1-5'
+    
+    # 10:26 UTC = 03:56 IST
+    # 10:30 UTC = 04:00 IST (Final)
+    - cron: '26,30 10 * * 1-5'
+
   workflow_dispatch:
-  
+
   push:
     branches:
       - main
@@ -295,8 +320,7 @@ jobs:
                   <div class="reports">
                       <h2>Available Reports</h2>
                       <ul class="report-list" id="reportList">
-                          <!-- Reports will be listed here -->
-                      </ul>
+                          </ul>
                   </div>
                   
                   <div class="footer">
@@ -315,205 +339,3 @@ jobs:
               filename=$(basename "$report")
               if [ "$first" = true ]; then
                 first=false
-              else
-                echo "," >> docs/archive.html
-              fi
-              echo "          {file: '$filename', name: '$filename'}" >> docs/archive.html
-            done
-            
-            cat >> docs/archive.html << 'ARCHIVE_EOF2'
-                  ];
-                  
-                  const reportList = document.getElementById('reportList');
-                  if (reports.length === 0) {
-                      reportList.innerHTML = '<li class="report-item">No reports available yet.</li>';
-                  } else {
-                      reports.forEach(report => {
-                          const li = document.createElement('li');
-                          li.className = 'report-item';
-                          
-                          const link = document.createElement('a');
-                          link.href = report.file;
-                          link.textContent = report.name.replace('.html', '').replace(/_/g, ' ');
-                          
-                          const date = document.createElement('div');
-                          date.className = 'report-date';
-                          date.textContent = 'View Report →';
-                          
-                          li.appendChild(link);
-                          li.appendChild(date);
-                          reportList.appendChild(li);
-                      });
-                  }
-              </script>
-          </body>
-          </html>
-          ARCHIVE_EOF2
-            
-            echo "✅ Archive page created"
-          else
-            echo "⚠️ No reports found, creating placeholder"
-            cat > docs/index.html << 'PLACEHOLDER_EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Nifty Option Chain Analysis</title>
-              <style>
-                  body {
-                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-                      min-height: 100vh;
-                      margin: 0;
-                  }
-                  .container {
-                      background: white;
-                      padding: 40px;
-                      border-radius: 15px;
-                      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                      text-align: center;
-                      max-width: 600px;
-                  }
-                  h1 {
-                      color: #667eea;
-                      margin-bottom: 20px;
-                  }
-                  p {
-                      color: #666;
-                      line-height: 1.6;
-                  }
-                  .status {
-                      background-color: #fff3cd;
-                      border: 1px solid #ffc107;
-                      border-radius: 5px;
-                      padding: 15px;
-                      margin-top: 20px;
-                  }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h1>📊 Nifty Option Chain Analysis</h1>
-                  <p>Analysis reports will appear here once the workflow runs successfully.</p>
-                  <div class="status">
-                      <p><strong>⏰ Analysis Schedule:</strong></p>
-                      <p>Reports are auto-generated every 27 minutes during market hours (9:00 AM - 3:30 PM IST) on weekdays.</p>
-                  </div>
-              </div>
-          </body>
-          </html>
-          PLACEHOLDER_EOF
-          fi
-          
-          # Create a README for the docs folder
-          cat > docs/README.md << 'README_EOF'
-          # Nifty Option Chain Analysis - Live Reports
-          
-          This folder contains auto-generated trading analysis reports for Nifty options.
-          
-          ## Latest Report
-          View the latest analysis: [index.html](index.html)
-          
-          ## All Reports
-          Browse historical reports: [archive.html](archive.html)
-          
-          ## Schedule
-          Reports are generated every 27 minutes during market hours (9:00 AM - 3:30 PM IST) on weekdays.
-          
-          *Auto-updated via GitHub Actions*
-          README_EOF
-          
-          echo "=== GitHub Pages content ready ==="
-          ls -lah docs/
-      
-      - name: Check outputs
-        if: always()
-        run: |
-          echo "=== Generated Reports ==="
-          ls -lah reports/ 2>/dev/null || echo "No reports directory"
-          
-          echo "=== GitHub Pages (docs) ==="
-          ls -lah docs/ 2>/dev/null || echo "No docs directory"
-          
-          echo "=== Logs ==="
-          ls -lah logs/ 2>/dev/null || echo "No logs directory"
-          
-          if [ -f "logs/nifty_analyzer.log" ]; then
-            echo "=== Last 30 Log Lines ==="
-            tail -30 logs/nifty_analyzer.log
-          else
-            echo "⚠️ No log file found"
-          fi
-      
-      - name: Upload Reports as Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nifty-reports-${{ github.run_number }}
-          path: |
-            reports/*.html
-            docs/*.html
-          if-no-files-found: warn
-          retention-days: 30
-      
-      - name: Upload Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: analyzer-logs-${{ github.run_number }}
-          path: |
-            logs/*.log
-          if-no-files-found: warn
-          retention-days: 7
-      
-      - name: Deploy to GitHub Pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          publish_branch: gh-pages
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy Nifty Analysis Report - Run #${{ github.run_number }}'
-      
-      - name: Summary
-        if: always()
-        run: |
-          echo "## 📊 Nifty Analysis Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Get repository info
-          REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          REPO_OWNER="${GITHUB_REPOSITORY%/*}"
-          
-          echo "### 🌐 Live Report URL:" >> $GITHUB_STEP_SUMMARY
-          echo "**https://${REPO_OWNER}.github.io/${REPO_NAME}/**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "### 📑 Pages:" >> $GITHUB_STEP_SUMMARY
-          echo "- [Latest Report](https://${REPO_OWNER}.github.io/${REPO_NAME}/)" >> $GITHUB_STEP_SUMMARY
-          echo "- [All Reports Archive](https://${REPO_OWNER}.github.io/${REPO_NAME}/archive.html)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f "logs/nifty_analyzer.log" ]; then
-            echo "### 📝 Last Log Entries:" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -20 logs/nifty_analyzer.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📁 Artifacts:" >> $GITHUB_STEP_SUMMARY
-          echo "- HTML Reports: \`nifty-reports-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Logs: \`analyzer-logs-${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "*Report deployed to GitHub Pages automatically*" >> $GITHUB_STEP_SUMMARY
-          echo "*Runs every 27 minutes during market hours (09:00-15:30 IST)*" >> $GITHUB_STEP_SUMMARY
-          echo "*Powered by curl-cffi for NSE API access*" >> $GITHUB_STEP_SUMMARY
