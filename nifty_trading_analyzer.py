@@ -10,6 +10,8 @@ Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
 FIXED:  Using curl-cffi for NSE API to bypass anti-scraping
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str'
+BUGFIX: Live LTP now fetched via yfinance fast_info to show real-time price
+        (not last completed candle close) — both LTP and Nifty Spot are live
 RESPONSIVE: Auto-adjusts for Mobile / iPad / Desktop / Ultra-wide
 """
 
@@ -200,6 +202,41 @@ class NiftyAnalyzer:
                 file_handler.setFormatter(formatter)
                 self.logger.addHandler(file_handler)
 
+    # =========================================================================
+    # FIX: Fetch live/real-time LTP from yfinance fast_info
+    # =========================================================================
+    def fetch_live_ltp(self):
+        """
+        Fetch the real-time Last Traded Price (LTP) for Nifty.
+        Uses yfinance fast_info which returns live price, NOT the last candle close.
+        Falls back to a 1-min bar if fast_info is unavailable.
+        Returns: float or None
+        """
+        try:
+            ticker = yf.Ticker(self.nifty_symbol)
+
+            # Primary: fast_info gives real-time last_price
+            live_price = ticker.fast_info.get('last_price', None)
+            if live_price and live_price > 0:
+                self.logger.info(f"✅ Live LTP (fast_info): ₹{live_price:.2f}")
+                return round(float(live_price), 2)
+        except Exception as e:
+            self.logger.warning(f"fast_info LTP fetch failed: {e}")
+
+        try:
+            # Fallback: 1-min bar — much closer to live than 1h candle close
+            ticker = yf.Ticker(self.nifty_symbol)
+            df_1m = ticker.history(period='1d', interval='1m')
+            if not df_1m.empty:
+                live_price = float(df_1m['Close'].iloc[-1])
+                self.logger.info(f"✅ Live LTP (1m bar fallback): ₹{live_price:.2f}")
+                return round(live_price, 2)
+        except Exception as e:
+            self.logger.warning(f"1m bar LTP fallback failed: {e}")
+
+        self.logger.warning("⚠️ Could not fetch live LTP — will use last 1h candle close")
+        return None
+
     def fetch_option_chain(self):
         """Fetch Nifty option chain data from NSE using curl-cffi"""
         if self.config['data_source']['option_chain_source'] == 'sample':
@@ -231,7 +268,8 @@ class NiftyAnalyzer:
 
                     if 'records' in data and 'data' in data['records']:
                         option_data  = data['records']['data']
-                        current_price = data['records']['underlyingValue']
+                        # NSE underlyingValue is already live spot price — use it directly
+                        nse_spot_price = data['records']['underlyingValue']
 
                         if not option_data:
                             self.logger.warning(f"No option data for expiry {expiry_date}")
@@ -272,9 +310,9 @@ class NiftyAnalyzer:
                         oc_df = oc_df.fillna(0)
                         oc_df = oc_df.sort_values('Strike')
 
-                        self.logger.info(f"✅ Option chain fetched | Spot: ₹{current_price} | Expiry: {expiry_date}")
+                        self.logger.info(f"✅ Option chain fetched | NSE Spot: ₹{nse_spot_price} | Expiry: {expiry_date}")
                         self.logger.info(f"✅ Total strikes fetched: {len(oc_df)}")
-                        return oc_df, current_price
+                        return oc_df, nse_spot_price
                     else:
                         self.logger.warning("Invalid response structure from NSE API")
                 else:
@@ -417,7 +455,11 @@ class NiftyAnalyzer:
         }
 
     def fetch_technical_data(self):
-        """Fetch historical data for technical analysis - ALWAYS 1 HOUR"""
+        """
+        Fetch historical data for technical analysis - ALWAYS 1 HOUR.
+        Also fetches and stores the real-time LTP in df.attrs['live_price']
+        so downstream code can display the correct live price.
+        """
         if self.config['data_source']['technical_source'] == 'sample':
             self.logger.info("Using sample technical data")
             return None
@@ -436,8 +478,18 @@ class NiftyAnalyzer:
                     self.logger.warning(f"Insufficient data points: {len(df)} < {min_points}")
                     return None
 
-            self.logger.info(f"✅ 1-HOUR data fetched | {len(df)} bars")
-            self.logger.info(f"Price: ₹{df['Close'].iloc[-1]:.2f} | Last candle: {df.index[-1]}")
+            candle_close = df['Close'].iloc[-1]
+            self.logger.info(f"✅ 1-HOUR data fetched | {len(df)} bars | Last candle close: ₹{candle_close:.2f}")
+            self.logger.info(f"Last candle time: {df.index[-1]}")
+
+            # ── LIVE LTP FIX ────────────────────────────────────────────────
+            # fetch_live_ltp() returns the real-time price (fast_info or 1m bar).
+            # If it succeeds, we store it on the DataFrame for use everywhere.
+            # Momentum/RSI calculations still use candle history (correct).
+            live_price = self.fetch_live_ltp()
+            df.attrs['live_price'] = live_price  # None if fetch failed
+            # ────────────────────────────────────────────────────────────────
+
             return df
         except Exception as e:
             self.logger.error(f"Error fetching technical data: {e}")
@@ -557,17 +609,35 @@ class NiftyAnalyzer:
             }
 
     def technical_analysis(self, df):
-        """Perform complete technical analysis - 1 HOUR TIMEFRAME with DUAL MOMENTUM"""
+        """
+        Perform complete technical analysis - 1 HOUR TIMEFRAME with DUAL MOMENTUM.
+
+        LIVE LTP FIX:
+          - current_price displayed in the report = live LTP from fast_info (real-time)
+          - candle_close_price = last 1h bar close (used for momentum calcs vs history)
+          - Momentum percentages computed against candle history (unchanged logic)
+        """
         if df is None or df.empty:
             self.logger.warning("No technical data, using sample analysis")
             return self.get_sample_tech_analysis()
 
-        current_price = df['Close'].iloc[-1]
+        # ── LIVE LTP FIX: resolve display price ─────────────────────────────
+        candle_close_price = float(df['Close'].iloc[-1])
+        live_price = df.attrs.get('live_price', None)
 
+        if live_price and live_price > 0:
+            current_price = live_price
+            self.logger.info(f"💹 Using LIVE LTP: ₹{current_price:.2f}  (candle close was ₹{candle_close_price:.2f})")
+        else:
+            current_price = candle_close_price
+            self.logger.warning(f"⚠️ Live LTP unavailable — using candle close: ₹{current_price:.2f}")
+        # ────────────────────────────────────────────────────────────────────
+
+        # Momentum calculations use candle history (correct behaviour)
         if len(df) > 1:
             price_1h_ago        = df['Close'].iloc[-2]
-            price_change_1h     = current_price - price_1h_ago
-            price_change_pct_1h = (price_change_1h / price_1h_ago * 100)
+            price_change_1h     = current_price - float(price_1h_ago)
+            price_change_pct_1h = (price_change_1h / float(price_1h_ago) * 100)
         else:
             price_change_1h     = 0
             price_change_pct_1h = 0
@@ -576,8 +646,8 @@ class NiftyAnalyzer:
 
         if len(df) >= 5:
             price_5h_ago    = df['Close'].iloc[-5]
-            momentum_5h     = current_price - price_5h_ago
-            momentum_5h_pct = (momentum_5h / price_5h_ago * 100)
+            momentum_5h     = current_price - float(price_5h_ago)
+            momentum_5h_pct = (momentum_5h / float(price_5h_ago) * 100)
         else:
             momentum_5h     = 0
             momentum_5h_pct = 0
@@ -587,8 +657,8 @@ class NiftyAnalyzer:
         bars_2d = 13
         if len(df) >= bars_2d:
             price_2d_ago    = df['Close'].iloc[-bars_2d]
-            momentum_2d     = current_price - price_2d_ago
-            momentum_2d_pct = (momentum_2d / price_2d_ago * 100)
+            momentum_2d     = current_price - float(price_2d_ago)
+            momentum_2d_pct = (momentum_2d / float(price_2d_ago) * 100)
         else:
             momentum_2d     = 0
             momentum_2d_pct = 0
@@ -640,6 +710,7 @@ class NiftyAnalyzer:
 
         return {
             'current_price':       round(current_price, 2),
+            'candle_close_price':  round(candle_close_price, 2),   # kept for reference
             'rsi':                 round(current_rsi, 2),
             'rsi_signal':          rsi_signal,
             'ema20':               round(ema_short_val, 2),
@@ -670,6 +741,7 @@ class NiftyAnalyzer:
         """Return sample technical analysis"""
         return {
             'current_price':       24520.50,
+            'candle_close_price':  24516.45,
             'rsi':                 42.82,
             'rsi_signal':          'Bearish',
             'ema20':               24480.00,
@@ -1313,7 +1385,6 @@ class NiftyAnalyzer:
             .nl-footer-l {{ font-size: 9px; color: #0d2a40; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }}
             .nl-footer-r {{ display: flex; align-items: center; gap: 7px; font-size: 9px; color: #00c8ff; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }}
 
-            /* ── RESPONSIVE: stack panels on mobile ── */
             @media (max-width: 700px) {{
                 .nl-panels {{ grid-template-columns: 1fr; }}
                 .nl-panel.nl-panel-ce {{ border-right: none; border-bottom: 2px solid #0b2540; }}
@@ -1510,8 +1581,8 @@ class NiftyAnalyzer:
             .w2oc-levels-title {{ font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }}
             .w2oc-level-row {{ display: flex; align-items: center; gap: 12px; }}
             .w2oc-level-tag {{ font-size: 10px; font-weight: 800; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }}
-            .w2oc-r-tag {{ background:rgba(255,64,80,.14); border:1px solid rgba(255,64,80,.5); color:#ff5060; }}
-            .w2oc-s-tag {{ background:rgba(0,230,118,.14); border:1px solid rgba(0,230,118,.5); color:#00e676; }}
+            .w2oc-r-tag {{ background:rgba(255,64,80,.14);border:1px solid rgba(255,64,80,.5);color:#ff5060; }}
+            .w2oc-s-tag {{ background:rgba(0,230,118,.14);border:1px solid rgba(0,230,118,.5);color:#00e676; }}
             .w2oc-level-track {{ flex: 1; height: 8px; background: #0a1a2a; border-radius: 4px; overflow: hidden; }}
             .w2oc-level-fill {{ height: 100%; border-radius: 4px; }}
             .w2oc-fill-r {{ background: linear-gradient(90deg,#ff405033,#ff4050cc); box-shadow:0 0 8px #ff405066; }}
@@ -1524,7 +1595,6 @@ class NiftyAnalyzer:
             .w2oc-footer-r {{ display: flex; align-items: center; gap: 6px; font-size: 9px; color: #00c8ff; letter-spacing: 2px; font-weight: 700; }}
             .w2oc-footer-dot {{ width: 6px; height: 6px; border-radius: 50%; background: #00c8ff; box-shadow: 0 0 8px #00c8ff; animation: w2oc-pulse 1.5s ease-in-out infinite; }}
 
-            /* RESPONSIVE */
             @media (max-width: 700px) {{
                 .w2oc-body {{ grid-template-columns: 1fr; }}
                 .w2oc-gauge-col {{ border-right: none; border-bottom: 1px solid #0a2040; padding: 20px; }}
@@ -1799,7 +1869,6 @@ class NiftyAnalyzer:
             .w1-footer-l {{ color: #2a6a8a; letter-spacing: 1px; }}
             .w1-footer-r {{ color: #00c8ff; font-weight: 700; text-shadow: 0 0 8px rgba(0,200,255,.5); }}
 
-            /* RESPONSIVE */
             @media (max-width: 600px) {{
                 .w1-grid {{ grid-template-columns: 1fr; }}
                 .w1-pivot-col {{ border: none; border-top: 1px solid #0a2030; border-bottom: 1px solid #0a2030; flex-direction: row; justify-content: space-around; padding: 12px 16px; }}
@@ -2002,7 +2071,6 @@ class NiftyAnalyzer:
             .w4-footer-dot {{ width:5px;height:5px;border-radius:50%;background:#ffd700;display:inline-block;margin-right:6px;box-shadow:0 0 6px #ffd700;animation:w4-blink 2s ease-in-out infinite; }}
             @keyframes w4-blink {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.4; }} }}
 
-            /* RESPONSIVE */
             @media (max-width: 600px) {{
                 .w4-body {{ grid-template-columns: 1fr; }}
                 .w4-col.r-col {{ border-right: none; border-bottom: 2px solid #222; }}
@@ -2028,7 +2096,7 @@ class NiftyAnalyzer:
                 <div class="w4-ltp-line"></div>
                 <div class="w4-ltp-chip">
                     <span class="w4-ltp-label">LTP</span>
-                    <span class="w4-ltp-value">&#8377;{current_price:,.1f}</span>
+                    <span class="w4-ltp-value">&#8377;{current_price:,.2f}</span>
                 </div>
                 <div class="w4-ltp-line"></div>
             </div>
@@ -2046,7 +2114,7 @@ class NiftyAnalyzer:
             </div>
             <div class="w4-footer">
                 <span class="w4-footer-left">WIDGET 04 &middot; BLOOMBERG TABLE &middot; PRICE ACTION S/R</span>
-                <span class="w4-footer-right"><span class="w4-footer-dot"></span>LTP &#8377;{current_price:,.1f}</span>
+                <span class="w4-footer-right"><span class="w4-footer-dot"></span>LTP &#8377;{current_price:,.2f}</span>
             </div>
         </div>'''
         return widget_html
@@ -2059,6 +2127,8 @@ class NiftyAnalyzer:
         bias          = recommendation['bias']
         current_price = tech_analysis.get('current_price', 0)
         confidence    = recommendation['confidence']
+        # Also show candle close alongside live LTP for transparency
+        candle_close  = tech_analysis.get('candle_close_price', current_price)
 
         if bias == 'Bullish':
             hdr_accent = '#00ff88'; hdr_bg_from = '#003322'; hdr_bg_to = '#001a11'
@@ -2158,7 +2228,6 @@ class NiftyAnalyzer:
 
             cards_html += f'''
             <div style="background:linear-gradient(135deg,#030d18 0%,#020910 100%);border:1px solid #0a2a40;border-left:4px solid {card_border_color};border-radius:14px;overflow:hidden;box-shadow:0 0 30px {card_glow},0 12px 40px rgba(0,0,0,0.8);font-family:'Chakra Petch',sans-serif;">
-                <!-- Card Header -->
                 <div style="background:linear-gradient(135deg,#031525 0%,#020e1c 100%);border-bottom:1px solid #0a3050;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                         <span style="font-size:clamp(14px,3vw,17px);font-weight:800;color:#ffffff;letter-spacing:1px;text-shadow:0 0 20px rgba(0,200,255,0.3);">{strategy}</span>
@@ -2171,7 +2240,6 @@ class NiftyAnalyzer:
                         <span style="font-size:10px;color:#00c8ff;font-weight:700;letter-spacing:1.5px;">LIVE</span>
                     </div>
                 </div>
-                <!-- Main metrics row — responsive grid -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));border-bottom:1px solid #0a2030;">
                     <div style="padding:16px;border-right:1px solid #0a2030;background:rgba(0,200,255,0.04);">
                         <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">LTP</div>
@@ -2199,7 +2267,6 @@ class NiftyAnalyzer:
                         <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">VOLUME</div>
                     </div>
                 </div>
-                <!-- Targets + Stop Loss — responsive grid -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid #0a2030;">
                     <div style="padding:16px 18px;border-right:1px solid #0a2030;background:rgba(0,200,80,0.05);border-bottom:2px solid rgba(0,200,80,0.3);">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -2226,7 +2293,6 @@ class NiftyAnalyzer:
                         <div style="font-size:11px;color:#8a2233;margin-top:4px;font-weight:600;">Risk per lot: {risk_per_lot}</div>
                     </div>
                 </div>
-                <!-- R:R footer bar -->
                 <div style="padding:10px 18px;background:#020810;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                         <span style="font-size:10px;color:#1a4a6a;letter-spacing:1.5px;font-weight:600;">RISK:REWARD</span>
@@ -2270,9 +2336,10 @@ class NiftyAnalyzer:
             .stc-master-text p {{ font-size: 10px; color: #2a6a8a; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
             .stc-master-right {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }}
             .stc-bias-pill {{ background:{bias_bg};border:1.5px solid {bias_brd};color:{bias_color};padding:7px 20px;border-radius:22px;font-size:13px;font-weight:800;letter-spacing:2px;text-shadow:0 0 14px {bias_color}88;box-shadow:0 0 18px {bias_color}22; }}
-            .stc-price-chip {{ background:rgba(0,0,0,0.4);border:1px solid #0a3050;border-radius:10px;padding:7px 16px;display:flex;align-items:center;gap:8px; }}
+            .stc-price-chip {{ background:rgba(0,0,0,0.4);border:1px solid #0a3050;border-radius:10px;padding:7px 16px;display:flex;align-items:center;gap:8px;flex-direction:column; }}
             .stc-price-lbl {{ font-size:9px;color:#2a6a8a;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
             .stc-price-val {{ font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:800;color:#00c8ff;text-shadow:0 0 14px rgba(0,200,255,0.6); }}
+            .stc-price-sub {{ font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#3a6a8a; }}
             .stc-cards {{ display:flex;flex-direction:column;gap:16px;padding:16px 0 0 0; }}
             @keyframes stc-pulse {{ 0%,100% {{ opacity:1;transform:scale(1); }} 50% {{ opacity:0.5;transform:scale(0.8); }} }}
             .stc-footer {{ background:#010810;border:1px solid #0a2030;border-top:none;border-radius:0 0 12px 12px;padding:10px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }}
@@ -2293,8 +2360,9 @@ class NiftyAnalyzer:
                 <div class="stc-master-right">
                     <div class="stc-bias-pill">{bias.upper()}</div>
                     <div class="stc-price-chip">
-                        <span class="stc-price-lbl">NIFTY</span>
+                        <span class="stc-price-lbl">NIFTY LIVE LTP</span>
                         <span class="stc-price-val">&#8377;{current_price:,.2f}</span>
+                        <span class="stc-price-sub">1H Close: &#8377;{candle_close:,.2f}</span>
                     </div>
                 </div>
             </div>
@@ -2310,8 +2378,13 @@ class NiftyAnalyzer:
     # =========================================================================
     # HTML REPORT — Deep Ocean Trading Desk Theme (FULL RESPONSIVE)
     # =========================================================================
-    def create_html_report(self, oc_analysis, tech_analysis, recommendation):
-        """Create professional HTML report — Deep Ocean Trading Desk Theme"""
+    def create_html_report(self, oc_analysis, tech_analysis, recommendation, nse_spot_price=None):
+        """
+        Create professional HTML report — Deep Ocean Trading Desk Theme.
+        nse_spot_price: live spot from NSE option chain API (underlyingValue).
+        tech_analysis['current_price']: live LTP from yfinance fast_info.
+        Both are now correctly real-time, not stale candle closes.
+        """
         now_ist = self.format_ist_time()
         rec = recommendation['recommendation']
 
@@ -2335,6 +2408,7 @@ class NiftyAnalyzer:
 
         pivot_points   = tech_analysis.get('pivot_points', {})
         current_price  = tech_analysis.get('current_price', 0)
+        candle_close   = tech_analysis.get('candle_close_price', current_price)
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         pivot_widget_html = self._build_pivot_widget(pivot_points, current_price, nearest_levels)
 
@@ -2365,6 +2439,9 @@ class NiftyAnalyzer:
         bar_1h = min(abs(momentum_1h_pct) * 40, 100)
         bar_5h = min(abs(momentum_5h_pct) * 20, 100)
         bar_2d = min(abs(momentum_2d_pct) * 10, 100)
+
+        # Spot price display: prefer NSE underlyingValue, else live LTP
+        spot_display = nse_spot_price if nse_spot_price else current_price
 
         strategies_html = ''
         for strategy in strategies:
@@ -2449,6 +2526,23 @@ class NiftyAnalyzer:
             font-weight: 700; margin-bottom: 14px; letter-spacing: clamp(2px, 1vw, 5px);
             text-transform: uppercase; text-shadow: 0 0 40px rgba(201,168,76,.5), 0 2px 4px rgba(0,0,0,.8);
         }}
+
+        /* ── LIVE PRICE BANNER ── */
+        .live-price-banner {{
+            display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 40px);
+            background: linear-gradient(135deg, #0a0800 0%, #141000 100%);
+            border: 1px solid #3a2a08; border-top: 2px solid var(--gold);
+            padding: clamp(12px, 2vw, 18px) clamp(16px, 3vw, 28px);
+            margin: 14px 0; flex-wrap: wrap;
+        }}
+        .live-price-item {{ text-align: center; }}
+        .live-price-label {{ font-size: clamp(9px, 1.5vw, 11px); color: var(--gold-dim); letter-spacing: 3px; text-transform: uppercase; font-family: 'Cinzel', serif; font-weight: 600; margin-bottom: 6px; }}
+        .live-price-value {{ font-family: 'Cinzel', serif; font-size: clamp(20px, 4vw, 28px); font-weight: 700; color: var(--gold-bright); text-shadow: 0 0 24px rgba(255,215,0,0.5); }}
+        .live-price-sub {{ font-size: clamp(9px, 1.5vw, 11px); color: var(--gold-dim); margin-top: 4px; font-family: 'Cinzel', serif; letter-spacing: 1px; }}
+        .live-price-sep {{ width: 1px; height: 50px; background: linear-gradient(180deg, transparent, var(--gold-dim), transparent); flex-shrink: 0; }}
+        .live-dot {{ width: 8px; height: 8px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 10px #00ff88; display: inline-block; margin-right: 6px; animation: live-pulse 1.5s ease-in-out infinite; }}
+        @keyframes live-pulse {{ 0%,100% {{ opacity:1;transform:scale(1); }} 50% {{ opacity:0.5;transform:scale(0.8); }} }}
+
         .timestamp {{ color: var(--gold-dim); font-size: clamp(10px, 2vw, 12px); font-weight: 600; margin-top: 10px; letter-spacing: 2px; font-family: 'Cinzel', serif; }}
         .timeframe-badge {{
             display: inline-flex; align-items: center; gap: 12px;
@@ -2545,39 +2639,28 @@ class NiftyAnalyzer:
         /* ── FOOTER ── */
         .footer {{ text-align:center; margin-top:30px; padding-top:20px; border-top:1px solid var(--dark-border2); color:var(--text-dim); font-size:clamp(9px,1.5vw,11px); line-height:1.8; letter-spacing:1px; font-family:'Cinzel',serif; }}
 
-        /* ══════════════════════════════════════════
-           RESPONSIVE BREAKPOINTS — COMPREHENSIVE
-        ══════════════════════════════════════════ */
-
-        /* Tablet 900px */
+        /* ══ RESPONSIVE ══ */
         @media (max-width: 900px) {{
             .momentum-container {{ grid-template-columns: 1fr 1fr 1fr; }}
             .data-grid {{ grid-template-columns: repeat(3, 1fr); }}
         }}
-
-        /* Small Tablet / Large Phone: 680px */
         @media (max-width: 680px) {{
             .momentum-container {{ grid-template-columns: 1fr 1fr; gap: 10px; }}
             .header-corner-tl,.header-corner-tr,.header-corner-bl,.header-corner-br {{ display: none; }}
             .section-title .st-line,.section-title .st-line-r {{ display: none; }}
             .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
             .strategies-grid {{ grid-template-columns: 1fr; }}
+            .live-price-sep {{ display: none; }}
         }}
-
-        /* Mobile: 480px */
         @media (max-width: 480px) {{
             .momentum-container {{ grid-template-columns: 1fr; gap: 10px; }}
             .timeframe-badge::before,.timeframe-badge::after {{ width: 20px; }}
             .data-grid {{ grid-template-columns: 1fr; }}
             .recommendation-box::before {{ display: none; }}
         }}
-
-        /* Large Desktop: 1600px+ */
         @media (min-width: 1600px) {{
             .data-grid {{ grid-template-columns: repeat(6, 1fr); }}
         }}
-
-        /* Print Stylesheet */
         @media print {{
             body {{ background: white; color: black; padding: 0; }}
             .container {{ box-shadow: none; border: 1px solid #ccc; }}
@@ -2599,7 +2682,28 @@ class NiftyAnalyzer:
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- OPTION CHAIN — WIDGET 02 PLASMA RADIAL (top as requested) -->
+    <!-- LIVE PRICE BANNER (NEW — shows real-time LTP + NSE Spot clearly) -->
+    <div class="live-price-banner">
+        <div class="live-price-item">
+            <div class="live-price-label"><span class="live-dot"></span>NIFTY LIVE LTP</div>
+            <div class="live-price-value">&#8377;{current_price:,.2f}</div>
+            <div class="live-price-sub">via yfinance fast_info (real-time)</div>
+        </div>
+        <div class="live-price-sep"></div>
+        <div class="live-price-item">
+            <div class="live-price-label"><span class="live-dot"></span>NSE SPOT PRICE</div>
+            <div class="live-price-value">&#8377;{spot_display:,.2f}</div>
+            <div class="live-price-sub">via NSE Option Chain API</div>
+        </div>
+        <div class="live-price-sep"></div>
+        <div class="live-price-item">
+            <div class="live-price-label">1H CANDLE CLOSE</div>
+            <div class="live-price-value" style="color:var(--gold-dim);font-size:clamp(16px,3vw,20px);">&#8377;{candle_close:,.2f}</div>
+            <div class="live-price-sub">last completed 1H bar</div>
+        </div>
+    </div>
+
+    <!-- OPTION CHAIN — WIDGET 02 PLASMA RADIAL -->
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Option Chain Analysis<span class="st-line-r"></span></div>
         {oc_plasma_widget_html}
@@ -2641,7 +2745,8 @@ class NiftyAnalyzer:
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Technical Analysis (1H)<span class="st-line-r"></span></div>
         <div class="data-grid">
-            <div class="data-item"><div class="label">Current Price</div><div class="value">&#8377;{tech_analysis.get('current_price','N/A')}</div></div>
+            <div class="data-item"><div class="label">Live LTP</div><div class="value">&#8377;{current_price:,.2f}</div></div>
+            <div class="data-item"><div class="label">1H Candle Close</div><div class="value">&#8377;{candle_close:,.2f}</div></div>
             <div class="data-item"><div class="label">RSI (14)</div><div class="value">{tech_analysis.get('rsi','N/A')}</div></div>
             <div class="data-item"><div class="label">EMA 20</div><div class="value">&#8377;{tech_analysis.get('ema20','N/A')}</div></div>
             <div class="data-item"><div class="label">EMA 50</div><div class="value">&#8377;{tech_analysis.get('ema50','N/A')}</div></div>
@@ -2681,7 +2786,7 @@ class NiftyAnalyzer:
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Strike Recommendations<span class="st-line-r"></span></div>
         <p style="color:#7a6030;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
-            <strong style="color:#c9a84c;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
+            <strong style="color:#c9a84c;">Based on {recommendation['bias']} bias &mdash; Live Nifty LTP &#8377;{current_price:,.2f}</strong><br>
             Actionable trades with specific strike prices, LTP, targets &amp; risk management.
         </p>
         {strike_ticker_card_html}
@@ -2699,7 +2804,7 @@ class NiftyAnalyzer:
     <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; Art Deco Gold Theme &nbsp;&#9830;&nbsp; Neon Runway Pivot &nbsp;&#9830;&nbsp; Bloomberg S/R Table &nbsp;&#9830;&nbsp; Dual Momentum (1H + 5H) &nbsp;&#9830;&nbsp; Neon Ledger OI &nbsp;&#9830;&nbsp; Dark Ticker Card Strike</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; Live LTP via yfinance fast_info &nbsp;&#9830;&nbsp; NSE Spot via Option Chain API &nbsp;&#9830;&nbsp; Art Deco Gold Theme</p>
     </div>
 
 </div>
@@ -2739,16 +2844,18 @@ class NiftyAnalyzer:
 
     def run_analysis(self):
         """Run complete analysis with DUAL MOMENTUM DETECTION"""
-        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum...")
+        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum + Live LTP Fix...")
         self.logger.info("=" * 60)
 
-        oc_df, spot_price = self.fetch_option_chain()
+        oc_df, nse_spot_price = self.fetch_option_chain()
 
-        if oc_df is not None and spot_price is not None:
-            oc_analysis = self.analyze_option_chain(oc_df, spot_price)
+        if oc_df is not None and nse_spot_price is not None:
+            oc_analysis = self.analyze_option_chain(oc_df, nse_spot_price)
         else:
+            nse_spot_price = None
             oc_analysis = self.get_sample_oc_analysis()
 
+        # fetch_technical_data now also calls fetch_live_ltp() internally
         tech_df = self.fetch_technical_data()
 
         if tech_df is not None and not tech_df.empty:
@@ -2762,13 +2869,18 @@ class NiftyAnalyzer:
         self.logger.info("=" * 60)
         self.logger.info(f"📊 RECOMMENDATION: {recommendation['recommendation']}")
         self.logger.info(f"📈 Bias: {recommendation['bias']} | Confidence: {recommendation['confidence']}")
+        self.logger.info(f"💹 Live LTP (yfinance):  ₹{tech_analysis.get('current_price', 'N/A')}")
+        self.logger.info(f"💹 NSE Spot (API):       ₹{nse_spot_price or 'N/A'}")
+        self.logger.info(f"📉 1H Candle Close:      ₹{tech_analysis.get('candle_close_price', 'N/A')}")
         self.logger.info(f"🎯 RSI (1H): {tech_analysis.get('rsi', 'N/A')}")
         self.logger.info(f"⚡ 1H Momentum: {tech_analysis.get('price_change_pct_1h', 0):+.2f}% - {tech_analysis.get('momentum_1h_signal')}")
         self.logger.info(f"📊 5H Momentum: {tech_analysis.get('momentum_5h_pct', 0):+.2f}% - {tech_analysis.get('momentum_5h_signal')}")
         self.logger.info(f"📍 Pivot Point: ₹{tech_analysis.get('pivot_points', {}).get('pivot', 'N/A')}")
         self.logger.info("=" * 60)
 
-        html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation)
+        # Pass nse_spot_price to report so it can be shown in the banner
+        html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation,
+                                              nse_spot_price=nse_spot_price)
 
         if self.config['report']['save_local']:
             report_dir      = self.config['report']['local_dir']
@@ -2787,10 +2899,11 @@ class NiftyAnalyzer:
         self.logger.info("✅ Analysis Complete!")
 
         return {
-            'oc_analysis':    oc_analysis,
-            'tech_analysis':  tech_analysis,
-            'recommendation': recommendation,
-            'html_report':    html_report
+            'oc_analysis':      oc_analysis,
+            'tech_analysis':    tech_analysis,
+            'recommendation':   recommendation,
+            'html_report':      html_report,
+            'nse_spot_price':   nse_spot_price
         }
 
 
@@ -2801,9 +2914,12 @@ if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
 
-    print(f"\n✅ Analysis Complete! (Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI · Dark Ticker Card Strike)")
-    print(f"Recommendation: {result['recommendation']['recommendation']}")
-    print(f"RSI (1H):       {result['tech_analysis']['rsi']}")
-    print(f"1H Momentum:    {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
-    print(f"5H Momentum:    {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
-    print(f"Check your email or ./reports/ for the detailed report!")
+    print(f"\n✅ Analysis Complete!")
+    print(f"Recommendation:    {result['recommendation']['recommendation']}")
+    print(f"Live LTP:          ₹{result['tech_analysis']['current_price']:,.2f}  ← real-time via fast_info")
+    print(f"NSE Spot:          ₹{result['nse_spot_price'] or 'N/A'}  ← via NSE option chain API")
+    print(f"1H Candle Close:   ₹{result['tech_analysis']['candle_close_price']:,.2f}  ← last completed bar")
+    print(f"RSI (1H):          {result['tech_analysis']['rsi']}")
+    print(f"1H Momentum:       {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
+    print(f"5H Momentum:       {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
+    print(f"Check your email or ./reports/ for the detailed HTML report!")
