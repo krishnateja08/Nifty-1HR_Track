@@ -12,6 +12,10 @@ FIXED:  Using curl-cffi for NSE API to bypass anti-scraping
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str'
 BUGFIX: Live LTP now fetched via yfinance fast_info to show real-time price
         (not last completed candle close) — both LTP and Nifty Spot are live
+OI FIX: Top 5 CE picked from 10 strikes ABOVE ATM only (not full chain)
+        Top 5 PE picked from 10 strikes BELOW ATM only (not full chain)
+        PCR, buildup, IV also computed from this ±10 ATM window for accuracy
+        ATM badge displayed in widget header for quick reference
 RESPONSIVE: Auto-adjusts for Mobile / iPad / Desktop / Ultra-wide
 """
 
@@ -329,32 +333,81 @@ class NiftyAnalyzer:
         return None, None
 
     def get_top_strikes_by_oi(self, oc_df, spot_price):
-        """Get top 5 strikes by Open Interest for CE and PE"""
+        """
+        Get top 5 CE and top 5 PE strikes by Open Interest,
+        but ONLY considering the 10 strikes immediately above ATM (for CE)
+        and 10 strikes immediately below ATM (for PE).
+
+        Logic:
+          ATM strike  = nearest strike to spot_price (rounded to 50)
+          CE window   = ATM + 1 strike  →  ATM + 10 strikes  (10 strikes above ATM)
+          PE window   = ATM - 1 strike  →  ATM - 10 strikes  (10 strikes below ATM)
+
+        Within each window, pick top 5 by OI.
+        This avoids far OTM/ITM noise and focuses on the most relevant strikes.
+        """
         if oc_df is None or oc_df.empty:
             return {'top_ce_strikes': [], 'top_pe_strikes': []}
 
-        top_count = self.config['option_chain'].get('top_strikes_count', 5)
+        top_count   = self.config['option_chain'].get('top_strikes_count', 5)
+        window_size = 10   # number of strikes above/below ATM to consider
 
-        ce_data = oc_df[oc_df['Call_OI'] > 0].copy()
+        # ATM = nearest strike to spot (Nifty strikes are multiples of 50)
+        all_strikes_sorted = sorted(oc_df['Strike'].unique())
+        atm_strike = min(all_strikes_sorted, key=lambda x: abs(x - spot_price))
+
+        # ── CE window: 10 strikes ABOVE ATM (ATM itself excluded, it belongs to PE side too) ──
+        strikes_above_atm = [s for s in all_strikes_sorted if s > atm_strike]
+        ce_window_strikes  = strikes_above_atm[:window_size]   # nearest 10 above ATM
+
+        # ── PE window: 10 strikes BELOW ATM ──
+        strikes_below_atm = [s for s in reversed(all_strikes_sorted) if s < atm_strike]
+        pe_window_strikes  = strikes_below_atm[:window_size]   # nearest 10 below ATM
+
+        # Include ATM in both windows so ATM CE/PE are always visible
+        ce_window_strikes = [atm_strike] + ce_window_strikes
+        pe_window_strikes = [atm_strike] + pe_window_strikes
+
+        self.logger.info(
+            f"📊 ATM Strike: ₹{atm_strike} | "
+            f"CE window: ₹{ce_window_strikes[0]}–₹{ce_window_strikes[-1]} | "
+            f"PE window: ₹{pe_window_strikes[-1]}–₹{pe_window_strikes[0]}"
+        )
+
+        # ── Top CE strikes (by Call_OI) within CE window ──
+        ce_data = oc_df[oc_df['Strike'].isin(ce_window_strikes) & (oc_df['Call_OI'] > 0)].copy()
         ce_data = ce_data.sort_values('Call_OI', ascending=False).head(top_count)
+
         top_ce_strikes = []
         for _, row in ce_data.iterrows():
-            strike_type = 'ITM' if row['Strike'] < spot_price else ('ATM' if row['Strike'] == spot_price else 'OTM')
+            if row['Strike'] == atm_strike:
+                strike_type = 'ATM'
+            elif row['Strike'] < spot_price:
+                strike_type = 'ITM'
+            else:
+                strike_type = 'OTM'
             top_ce_strikes.append({
-                'strike':   row['Strike'],
-                'oi':       int(row['Call_OI']),
-                'ltp':      row['Call_LTP'],
-                'iv':       row['Call_IV'],
-                'type':     strike_type,
-                'chng_oi':  int(row['Call_Chng_OI']),
-                'volume':   int(row['Call_Volume'])
+                'strike':  row['Strike'],
+                'oi':      int(row['Call_OI']),
+                'ltp':     row['Call_LTP'],
+                'iv':      row['Call_IV'],
+                'type':    strike_type,
+                'chng_oi': int(row['Call_Chng_OI']),
+                'volume':  int(row['Call_Volume'])
             })
 
-        pe_data = oc_df[oc_df['Put_OI'] > 0].copy()
+        # ── Top PE strikes (by Put_OI) within PE window ──
+        pe_data = oc_df[oc_df['Strike'].isin(pe_window_strikes) & (oc_df['Put_OI'] > 0)].copy()
         pe_data = pe_data.sort_values('Put_OI', ascending=False).head(top_count)
+
         top_pe_strikes = []
         for _, row in pe_data.iterrows():
-            strike_type = 'ITM' if row['Strike'] > spot_price else ('ATM' if row['Strike'] == spot_price else 'OTM')
+            if row['Strike'] == atm_strike:
+                strike_type = 'ATM'
+            elif row['Strike'] > spot_price:
+                strike_type = 'ITM'
+            else:
+                strike_type = 'OTM'
             top_pe_strikes.append({
                 'strike':  row['Strike'],
                 'oi':      int(row['Put_OI']),
@@ -365,20 +418,58 @@ class NiftyAnalyzer:
                 'volume':  int(row['Put_Volume'])
             })
 
-        return {'top_ce_strikes': top_ce_strikes, 'top_pe_strikes': top_pe_strikes}
+        self.logger.info(
+            f"✅ Top CE strikes (±10 ATM window): "
+            f"{[s['strike'] for s in top_ce_strikes]}"
+        )
+        self.logger.info(
+            f"✅ Top PE strikes (±10 ATM window): "
+            f"{[s['strike'] for s in top_pe_strikes]}"
+        )
+
+        return {'top_ce_strikes': top_ce_strikes, 'top_pe_strikes': top_pe_strikes,
+                'atm_strike': atm_strike,
+                'ce_window': ce_window_strikes,
+                'pe_window': pe_window_strikes}
 
     def analyze_option_chain(self, oc_df, spot_price):
-        """Analyze option chain for trading signals"""
+        """
+        Analyze option chain for trading signals.
+
+        PCR, buildup, and IV are calculated over the ±10 strike ATM window
+        (same window used for the OI display), so the numbers are meaningful
+        and not diluted by far OTM/ITM strikes with negligible open interest.
+        Max Pain still uses the full chain (it needs all strikes by definition).
+        """
         if oc_df is None or oc_df.empty:
             self.logger.warning("No option chain data, using sample analysis")
             return self.get_sample_oc_analysis()
 
         config = self.config['option_chain']
 
-        total_call_oi = oc_df['Call_OI'].sum()
-        total_put_oi  = oc_df['Put_OI'].sum()
-        pcr = total_put_oi / total_call_oi if total_call_oi > 0 else 0
+        # ── Step 1: compute ATM window (same as get_top_strikes_by_oi) ──────
+        all_strikes_sorted = sorted(oc_df['Strike'].unique())
+        atm_strike  = min(all_strikes_sorted, key=lambda x: abs(x - spot_price))
+        window_size = 10
 
+        strikes_above = [s for s in all_strikes_sorted if s > atm_strike]
+        strikes_below = [s for s in reversed(all_strikes_sorted) if s < atm_strike]
+        ce_window     = [atm_strike] + strikes_above[:window_size]
+        pe_window     = [atm_strike] + strikes_below[:window_size]
+        atm_window    = sorted(set(ce_window + pe_window))   # full ±10 band
+
+        atm_df = oc_df[oc_df['Strike'].isin(atm_window)].copy()
+        self.logger.info(
+            f"📊 ATM window for analysis: ₹{atm_window[0]}–₹{atm_window[-1]} "
+            f"({len(atm_window)} strikes)"
+        )
+
+        # ── Step 2: PCR from ATM window (more representative) ───────────────
+        window_call_oi = atm_df['Call_OI'].sum()
+        window_put_oi  = atm_df['Put_OI'].sum()
+        pcr = window_put_oi / window_call_oi if window_call_oi > 0 else 0
+
+        # ── Step 3: Max Pain (needs full chain) ──────────────────────────────
         oc_df['Call_Pain'] = oc_df.apply(
             lambda row: row['Call_OI'] * max(0, spot_price - row['Strike']), axis=1
         )
@@ -386,44 +477,51 @@ class NiftyAnalyzer:
             lambda row: row['Put_OI'] * max(0, row['Strike'] - spot_price), axis=1
         )
         oc_df['Total_Pain'] = oc_df['Call_Pain'] + oc_df['Put_Pain']
-
         max_pain_strike = oc_df.loc[oc_df['Total_Pain'].idxmax(), 'Strike']
 
-        strike_range   = config['strike_range']
-        nearby_strikes = oc_df[
-            (oc_df['Strike'] >= spot_price - strike_range) &
-            (oc_df['Strike'] <= spot_price + strike_range)
-        ].copy()
-
+        # ── Step 4: Resistance / Support from ATM window ────────────────────
         num_resistance = self.config['technical']['num_resistance_levels']
         num_support    = self.config['technical']['num_support_levels']
 
-        resistance_df = nearby_strikes[nearby_strikes['Strike'] > spot_price].nlargest(num_resistance, 'Call_OI')
+        above_atm_df = atm_df[atm_df['Strike'] > spot_price]
+        below_atm_df = atm_df[atm_df['Strike'] < spot_price]
+
+        resistance_df = above_atm_df.nlargest(num_resistance, 'Call_OI')
         resistances   = resistance_df['Strike'].tolist()
 
-        support_df = nearby_strikes[nearby_strikes['Strike'] < spot_price].nlargest(num_support, 'Put_OI')
+        support_df = below_atm_df.nlargest(num_support, 'Put_OI')
         supports   = support_df['Strike'].tolist()
 
-        total_call_buildup = oc_df['Call_Chng_OI'].sum()
-        total_put_buildup  = oc_df['Put_Chng_OI'].sum()
+        # ── Step 5: OI Buildup & IV from ATM window ──────────────────────────
+        total_call_buildup = atm_df['Call_Chng_OI'].sum()
+        total_put_buildup  = atm_df['Put_Chng_OI'].sum()
 
-        avg_call_iv = oc_df['Call_IV'].mean()
-        avg_put_iv  = oc_df['Put_IV'].mean()
+        avg_call_iv = atm_df[atm_df['Call_IV'] > 0]['Call_IV'].mean() if (atm_df['Call_IV'] > 0).any() else 0
+        avg_put_iv  = atm_df[atm_df['Put_IV']  > 0]['Put_IV'].mean()  if (atm_df['Put_IV']  > 0).any() else 0
 
+        # ── Step 6: Top 5 CE / PE (already filtered to ±10 window inside) ───
         top_strikes = self.get_top_strikes_by_oi(oc_df, spot_price)
 
+        self.logger.info(
+            f"📈 PCR (±10 ATM window): {pcr:.2f} | "
+            f"Call buildup: {total_call_buildup:,.0f} | Put buildup: {total_put_buildup:,.0f}"
+        )
+
         return {
-            'pcr':           round(pcr, 2),
-            'max_pain':      max_pain_strike,
-            'resistances':   sorted(resistances, reverse=True),
-            'supports':      sorted(supports, reverse=True),
-            'call_buildup':  total_call_buildup,
-            'put_buildup':   total_put_buildup,
-            'avg_call_iv':   round(avg_call_iv, 2),
-            'avg_put_iv':    round(avg_put_iv, 2),
-            'oi_sentiment':  'Bullish' if total_put_buildup > total_call_buildup else 'Bearish',
+            'pcr':            round(pcr, 2),
+            'max_pain':       max_pain_strike,
+            'atm_strike':     atm_strike,
+            'resistances':    sorted(resistances, reverse=True),
+            'supports':       sorted(supports, reverse=True),
+            'call_buildup':   total_call_buildup,
+            'put_buildup':    total_put_buildup,
+            'avg_call_iv':    round(avg_call_iv, 2),
+            'avg_put_iv':     round(avg_put_iv, 2),
+            'oi_sentiment':   'Bullish' if total_put_buildup > total_call_buildup else 'Bearish',
             'top_ce_strikes': top_strikes['top_ce_strikes'],
-            'top_pe_strikes': top_strikes['top_pe_strikes']
+            'top_pe_strikes': top_strikes['top_pe_strikes'],
+            'ce_window':      top_strikes.get('ce_window', []),
+            'pe_window':      top_strikes.get('pe_window', []),
         }
 
     def get_sample_oc_analysis(self):
@@ -431,6 +529,7 @@ class NiftyAnalyzer:
         return {
             'pcr':          1.15,
             'max_pain':     24500,
+            'atm_strike':   24500,
             'resistances':  [24600, 24650],
             'supports':     [24400, 24350],
             'call_buildup': 5000000,
@@ -438,6 +537,8 @@ class NiftyAnalyzer:
             'avg_call_iv':  15.5,
             'avg_put_iv':   16.2,
             'oi_sentiment': 'Bullish',
+            'ce_window':    [24500, 24550, 24600, 24650, 24700, 24750, 24800, 24850, 24900, 24950, 25000],
+            'pe_window':    [24500, 24450, 24400, 24350, 24300, 24250, 24200, 24150, 24100, 24050, 24000],
             'top_ce_strikes': [
                 {'strike': 24500, 'oi': 5000000, 'ltp': 120, 'iv': 16.5, 'type': 'ATM', 'chng_oi': 500000, 'volume': 125000},
                 {'strike': 24600, 'oi': 4500000, 'ltp': 80,  'iv': 15.8, 'type': 'OTM', 'chng_oi': 450000, 'volume': 110000},
@@ -1187,7 +1288,7 @@ class NiftyAnalyzer:
     # =========================================================================
     # WIDGET 01 — NEON LEDGER | Top 10 Open Interest
     # =========================================================================
-    def _build_oi_neon_ledger_widget(self, top_ce_strikes, top_pe_strikes):
+    def _build_oi_neon_ledger_widget(self, top_ce_strikes, top_pe_strikes, atm_strike=None):
         all_oi = [s['oi'] for s in top_ce_strikes] + [s['oi'] for s in top_pe_strikes]
         max_oi = max(all_oi) if all_oi else 1
 
@@ -1320,6 +1421,11 @@ class NiftyAnalyzer:
                 padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
                 text-shadow: 0 0 12px rgba(255,58,92,.8); box-shadow: 0 0 16px rgba(255,58,92,.2);
             }}
+            .nl-atm-badge {{
+                background: rgba(255,220,0,.15); border: 1px solid rgba(255,220,0,.6); color: #ffe033;
+                padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(255,220,0,.8); box-shadow: 0 0 16px rgba(255,220,0,.2);
+            }}
             .nl-pe-badge {{
                 background: rgba(0,230,118,.15); border: 1px solid rgba(0,230,118,.6); color: #00e676;
                 padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
@@ -1401,11 +1507,12 @@ class NiftyAnalyzer:
                     <div class="nl-master-icon">&#9651;</div>
                     <div class="nl-master-text">
                         <h2>Top 10 Open Interest</h2>
-                        <p>NIFTY &middot; Weekly Expiry &middot; OI Analysis</p>
+                        <p>NIFTY &middot; ±10 Strikes from ATM &middot; Highest OI in Window</p>
                     </div>
                 </div>
                 <div class="nl-master-badges">
                     <span class="nl-ce-badge">5 CE</span>
+                    <span class="nl-atm-badge">ATM &#8377;{atm_strike:,}</span>
                     <span class="nl-pe-badge">5 PE</span>
                     <div class="nl-live-dot"></div>
                 </div>
@@ -1415,7 +1522,7 @@ class NiftyAnalyzer:
                     <div class="nl-panel-hdr">
                         <div class="nl-panel-hdr-dot nl-ce-dot"></div>
                         <span class="nl-panel-hdr-title nl-ce-title">Top 5 Call Options (CE)</span>
-                        <span class="nl-panel-hdr-sub nl-ce-sub">RESISTANCE WALL</span>
+                        <span class="nl-panel-hdr-sub nl-ce-sub">10 STRIKES ABOVE ATM</span>
                     </div>
                     <table class="nl-table">
                         <thead class="nl-col-hdr-row"><tr>{col_heads}</tr></thead>
@@ -1426,7 +1533,7 @@ class NiftyAnalyzer:
                     <div class="nl-panel-hdr">
                         <div class="nl-panel-hdr-dot nl-pe-dot"></div>
                         <span class="nl-panel-hdr-title nl-pe-title">Top 5 Put Options (PE)</span>
-                        <span class="nl-panel-hdr-sub nl-pe-sub">SUPPORT FLOOR</span>
+                        <span class="nl-panel-hdr-sub nl-pe-sub">10 STRIKES BELOW ATM</span>
                     </div>
                     <table class="nl-table">
                         <thead class="nl-col-hdr-row"><tr>{col_heads}</tr></thead>
@@ -1435,7 +1542,7 @@ class NiftyAnalyzer:
                 </div>
             </div>
             <div class="nl-footer">
-                <span class="nl-footer-l">WIDGET 01 &middot; NEON LEDGER &middot; OI ANALYSIS</span>
+                <span class="nl-footer-l">NEON LEDGER &middot; TOP OI &middot; ±10 ATM STRIKES WINDOW</span>
                 <span class="nl-footer-r"><div class="nl-live-dot"></div>LIVE</span>
             </div>
         </div>'''
@@ -2420,7 +2527,8 @@ class NiftyAnalyzer:
 
         top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
         top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
-        oi_neon_ledger_html = self._build_oi_neon_ledger_widget(top_ce_strikes, top_pe_strikes)
+        atm_strike_val = oc_analysis.get('atm_strike', 0)
+        oi_neon_ledger_html = self._build_oi_neon_ledger_widget(top_ce_strikes, top_pe_strikes, atm_strike=atm_strike_val)
 
         strike_ticker_card_html = self._build_strike_ticker_card_widget(
             strike_recommendations, recommendation, tech_analysis
@@ -2769,7 +2877,7 @@ class NiftyAnalyzer:
 
     <!-- TOP 10 OI — WIDGET 01 NEON LEDGER -->
     <div class="section">
-        <div class="section-title"><span class="st-line"></span>Top 10 Open Interest (5 CE + 5 PE)<span class="st-line-r"></span></div>
+        <div class="section-title"><span class="st-line"></span>Top OI — ±10 Strikes from ATM (5 CE + 5 PE)<span class="st-line-r"></span></div>
         {oi_neon_ledger_html}
     </div>
 
