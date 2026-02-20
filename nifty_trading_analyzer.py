@@ -921,7 +921,7 @@ class NiftyAnalyzer:
                 font-size: clamp(13px, 2.5vw, 16px); font-weight: 700; color: #ddeeff;
                 letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 20px rgba(68,238,204,.35);
             }}
-            .nl-master-text p {{ font-size: 10px; color: #2a3a4a; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
+            .nl-master-text p {{ font-size: 10px; color: #667788; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
             .nl-master-badges {{ display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }}
             .nl-ce-badge {{
                 background: rgba(255,58,92,.12); border: 1px solid rgba(255,58,92,.5); color: #ff3a5c;
@@ -958,7 +958,7 @@ class NiftyAnalyzer:
             .nl-panel-hdr-sub {{ margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; }}
             .nl-ce-sub {{ color: rgba(255,58,92,.45); }} .nl-pe-sub {{ color: rgba(68,238,204,.45); }}
             .nl-col-hdr-row {{ background: #0a1018; border-bottom: 1px solid #1e2a38; }}
-            .nl-th {{ font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #2a3a4a; padding: 8px 10px; text-align: left; white-space: nowrap; }}
+            .nl-th {{ font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #667788; padding: 8px 10px; text-align: left; white-space: nowrap; }}
             .nl-th:first-child {{ padding-left: 16px; }} .nl-th:last-child {{ padding-right: 16px; }}
             .nl-table {{ width: 100%; border-collapse: collapse; min-width: 380px; }}
             .nl-row {{ border-bottom: 1px solid #0c1418; transition: background .15s; cursor: default; }}
@@ -984,15 +984,15 @@ class NiftyAnalyzer:
             .nl-bar-ce {{ background: linear-gradient(90deg, #ff3a5c44, #ff3a5c); box-shadow: 0 0 5px #ff3a5c55; }}
             .nl-bar-pe {{ background: linear-gradient(90deg, #44eecc44, #44eecc); box-shadow: 0 0 5px #44eecc55; }}
             .nl-chng {{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; }}
-            .nl-chng-up {{ color: #44eecc; }} .nl-chng-dn {{ color: #ff4d6d; }} .nl-chng-flat {{ color: #2a3a4a; }}
+            .nl-chng-up {{ color: #44eecc; }} .nl-chng-dn {{ color: #ff4d6d; }} .nl-chng-flat {{ color: #556070; }}
             .nl-ltp {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 14px); font-weight: 800; }}
             .nl-ltp-ce {{ color: #ffaacc; }} .nl-ltp-pe {{ color: #88ffee; }}
-            .nl-vol {{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #2a3a4a; }}
+            .nl-vol {{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #667788; }}
             .nl-footer {{
                 background: #080c12; border-top: 1px solid #1e2a38; padding: 10px 24px;
                 display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
             }}
-            .nl-footer-l {{ font-size: 9px; color: #1e2a38; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }}
+            .nl-footer-l {{ font-size: 9px; color: #556070; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }}
             .nl-footer-r {{ display: flex; align-items: center; gap: 7px; font-size: 9px; color: #44eecc; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }}
             @media (max-width: 700px) {{
                 .nl-panels {{ grid-template-columns: 1fr; }}
@@ -1131,7 +1131,7 @@ class NiftyAnalyzer:
                 font-size: clamp(12px, 2.5vw, 14px); font-weight: 700; color: #ddeeff;
                 letter-spacing: 2.5px; text-transform: uppercase; text-shadow: 0 0 18px rgba(68,238,204,.4);
             }}
-            .w2oc-hdr-text p {{ font-size: 10px; color: #2a3a4a; margin-top: 3px; letter-spacing: 1.5px; font-weight: 600; }}
+            .w2oc-hdr-text p {{ font-size: 10px; color: #667788; margin-top: 3px; letter-spacing: 1.5px; font-weight: 600; }}
             .w2oc-hdr-badge {{
                 margin-left: auto; background: rgba(68,238,204,.1); border: 1px solid #22aa8877; color: #44eecc;
                 padding: 5px 16px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 2px;
@@ -1146,9 +1146,9 @@ class NiftyAnalyzer:
             .w2oc-gauge-wrap {{ position: relative; width: 170px; height: 170px; }}
             .w2oc-gauge-wrap svg {{ position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 8px {arc_col2}44); }}
             .w2oc-gauge-center {{ position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }}
-            .w2oc-gauge-lbl {{ font-size: 9px; color: #2a3a4a; letter-spacing: 3px; text-transform: uppercase; }}
+            .w2oc-gauge-lbl {{ font-size: 9px; color: #667788; letter-spacing: 3px; text-transform: uppercase; }}
             .w2oc-gauge-val {{ font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 700; color: #ddeeff; letter-spacing: -1px; text-shadow: 0 0 24px {arc_col2}; }}
-            .w2oc-gauge-sub {{ font-size: 9px; color: #2a3a4a; letter-spacing: 2px; }}
+            .w2oc-gauge-sub {{ font-size: 9px; color: #667788; letter-spacing: 2px; }}
             .w2oc-gauge-title {{ font-size: 11px; font-weight: 700; color: {arc_col2}; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 12px {arc_col2}88; }}
             .w2oc-sent-pill {{ background: {sent_bg}; border: 1px solid {sent_brd}; border-radius: 10px; padding: 10px 16px; text-align: center; width: 100%; }}
             .w2oc-sent-lbl {{ font-size: 9px; color: #44eecc; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }}
@@ -1156,7 +1156,7 @@ class NiftyAnalyzer:
             .w2oc-maxpain {{ background: rgba(68,238,204,.06); border: 1px solid #1e3a3a; border-radius: 10px; padding: 10px 16px; text-align: center; width: 100%; }}
             .w2oc-maxpain-lbl {{ font-size: 9px; color: #44eecc; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }}
             .w2oc-maxpain-val {{ font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: #44eecc; text-shadow: 0 0 16px rgba(68,238,204,.6); }}
-            .w2oc-maxpain-note {{ font-size: 9px; color: #2a3a4a; margin-top: 4px; letter-spacing: 1px; }}
+            .w2oc-maxpain-note {{ font-size: 9px; color: #667788; margin-top: 4px; letter-spacing: 1px; }}
             .w2oc-right {{ padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }}
             .w2oc-stats-row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
             .w2oc-stat-card {{ background: rgba(68,238,204,.04); border: 1px solid #1e2a38; border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; }}
@@ -1179,7 +1179,7 @@ class NiftyAnalyzer:
             .w2oc-r-price {{ color: #ff8090; text-shadow: 0 0 8px #ff405055; }}
             .w2oc-s-price {{ color: #44eecc; text-shadow: 0 0 8px #44eecc55; }}
             .w2oc-footer {{ background: #080c12; border-top: 1px solid #1e2a38; padding: 10px 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }}
-            .w2oc-footer-l {{ font-size: 9px; color: #1e2a38; letter-spacing: 1.5px; font-weight: 600; }}
+            .w2oc-footer-l {{ font-size: 9px; color: #556070; letter-spacing: 1.5px; font-weight: 600; }}
             .w2oc-footer-r {{ display: flex; align-items: center; gap: 6px; font-size: 9px; color: #44eecc; letter-spacing: 2px; font-weight: 700; }}
             .w2oc-footer-dot {{ width: 6px; height: 6px; border-radius: 50%; background: #44eecc; box-shadow: 0 0 8px #44eecc; animation: w2oc-pulse 1.5s ease-in-out infinite; }}
             @media (max-width: 700px) {{
@@ -1259,7 +1259,7 @@ class NiftyAnalyzer:
                             <span style="width:8px;height:8px;border-radius:50%;background:#ff5060;display:inline-block;box-shadow:0 0 8px #ff5060;flex-shrink:0;"></span>
                             OI RESISTANCE WALLS
                         </div>
-                        {r_bars_html if r_bars_html else '<div style="color:#2a3a4a;font-size:12px;padding:6px 0;">No resistance data</div>'}
+                        {r_bars_html if r_bars_html else '<div style="color:#667788;font-size:12px;padding:6px 0;">No resistance data</div>'}
                     </div>
                     <div class="w2oc-div"></div>
                     <div class="w2oc-levels-section">
@@ -1267,7 +1267,7 @@ class NiftyAnalyzer:
                             <span style="width:8px;height:8px;border-radius:50%;background:#44eecc;display:inline-block;box-shadow:0 0 8px #44eecc;flex-shrink:0;"></span>
                             OI SUPPORT FLOORS
                         </div>
-                        {s_bars_html if s_bars_html else '<div style="color:#2a3a4a;font-size:12px;padding:6px 0;">No support data</div>'}
+                        {s_bars_html if s_bars_html else '<div style="color:#667788;font-size:12px;padding:6px 0;">No support data</div>'}
                     </div>
                 </div>
             </div>
@@ -1376,7 +1376,7 @@ class NiftyAnalyzer:
                 border-bottom: 2px solid #44eecc; flex-wrap: wrap; gap: 10px;
             }}
             .w1-hdr-title {{ font-size: clamp(13px, 3vw, 15px); font-weight: 700; color: #ddeeff; letter-spacing: 2px; }}
-            .w1-hdr-sub   {{ font-size: 11px; color: #2a3a4a; margin-top: 3px; letter-spacing: .5px; }}
+            .w1-hdr-sub   {{ font-size: 11px; color: #667788; margin-top: 3px; letter-spacing: .5px; }}
             .w1-hdr-badge {{ background: #44eecc; color: #080c12; font-size: 10px; font-weight: 800; padding: 4px 14px; border-radius: 20px; letter-spacing: 2px; }}
             .w1-gauge {{ padding: 16px 20px 4px; background: #0a1018; border-bottom: 1px solid #1e2a38; }}
             .w1-gauge-track {{
@@ -1409,7 +1409,7 @@ class NiftyAnalyzer:
             .w1-candle {{ display: flex; margin: 0 16px 14px; border: 1px solid #1e2a38; border-radius: 8px; overflow: hidden; }}
             .w1-ci {{ flex: 1; padding: 10px 14px; border-right: 1px solid #1e2a38; }}
             .w1-ci:last-child {{ border-right: none; }}
-            .w1-ci-lbl {{ font-size: 10px; color: #2a3a4a; letter-spacing: 1.5px; margin-bottom: 5px; text-transform: uppercase; }}
+            .w1-ci-lbl {{ font-size: 10px; color: #667788; letter-spacing: 1.5px; margin-bottom: 5px; text-transform: uppercase; }}
             .w1-ci-val {{ font-size: clamp(13px, 2vw, 15px); font-weight: 700; font-family: 'IBM Plex Mono'; }}
             .w1-ci-h .w1-ci-val {{ color: #ff8090; }} .w1-ci-l .w1-ci-val {{ color: #44eecc; }} .w1-ci-c .w1-ci-val {{ color: #88a0b8; }}
             .w1-grid {{ display: grid; grid-template-columns: 1fr auto 1fr; border-top: 1px solid #1e2a38; }}
@@ -1434,15 +1434,15 @@ class NiftyAnalyzer:
                 padding: 18px 16px; gap: 6px; background: rgba(68,238,204,.03);
                 border-left: 1px solid #1e2a38; border-right: 1px solid #1e2a38; min-width: 130px;
             }}
-            .w1-pp-tag  {{ font-size: 10px; color: #2a3a4a; letter-spacing: 2px; text-transform: uppercase; }}
+            .w1-pp-tag  {{ font-size: 10px; color: #667788; letter-spacing: 2px; text-transform: uppercase; }}
             .w1-pp-val  {{ font-size: clamp(16px, 3vw, 20px); font-weight: 700; color: #44eecc; font-family: 'IBM Plex Mono', monospace; text-shadow: 0 0 12px rgba(68,238,204,.5); text-align: center; }}
-            .w1-pp-dist {{ font-size: 12px; color: #2a3a4a; font-family: 'IBM Plex Mono'; }}
+            .w1-pp-dist {{ font-size: 12px; color: #667788; font-family: 'IBM Plex Mono'; }}
             .w1-pp-sep  {{ width: 36px; height: 1px; background: #1e2a38; margin: 3px 0; }}
             .w1-ltp-chip {{ background: #44eecc; color: #080c12; border-radius: 8px; padding: 7px 18px; text-align: center; margin-top: 4px; }}
             .w1-ltp-chip-lbl {{ font-size: 9px; font-weight: 800; letter-spacing: 2px; }}
             .w1-ltp-chip-val {{ font-size: clamp(13px, 2.5vw, 15px); font-weight: 800; font-family: 'IBM Plex Mono'; }}
             .w1-footer {{ display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#080c12;border-top:1px solid #1e2a38;font-family:'IBM Plex Mono',monospace;font-size:12px;flex-wrap:wrap;gap:8px; }}
-            .w1-footer-l {{ color: #2a3a4a; letter-spacing: 1px; }}
+            .w1-footer-l {{ color: #556070; letter-spacing: 1px; }}
             .w1-footer-r {{ color: #44eecc; font-weight: 700; text-shadow: 0 0 8px rgba(68,238,204,.4); }}
             @media (max-width: 600px) {{
                 .w1-grid {{ grid-template-columns: 1fr; }}
@@ -1595,7 +1595,7 @@ class NiftyAnalyzer:
             .w4-hdr-dot.s-dot {{ background: #44eecc; box-shadow: 0 0 8px #44eecc; }}
             .w4-hdr-title {{ font-size: clamp(10px, 2vw, 12px); font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; }}
             .w4-hdr-title.r-title {{ color: #ff4d6d; }} .w4-hdr-title.s-title {{ color: #44eecc; }}
-            .w4-hdr-tf {{ margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: #2a3a4a; }}
+            .w4-hdr-tf {{ margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: #667788; }}
             .w4-ltp-bar {{ background: #0a1018; border-bottom: 1px solid #1e2a38; display: flex; align-items: center; justify-content: center; padding: 10px 20px; gap: 12px; }}
             .w4-ltp-line {{ flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #1e3a3a, transparent); }}
             .w4-ltp-chip {{ background: linear-gradient(135deg, #0a1820, #0c1c28); border: 1px solid #44eecc44; border-radius: 8px; padding: 8px 20px; display: flex; align-items: center; gap: 10px; }}
@@ -1604,7 +1604,7 @@ class NiftyAnalyzer:
             .w4-body {{ display: grid; grid-template-columns: 1fr 1fr; }}
             .w4-col {{ padding: 4px 0; }} .w4-col.r-col {{ border-right: 1px solid #1e2a38; }}
             .w4-col-hdr {{ display: grid; grid-template-columns: 44px 1fr 90px 80px 1fr; padding: 6px 14px; border-bottom: 1px solid #1e2a38; }}
-            .w4-col-hdr span {{ font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #2a3a4a; }}
+            .w4-col-hdr span {{ font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #667788; }}
             .w4-table {{ width: 100%; border-collapse: collapse; min-width: 220px; }}
             .w4-row {{ transition: background 0.15s; cursor: default; }}
             .w4-row:hover {{ background: rgba(68,238,204,.025); }}
@@ -1627,7 +1627,7 @@ class NiftyAnalyzer:
             .w4-bar-r {{ background: linear-gradient(90deg, #ff4d6d44, #ff4d6d); }}
             .w4-bar-s {{ background: linear-gradient(90deg, #44eecc44, #44eecc); }}
             .w4-footer {{ background: #080c12; border-top: 1px solid #1e2a38; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; flex-wrap: wrap; gap: 8px; }}
-            .w4-footer-left {{ font-size: 10px; color: #1e2a38; letter-spacing: 1px; font-weight: 600; }}
+            .w4-footer-left {{ font-size: 10px; color: #556070; letter-spacing: 1px; font-weight: 600; }}
             .w4-footer-right {{ font-size: 10px; color: #22aa88; font-family: 'IBM Plex Mono', monospace; font-weight: 700; }}
             .w4-footer-dot {{ width:5px;height:5px;border-radius:50%;background:#44eecc;display:inline-block;margin-right:6px;box-shadow:0 0 6px #44eecc;animation:w4-blink 2s ease-in-out infinite; }}
             @keyframes w4-blink {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.35; }} }}
@@ -1789,36 +1789,36 @@ class NiftyAnalyzer:
                         {ot_badge}
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:10px;color:#2a3a4a;letter-spacing:1.5px;font-weight:600;">NIFTY</span>
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1.5px;font-weight:600;">NIFTY</span>
                         <span style="width:6px;height:6px;border-radius:50%;background:#44eecc;box-shadow:0 0 8px #44eecc;display:inline-block;animation:stc-pulse 1.5s ease-in-out infinite;"></span>
                         <span style="font-size:10px;color:#44eecc;font-weight:700;letter-spacing:1.5px;">LIVE</span>
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));border-bottom:1px solid #1e2a38;">
                     <div style="padding:16px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.03);">
-                        <div style="font-size:9px;color:#2a3a4a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">LTP</div>
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">LTP</div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,24px);font-weight:800;color:#44eecc;text-shadow:0 0 18px rgba(68,238,204,.6);">{ltp_display}</div>
-                        <div style="font-size:9px;color:#2a3a4a;margin-top:4px;letter-spacing:1px;">CURRENT PREMIUM</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">CURRENT PREMIUM</div>
                     </div>
                     <div style="padding:16px;border-right:1px solid #1e2a38;">
-                        <div style="font-size:9px;color:#2a3a4a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">STRIKE</div>
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">STRIKE</div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,20px);font-weight:800;color:#ddeeff;">{strike_display}</div>
-                        <div style="font-size:9px;color:#2a3a4a;margin-top:4px;letter-spacing:1px;">PRICE</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">PRICE</div>
                     </div>
                     <div style="padding:16px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.02);">
-                        <div style="font-size:9px;color:#2a3a4a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">INVEST</div>
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">INVEST</div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#66ffdd;text-shadow:0 0 12px rgba(68,238,204,.4);">{invest_display}</div>
-                        <div style="font-size:9px;color:#2a3a4a;margin-top:4px;letter-spacing:1px;">1 LOT (50 QTY)</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">1 LOT (50 QTY)</div>
                     </div>
                     <div style="padding:16px;border-right:1px solid #1e2a38;">
-                        <div style="font-size:9px;color:#2a3a4a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">OI</div>
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">OI</div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#88a0b8;">{oi_display}</div>
-                        <div style="font-size:9px;color:#2a3a4a;margin-top:4px;letter-spacing:1px;">OPEN INTEREST</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">OPEN INTEREST</div>
                     </div>
                     <div style="padding:16px;">
-                        <div style="font-size:9px;color:#2a3a4a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">VOL</div>
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">VOL</div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#5a7a8a;">{vol_display}</div>
-                        <div style="font-size:9px;color:#2a3a4a;margin-top:4px;letter-spacing:1px;">VOLUME</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">VOLUME</div>
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid #1e2a38;">
@@ -1828,7 +1828,7 @@ class NiftyAnalyzer:
                         </div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ddeeff;margin-bottom:6px;">{t1_display}</div>
                         <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:{t1_profit_color};">{p_at_t1_label}</div>
-                        <div style="font-size:11px;color:#2a6a5a;margin-top:4px;font-weight:600;">Per lot: {example_t1}</div>
+                        <div style="font-size:11px;color:#44eecc;margin-top:4px;font-weight:600;">Per lot: {example_t1}</div>
                     </div>
                     <div style="padding:16px 18px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.02);border-bottom:2px solid rgba(68,238,204,.15);">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -1849,12 +1849,12 @@ class NiftyAnalyzer:
                 </div>
                 <div style="padding:10px 18px;background:#0a1018;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        <span style="font-size:10px;color:#2a3a4a;letter-spacing:1.5px;font-weight:600;">RISK:REWARD</span>
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1.5px;font-weight:600;">RISK:REWARD</span>
                         <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:800;color:#44eecc;text-shadow:0 0 10px rgba(68,238,204,.45);">1 : {rr_ratio:.1f}</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <span style="font-size:10px;color:#2a3a4a;letter-spacing:1px;">TYPE: <span style="color:{ot_style['color']};font-weight:700;">{option_type}</span></span>
-                        <span style="font-size:10px;color:#2a3a4a;letter-spacing:1px;">LOT SIZE: <span style="color:#88a0b8;font-weight:700;">50</span></span>
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1px;">TYPE: <span style="color:{ot_style['color']};font-weight:700;">{option_type}</span></span>
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1px;">LOT SIZE: <span style="color:#88a0b8;font-weight:700;">50</span></span>
                     </div>
                 </div>
             </div>'''
@@ -1886,17 +1886,17 @@ class NiftyAnalyzer:
                 font-size: clamp(15px, 3.5vw, 18px); font-weight: 800; color: #ddeeff;
                 letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 20px {hdr_accent}66;
             }}
-            .stc-master-text p {{ font-size: 10px; color: #2a3a4a; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
+            .stc-master-text p {{ font-size: 10px; color: #667788; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
             .stc-master-right {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }}
             .stc-bias-pill {{ background:{bias_bg};border:1.5px solid {bias_brd};color:{bias_color};padding:7px 20px;border-radius:22px;font-size:13px;font-weight:800;letter-spacing:2px;text-shadow:0 0 12px {bias_color}77;box-shadow:0 0 16px {bias_color}18; }}
             .stc-price-chip {{ background:rgba(0,0,0,0.3);border:1px solid #1e2a38;border-radius:10px;padding:7px 16px;display:flex;align-items:center;gap:8px;flex-direction:column; }}
-            .stc-price-lbl {{ font-size:9px;color:#2a3a4a;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
+            .stc-price-lbl {{ font-size:9px;color:#88a0b8;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
             .stc-price-val {{ font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:800;color:#44eecc;text-shadow:0 0 12px rgba(68,238,204,.5); }}
-            .stc-price-sub {{ font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#2a3a4a; }}
+            .stc-price-sub {{ font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#667788; }}
             .stc-cards {{ display:flex;flex-direction:column;gap:16px;padding:16px 0 0 0; }}
             @keyframes stc-pulse {{ 0%,100% {{ opacity:1;transform:scale(1); }} 50% {{ opacity:0.5;transform:scale(0.8); }} }}
             .stc-footer {{ background:#080c12;border:1px solid #1e2a38;border-top:none;border-radius:0 0 8px 8px;padding:10px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }}
-            .stc-footer-l {{ font-size:9px;color:#1e2a38;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
+            .stc-footer-l {{ font-size:9px;color:#556070;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
             .stc-footer-r {{ display:flex;align-items:center;gap:7px;font-size:9px;color:{hdr_accent};font-weight:700;letter-spacing:2px; }}
             .stc-footer-dot {{ width:6px;height:6px;border-radius:50%;background:{hdr_accent};box-shadow:0 0 8px {hdr_accent};animation:stc-pulse 1.5s ease-in-out infinite; }}
         </style>
@@ -2043,7 +2043,7 @@ class NiftyAnalyzer:
             text-shadow: 0 0 40px rgba(68,238,204,.5), 0 0 80px rgba(34,170,136,.2);
             margin-bottom: 14px;
         }}
-        .header-sub {{ color: #2a3a4a; font-size: 11px; letter-spacing: 5px; text-transform: uppercase; font-weight: 600; }}
+        .header-sub {{ color: #88a0b8; font-size: 11px; letter-spacing: 5px; text-transform: uppercase; font-weight: 600; }}
         /* ── LIVE PRICE BANNER ── */
         .live-price-banner {{
             display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 40px);
@@ -2053,17 +2053,17 @@ class NiftyAnalyzer:
             margin: 14px 0; flex-wrap: wrap;
         }}
         .live-price-item {{ text-align: center; }}
-        .live-price-label {{ font-size: clamp(9px, 1.5vw, 11px); color: #2a3a4a; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }}
+        .live-price-label {{ font-size: clamp(9px, 1.5vw, 11px); color: #88a0b8; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }}
         .live-price-value {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(20px, 4vw, 28px); font-weight: 800; color: #44eecc; text-shadow: 0 0 20px rgba(68,238,204,.45); }}
-        .live-price-sub {{ font-size: clamp(9px, 1.5vw, 10px); color: #2a3a4a; margin-top: 4px; }}
+        .live-price-sub {{ font-size: clamp(9px, 1.5vw, 10px); color: #667788; margin-top: 4px; }}
         .live-price-sep {{ width: 1px; height: 50px; background: linear-gradient(180deg, transparent, #1e2a38, transparent); flex-shrink: 0; }}
         .live-dot {{ width: 8px; height: 8px; border-radius: 50%; background: #44eecc; box-shadow: 0 0 10px #44eecc; display: inline-block; margin-right: 6px; animation: lp 1.5s ease-in-out infinite; }}
         @keyframes lp {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.4; }} }}
         /* ── TIMESTAMP ── */
-        .timestamp {{ color: #2a3a4a; font-size: clamp(10px, 2vw, 12px); font-weight: 600; margin-top: 10px; letter-spacing: 2px; }}
+        .timestamp {{ color: #667788; font-size: clamp(10px, 2vw, 12px); font-weight: 600; margin-top: 10px; letter-spacing: 2px; }}
         .timeframe-badge {{
             display: inline-flex; align-items: center; gap: 12px;
-            color: #2a3a4a; padding: 8px 0; font-size: clamp(9px, 1.5vw, 11px);
+            color: #88a0b8; padding: 8px 0; font-size: clamp(9px, 1.5vw, 11px);
             font-weight: 600; margin-top: 10px; letter-spacing: 4px; text-transform: uppercase;
         }}
         .timeframe-badge::before,.timeframe-badge::after {{ content:'▸'; color:#44eecc; }}
@@ -2116,7 +2116,7 @@ class NiftyAnalyzer:
             border-top: 2px solid #2a3a4a; border-radius: 3px; transition: border-top-color .2s;
         }}
         .data-item:hover {{ border-top-color: #44eecc; }}
-        .data-item .dlabel {{ color: #2a3a4a; font-size: 9px; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; margin-bottom: 7px; }}
+        .data-item .dlabel {{ color: #667788; font-size: 9px; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; margin-bottom: 7px; }}
         .data-item .dvalue {{ color: #ddeeff; font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; font-family: 'IBM Plex Mono', monospace; }}
         /* ── REASONS ── */
         .reasons {{ background: linear-gradient(135deg, #141c28, #0e1420); border: 1px solid #1e2a38; border-left: 4px solid #22aa88; padding: 16px; border-radius: 3px; }}
@@ -2128,12 +2128,12 @@ class NiftyAnalyzer:
         .strategy-card {{ background: linear-gradient(135deg, #141c28, #0e1420); border: 1px solid #1e2a38; border-top: 2px solid #2a3a4a; padding: 16px; border-radius: 3px; }}
         .strategy-header {{ border-bottom: 1px solid #1e2a38; padding-bottom: 8px; margin-bottom: 10px; }}
         .strategy-header h4 {{ color: #ddeeff; font-size: clamp(12px, 2vw, 14px); font-weight: 700; letter-spacing: 1px; }}
-        .strategy-type {{ display: inline-block; background: rgba(68,238,204,.06); color: #2a3a4a; padding: 3px 8px; font-size: 10px; margin-top: 4px; font-weight: 600; border: 1px solid #1e2a38; letter-spacing: .5px; border-radius: 3px; }}
+        .strategy-type {{ display: inline-block; background: rgba(68,238,204,.06); color: #88a0b8; padding: 3px 8px; font-size: 10px; margin-top: 4px; font-weight: 600; border: 1px solid #1e2a38; letter-spacing: .5px; border-radius: 3px; }}
         .strategy-body p {{ margin: 7px 0; font-size: clamp(11px, 1.8vw, 13px); line-height: 1.5; color: #88a0b8; }}
         .strategy-body strong {{ color: #44eecc; }}
         .recommendation-stars {{ color: #44eecc; font-size: 13px; font-weight: 700; }}
         /* ── FOOTER ── */
-        .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #1e2a38; color: #2a3a4a; font-size: clamp(9px, 1.5vw, 11px); line-height: 1.8; letter-spacing: 1px; }}
+        .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #1e2a38; color: #556070; font-size: clamp(9px, 1.5vw, 11px); line-height: 1.8; letter-spacing: 1px; }}
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {{ .data-grid {{ grid-template-columns: repeat(3,1fr); }} }}
         @media (max-width: 680px) {{
@@ -2154,7 +2154,7 @@ class NiftyAnalyzer:
 
     <!-- HEADER -->
     <div class="header">
-        <div style="color:#2a3a4a;font-size:9px;letter-spacing:6px;margin-bottom:10px;">▸ &nbsp; ALGORITHMIC MARKET INTELLIGENCE &nbsp; ◂</div>
+        <div style="color:#556070;font-size:9px;letter-spacing:6px;margin-bottom:10px;">▸ &nbsp; ALGORITHMIC MARKET INTELLIGENCE &nbsp; ◂</div>
         <h1>&#9679; {title} &#9679;</h1>
         <div class="timeframe-badge">ONE HOUR TIMEFRAME</div>
         <div class="header-sub">LIVE DATA &nbsp;·&nbsp; NSE OPTION CHAIN &nbsp;·&nbsp; PHANTOM SLATE</div>
@@ -2171,8 +2171,14 @@ class NiftyAnalyzer:
         <div class="live-price-sep"></div>
         <div class="live-price-item">
             <div class="live-price-label">1H CANDLE CLOSE</div>
-            <div class="live-price-value" style="color:#2a6a5a;font-size:clamp(16px,3vw,20px);">&#8377;{candle_close:,.2f}</div>
+            <div class="live-price-value" style="color:#44eecc;font-size:clamp(16px,3vw,22px);">&#8377;{candle_close:,.2f}</div>
             <div class="live-price-sub">last completed 1H bar</div>
+        </div>
+        <div class="live-price-sep"></div>
+        <div class="live-price-item">
+            <div class="live-price-label">&#128197; EXPIRY DATE</div>
+            <div class="live-price-value" style="color:#ff3a5c;font-size:clamp(13px,2.5vw,18px);text-shadow:0 0 16px rgba(255,58,92,.5);">{self.get_next_expiry_date()}</div>
+            <div class="live-price-sub">weekly tuesday expiry</div>
         </div>
     </div>
 
@@ -2257,7 +2263,7 @@ class NiftyAnalyzer:
     <!-- STRIKE RECOMMENDATIONS — DARK TICKER CARD -->
     <div class="section">
         <div class="section-title">Strike Recommendations</div>
-        <p style="color:#2a3a4a;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
+        <p style="color:#88a0b8;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
             <strong style="color:#44eecc;">Based on {recommendation['bias']} bias &mdash; NSE Spot &#8377;{current_price:,.2f}</strong><br>
             Actionable trades with specific strike prices, LTP, targets &amp; risk management.
         </p>
@@ -2267,7 +2273,7 @@ class NiftyAnalyzer:
     <!-- OPTIONS STRATEGIES -->
     <div class="section">
         <div class="section-title">Options Strategies</div>
-        <p style="color:#2a3a4a;margin-bottom:14px;font-size:clamp(11px,2vw,13px);letter-spacing:.5px;">
+        <p style="color:#88a0b8;margin-bottom:14px;font-size:clamp(11px,2vw,13px);letter-spacing:.5px;">
             Based on <strong style="color:#44eecc;">{recommendation['bias']}</strong> bias:
         </p>
         <div class="strategies-grid">{strategies_html}</div>
@@ -2275,7 +2281,7 @@ class NiftyAnalyzer:
 
     <!-- FOOTER -->
     <div class="footer">
-        <p><strong style="color:#1e2a38;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
+        <p><strong style="color:#44eecc;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
         <p style="margin-top:6px;">&#9679; PHANTOM SLATE THEME &nbsp;&#9679;&nbsp; Charcoal Blue-Grey + Neon Mint + Graphite Steel &nbsp;&#9679;&nbsp; Max Pain = Min Buyer Pain (CORRECTED)</p>
     </div>
 
