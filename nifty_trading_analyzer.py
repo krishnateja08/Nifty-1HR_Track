@@ -10,6 +10,7 @@ Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
 FIXED:  Using curl-cffi for NSE API to bypass anti-scraping
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str'
+RESPONSIVE: Auto-adjusts for Mobile / iPad / Desktop / Ultra-wide
 """
 
 import pandas as pd
@@ -534,7 +535,6 @@ class NiftyAnalyzer:
         strong_threshold   = self.config['technical'].get('momentum_threshold_strong', 0.5)
         moderate_threshold = self.config['technical'].get('momentum_threshold_moderate', 0.2)
 
-        # ── Deep Ocean palette for momentum boxes ──────────────────────────
         if momentum_pct > strong_threshold:
             return "Strong Upward", "Bullish", {
                 'bg': '#004d2e', 'bg_dark': '#003320', 'text': '#00ff8c', 'border': '#00aa55'
@@ -564,7 +564,6 @@ class NiftyAnalyzer:
 
         current_price = df['Close'].iloc[-1]
 
-        # 1-HOUR MOMENTUM
         if len(df) > 1:
             price_1h_ago        = df['Close'].iloc[-2]
             price_change_1h     = current_price - price_1h_ago
@@ -575,7 +574,6 @@ class NiftyAnalyzer:
 
         momentum_1h_signal, momentum_1h_bias, momentum_1h_colors = self.get_momentum_signal(price_change_pct_1h)
 
-        # 5-HOUR MOMENTUM
         if len(df) >= 5:
             price_5h_ago    = df['Close'].iloc[-5]
             momentum_5h     = current_price - price_5h_ago
@@ -586,7 +584,6 @@ class NiftyAnalyzer:
 
         momentum_5h_signal, momentum_5h_bias, momentum_5h_colors = self.get_momentum_signal(momentum_5h_pct)
 
-        # 2-DAY MOMENTUM (approx 13 x 1H bars ≈ 2 trading days)
         bars_2d = 13
         if len(df) >= bars_2d:
             price_2d_ago    = df['Close'].iloc[-bars_2d]
@@ -1102,9 +1099,6 @@ class NiftyAnalyzer:
 
         return {'nearest_resistance': nearest_resistance, 'nearest_support': nearest_support}
 
-    # =========================================================================
-    # HELPER: safely format a profit value for display (FIX for ValueError)
-    # =========================================================================
     @staticmethod
     def _fmt_profit(value, multiplier=1):
         if isinstance(value, (int, float)):
@@ -1117,18 +1111,11 @@ class NiftyAnalyzer:
             return f"Profit: ₹{value * multiplier:.0f}"
         return str(value)
 
+
     # =========================================================================
-    # WIDGET 01 — NEON LEDGER  |  Top 10 Open Interest
-    # Glowing rank badges · Inline OI heat bars · Vivid split header
+    # WIDGET 01 — NEON LEDGER | Top 10 Open Interest
     # =========================================================================
     def _build_oi_neon_ledger_widget(self, top_ce_strikes, top_pe_strikes):
-        """
-        NEON LEDGER widget for Top 10 Open Interest display.
-        Split CE / PE panels · Glowing rank badges · Inline OI heat bars
-        · Vivid colour-coded type badges · Bright split header
-        """
-
-        # ── find max OI across both sides for heat-bar scaling ────────────
         all_oi = [s['oi'] for s in top_ce_strikes] + [s['oi'] for s in top_pe_strikes]
         max_oi = max(all_oi) if all_oi else 1
 
@@ -1162,7 +1149,6 @@ class NiftyAnalyzer:
             return f'<span class="nl-chng nl-chng-flat">{fmt_oi(val)}</span>'
 
         def rank_badge(rank, side):
-            # side: 'ce' = red glow, 'pe' = green glow
             glow_col = '#ff3a5c' if side == 'ce' else '#00e676'
             bg_col   = 'rgba(255,58,92,0.18)' if side == 'ce' else 'rgba(0,230,118,0.18)'
             brd_col  = 'rgba(255,58,92,0.55)' if side == 'ce' else 'rgba(0,230,118,0.55)'
@@ -1177,16 +1163,12 @@ class NiftyAnalyzer:
                 rows += f'''
                 <tr class="nl-row">
                     <td class="nl-td-rank">{rank_badge(idx, "ce")}</td>
-                    <td class="nl-td-strike">
-                        <span class="nl-strike-val">&#8377;{int(s["strike"]):,}</span>
-                    </td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;{int(s["strike"]):,}</span></td>
                     <td class="nl-td-type">{type_badge(s["type"])}</td>
                     <td class="nl-td-oi">
                         <div class="nl-oi-wrap">
                             <span class="nl-oi-val nl-oi-ce">{fmt_oi(s["oi"])}</span>
-                            <div class="nl-bar-track">
-                                <div class="nl-bar-fill nl-bar-ce" style="width:{bar_w}%;"></div>
-                            </div>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-ce" style="width:{bar_w}%;"></div></div>
                         </div>
                     </td>
                     <td class="nl-td-chng">{chng_oi_cell(s["chng_oi"])}</td>
@@ -1202,16 +1184,12 @@ class NiftyAnalyzer:
                 rows += f'''
                 <tr class="nl-row">
                     <td class="nl-td-rank">{rank_badge(idx, "pe")}</td>
-                    <td class="nl-td-strike">
-                        <span class="nl-strike-val">&#8377;{int(s["strike"]):,}</span>
-                    </td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;{int(s["strike"]):,}</span></td>
                     <td class="nl-td-type">{type_badge(s["type"])}</td>
                     <td class="nl-td-oi">
                         <div class="nl-oi-wrap">
                             <span class="nl-oi-val nl-oi-pe">{fmt_oi(s["oi"])}</span>
-                            <div class="nl-bar-track">
-                                <div class="nl-bar-fill nl-bar-pe" style="width:{bar_w}%;"></div>
-                            </div>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-pe" style="width:{bar_w}%;"></div></div>
                         </div>
                     </td>
                     <td class="nl-td-chng">{chng_oi_cell(s["chng_oi"])}</td>
@@ -1233,266 +1211,120 @@ class NiftyAnalyzer:
             <th class="nl-th">VOLUME</th>'''
 
         widget_html = f'''
-        <!-- ═══ TOP 10 OI — WIDGET 01 NEON LEDGER ═══ -->
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
-
-            /* ── Shell ──────────────────────────────────────────────────── */
             .nl-wrap {{
                 font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
-                background: #020912;
-                border: 1px solid #0b2540;
-                border-radius: 16px;
+                background: #020912; border: 1px solid #0b2540; border-radius: 16px;
                 overflow: hidden;
-                box-shadow:
-                    0 0 0 1px #040f1f,
-                    0 0 80px rgba(0,180,255,.05),
-                    0 32px 80px rgba(0,0,0,.95);
+                box-shadow: 0 0 0 1px #040f1f, 0 0 80px rgba(0,180,255,.05), 0 32px 80px rgba(0,0,0,.95);
             }}
-
-            /* ── Master header ──────────────────────────────────────────── */
             .nl-master-hdr {{
                 background: linear-gradient(135deg, #030c1c 0%, #040f22 100%);
-                border-bottom: 1px solid #0b2540;
-                padding: 16px 24px;
-                display: flex; align-items: center; justify-content: space-between;
-                position: relative;
+                border-bottom: 1px solid #0b2540; padding: 16px 24px;
+                display: flex; align-items: center; justify-content: space-between; position: relative;
+                flex-wrap: wrap; gap: 10px;
             }}
             .nl-master-hdr::after {{
-                content: '';
-                position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-                background: linear-gradient(90deg,
-                    transparent 0%, #ff3a5c 20%, #ff3a5c 49%,
-                    #00e676 51%, #00e676 80%, transparent 100%);
+                content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                background: linear-gradient(90deg, transparent 0%, #ff3a5c 20%, #ff3a5c 49%, #00e676 51%, #00e676 80%, transparent 100%);
                 opacity: 0.85;
             }}
-            .nl-master-title {{
-                display: flex; align-items: center; gap: 12px;
-            }}
+            .nl-master-title {{ display: flex; align-items: center; gap: 12px; }}
             .nl-master-icon {{
                 width: 40px; height: 40px; border-radius: 10px;
-                background: linear-gradient(135deg, #0a1a3a, #102040);
-                border: 1px solid #0d3060;
-                display: flex; align-items: center; justify-content: center;
-                font-size: 18px;
-                box-shadow: 0 0 20px rgba(0,160,255,.2);
+                background: linear-gradient(135deg, #0a1a3a, #102040); border: 1px solid #0d3060;
+                display: flex; align-items: center; justify-content: center; font-size: 18px;
+                box-shadow: 0 0 20px rgba(0,160,255,.2); flex-shrink: 0;
             }}
             .nl-master-text h2 {{
-                font-size: 16px; font-weight: 700; color: #ffffff;
-                letter-spacing: 3px; text-transform: uppercase;
-                text-shadow: 0 0 20px rgba(0,200,255,.4);
+                font-size: clamp(13px, 2.5vw, 16px); font-weight: 700; color: #ffffff;
+                letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 20px rgba(0,200,255,.4);
             }}
-            .nl-master-text p {{
-                font-size: 10px; color: #2a6a9a; margin-top: 3px;
-                letter-spacing: 2px; font-weight: 600; text-transform: uppercase;
-            }}
-            .nl-master-badges {{
-                display: flex; gap: 10px; align-items: center;
-            }}
+            .nl-master-text p {{ font-size: 10px; color: #2a6a9a; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
+            .nl-master-badges {{ display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }}
             .nl-ce-badge {{
-                background: rgba(255,58,92,.15);
-                border: 1px solid rgba(255,58,92,.6);
-                color: #ff3a5c;
-                padding: 6px 18px; border-radius: 20px;
-                font-size: 11px; font-weight: 800; letter-spacing: 2px;
-                text-shadow: 0 0 12px rgba(255,58,92,.8);
-                box-shadow: 0 0 16px rgba(255,58,92,.2);
+                background: rgba(255,58,92,.15); border: 1px solid rgba(255,58,92,.6); color: #ff3a5c;
+                padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(255,58,92,.8); box-shadow: 0 0 16px rgba(255,58,92,.2);
             }}
             .nl-pe-badge {{
-                background: rgba(0,230,118,.15);
-                border: 1px solid rgba(0,230,118,.6);
-                color: #00e676;
-                padding: 6px 18px; border-radius: 20px;
-                font-size: 11px; font-weight: 800; letter-spacing: 2px;
-                text-shadow: 0 0 12px rgba(0,230,118,.8);
-                box-shadow: 0 0 16px rgba(0,230,118,.2);
+                background: rgba(0,230,118,.15); border: 1px solid rgba(0,230,118,.6); color: #00e676;
+                padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(0,230,118,.8); box-shadow: 0 0 16px rgba(0,230,118,.2);
             }}
             .nl-live-dot {{
-                width: 8px; height: 8px; border-radius: 50%;
-                background: #00e676;
-                box-shadow: 0 0 10px #00e676;
-                animation: nl-pulse 1.5s ease-in-out infinite;
+                width: 8px; height: 8px; border-radius: 50%; background: #00e676;
+                box-shadow: 0 0 10px #00e676; animation: nl-pulse 1.5s ease-in-out infinite; flex-shrink: 0;
             }}
-            @keyframes nl-pulse {{
-                0%,100% {{ opacity: 1; transform: scale(1); }}
-                50%      {{ opacity: 0.5; transform: scale(0.8); }}
-            }}
-
-            /* ── Split panel headers ────────────────────────────────────── */
-            .nl-panels {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-            }}
-            .nl-panel {{ overflow: hidden; }}
+            @keyframes nl-pulse {{ 0%,100% {{ opacity:1;transform:scale(1); }} 50% {{ opacity:0.5;transform:scale(0.8); }} }}
+            .nl-panels {{ display: grid; grid-template-columns: 1fr 1fr; }}
+            .nl-panel {{ overflow-x: auto; }}
             .nl-panel.nl-panel-ce {{ border-right: 2px solid #0b2540; }}
-
-            .nl-panel-hdr {{
-                display: flex; align-items: center; gap: 10px;
-                padding: 14px 20px;
-                position: relative;
-            }}
-            .nl-panel-hdr::after {{
-                content: '';
-                position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-            }}
-            .nl-panel-ce .nl-panel-hdr {{
-                background: linear-gradient(135deg, #1a0610 0%, #110310 100%);
-                border-bottom: 2px solid #ff3a5c;
-            }}
-            .nl-panel-pe .nl-panel-hdr {{
-                background: linear-gradient(135deg, #031a0e 0%, #021408 100%);
-                border-bottom: 2px solid #00e676;
-            }}
-            .nl-panel-hdr-dot {{
-                width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-            }}
+            .nl-panel-hdr {{ display: flex; align-items: center; gap: 10px; padding: 14px 20px; position: relative; flex-wrap: wrap; }}
+            .nl-panel-ce .nl-panel-hdr {{ background: linear-gradient(135deg, #1a0610 0%, #110310 100%); border-bottom: 2px solid #ff3a5c; }}
+            .nl-panel-pe .nl-panel-hdr {{ background: linear-gradient(135deg, #031a0e 0%, #021408 100%); border-bottom: 2px solid #00e676; }}
+            .nl-panel-hdr-dot {{ width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }}
             .nl-ce-dot {{ background: #ff3a5c; box-shadow: 0 0 10px #ff3a5c; }}
             .nl-pe-dot {{ background: #00e676; box-shadow: 0 0 10px #00e676; }}
-            .nl-panel-hdr-title {{
-                font-size: 13px; font-weight: 800;
-                letter-spacing: 2.5px; text-transform: uppercase;
-            }}
+            .nl-panel-hdr-title {{ font-size: clamp(10px, 2vw, 13px); font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; }}
             .nl-ce-title {{ color: #ff3a5c; text-shadow: 0 0 14px rgba(255,58,92,.6); }}
             .nl-pe-title {{ color: #00e676; text-shadow: 0 0 14px rgba(0,230,118,.6); }}
-            .nl-panel-hdr-sub {{
-                margin-left: auto;
-                font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
-            }}
-            .nl-ce-sub {{ color: rgba(255,58,92,.55); }}
-            .nl-pe-sub {{ color: rgba(0,230,118,.55); }}
-
-            /* ── Column header row ──────────────────────────────────────── */
-            .nl-col-hdr-row {{
-                background: #030b18;
-                border-bottom: 1px solid #0b2030;
-            }}
-            .nl-th {{
-                font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
-                text-transform: uppercase; color: #1a4a6a;
-                padding: 8px 10px;
-                text-align: left;
-                white-space: nowrap;
-            }}
-            .nl-th:first-child {{ padding-left: 16px; }}
-            .nl-th:last-child  {{ padding-right: 16px; }}
-
-            /* ── Data rows ──────────────────────────────────────────────── */
-            .nl-table {{ width: 100%; border-collapse: collapse; }}
-            .nl-row {{
-                border-bottom: 1px solid #070f1c;
-                transition: background .15s;
-                cursor: default;
-            }}
+            .nl-panel-hdr-sub {{ margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; }}
+            .nl-ce-sub {{ color: rgba(255,58,92,.55); }} .nl-pe-sub {{ color: rgba(0,230,118,.55); }}
+            .nl-col-hdr-row {{ background: #030b18; border-bottom: 1px solid #0b2030; }}
+            .nl-th {{ font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #1a4a6a; padding: 8px 10px; text-align: left; white-space: nowrap; }}
+            .nl-th:first-child {{ padding-left: 16px; }} .nl-th:last-child {{ padding-right: 16px; }}
+            .nl-table {{ width: 100%; border-collapse: collapse; min-width: 380px; }}
+            .nl-row {{ border-bottom: 1px solid #070f1c; transition: background .15s; cursor: default; }}
             .nl-row:last-child {{ border-bottom: none; }}
             .nl-panel-ce .nl-row:hover {{ background: rgba(255,58,92,.04); }}
             .nl-panel-pe .nl-row:hover {{ background: rgba(0,230,118,.04); }}
-
-            /* ── Cells ──────────────────────────────────────────────────── */
-            .nl-td-rank    {{ padding: 12px 8px 12px 14px; width: 42px; vertical-align: middle; }}
-            .nl-td-strike  {{ padding: 12px 8px; vertical-align: middle; }}
-            .nl-td-type    {{ padding: 12px 6px; vertical-align: middle; }}
-            .nl-td-oi      {{ padding: 12px 8px; vertical-align: middle; min-width: 120px; }}
-            .nl-td-chng    {{ padding: 12px 8px; vertical-align: middle; }}
-            .nl-td-ltp     {{ padding: 12px 8px; vertical-align: middle; }}
-            .nl-td-vol     {{ padding: 12px 14px 12px 8px; vertical-align: middle; }}
-
-            /* ── Rank badge ─────────────────────────────────────────────── */
-            .nl-rank {{
-                width: 30px; height: 30px; border-radius: 8px;
-                display: flex; align-items: center; justify-content: center;
-                font-size: 13px; font-weight: 800;
-                font-family: 'IBM Plex Mono', monospace;
-                flex-shrink: 0;
-            }}
-
-            /* ── Strike value ───────────────────────────────────────────── */
-            .nl-strike-val {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 15px; font-weight: 700; color: #e8f4ff;
-                letter-spacing: -0.3px;
-            }}
-
-            /* ── Type badges ────────────────────────────────────────────── */
-            .nl-tbadge {{
-                display: inline-block;
-                padding: 3px 9px; border-radius: 6px;
-                font-size: 10px; font-weight: 800; letter-spacing: 1px;
-            }}
-            .nl-itm {{
-                background: rgba(0,230,118,.14); color: #00ff88;
-                border: 1px solid rgba(0,230,118,.5);
-                text-shadow: 0 0 8px rgba(0,255,136,.5);
-            }}
-            .nl-atm {{
-                background: rgba(255,220,0,.12); color: #ffe033;
-                border: 1px solid rgba(255,220,0,.5);
-                text-shadow: 0 0 8px rgba(255,220,0,.5);
-            }}
-            .nl-otm {{
-                background: rgba(80,140,200,.12); color: #7ab4d8;
-                border: 1px solid rgba(80,140,200,.4);
-            }}
-
-            /* ── OI value + heat bar ────────────────────────────────────── */
-            .nl-oi-wrap  {{ display: flex; flex-direction: column; gap: 5px; }}
-            .nl-oi-val   {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 14px; font-weight: 700;
-            }}
+            .nl-td-rank {{ padding: 12px 8px 12px 14px; width: 42px; vertical-align: middle; }}
+            .nl-td-strike {{ padding: 12px 8px; vertical-align: middle; }}
+            .nl-td-type {{ padding: 12px 6px; vertical-align: middle; }}
+            .nl-td-oi {{ padding: 12px 8px; vertical-align: middle; min-width: 100px; }}
+            .nl-td-chng {{ padding: 12px 8px; vertical-align: middle; }}
+            .nl-td-ltp {{ padding: 12px 8px; vertical-align: middle; }}
+            .nl-td-vol {{ padding: 12px 14px 12px 8px; vertical-align: middle; }}
+            .nl-rank {{ width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; font-family: 'IBM Plex Mono', monospace; flex-shrink: 0; }}
+            .nl-strike-val {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 15px); font-weight: 700; color: #e8f4ff; letter-spacing: -0.3px; }}
+            .nl-tbadge {{ display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }}
+            .nl-itm {{ background: rgba(0,230,118,.14); color: #00ff88; border: 1px solid rgba(0,230,118,.5); }}
+            .nl-atm {{ background: rgba(255,220,0,.12); color: #ffe033; border: 1px solid rgba(255,220,0,.5); }}
+            .nl-otm {{ background: rgba(80,140,200,.12); color: #7ab4d8; border: 1px solid rgba(80,140,200,.4); }}
+            .nl-oi-wrap {{ display: flex; flex-direction: column; gap: 5px; }}
+            .nl-oi-val {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 14px); font-weight: 700; }}
             .nl-oi-ce {{ color: #ff6680; text-shadow: 0 0 10px rgba(255,58,92,.4); }}
             .nl-oi-pe {{ color: #33ffaa; text-shadow: 0 0 10px rgba(0,230,118,.4); }}
-            .nl-bar-track {{
-                height: 5px; background: #060f1c; border-radius: 3px; overflow: hidden;
-                width: 100%; max-width: 120px;
-            }}
-            .nl-bar-fill  {{ height: 100%; border-radius: 3px; min-width: 3px; }}
+            .nl-bar-track {{ height: 5px; background: #060f1c; border-radius: 3px; overflow: hidden; width: 100%; max-width: 100px; }}
+            .nl-bar-fill {{ height: 100%; border-radius: 3px; min-width: 3px; }}
             .nl-bar-ce {{ background: linear-gradient(90deg, #ff3a5c44, #ff3a5c); box-shadow: 0 0 6px #ff3a5c66; }}
             .nl-bar-pe {{ background: linear-gradient(90deg, #00e67644, #00e676); box-shadow: 0 0 6px #00e67666; }}
-
-            /* ── Chng OI ────────────────────────────────────────────────── */
-            .nl-chng {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 12px; font-weight: 700;
-            }}
-            .nl-chng-up   {{ color: #00e676; }}
-            .nl-chng-dn   {{ color: #ff4d6d; }}
-            .nl-chng-flat {{ color: #3a6a8a; }}
-
-            /* ── LTP ────────────────────────────────────────────────────── */
-            .nl-ltp {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 14px; font-weight: 800;
-            }}
-            .nl-ltp-ce {{ color: #ffaacc; }}
-            .nl-ltp-pe {{ color: #aaffdd; }}
-
-            /* ── Volume ─────────────────────────────────────────────────── */
-            .nl-vol {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 12px; font-weight: 600; color: #3a7a9a;
-            }}
-
-            /* ── Footer ─────────────────────────────────────────────────── */
+            .nl-chng {{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; }}
+            .nl-chng-up {{ color: #00e676; }} .nl-chng-dn {{ color: #ff4d6d; }} .nl-chng-flat {{ color: #3a6a8a; }}
+            .nl-ltp {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 14px); font-weight: 800; }}
+            .nl-ltp-ce {{ color: #ffaacc; }} .nl-ltp-pe {{ color: #aaffdd; }}
+            .nl-vol {{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #3a7a9a; }}
             .nl-footer {{
-                background: #020810;
-                border-top: 1px solid #0a2030;
-                padding: 10px 24px;
-                display: flex; justify-content: space-between; align-items: center;
+                background: #020810; border-top: 1px solid #0a2030; padding: 10px 24px;
+                display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
             }}
-            .nl-footer-l {{
-                font-size: 9px; color: #0d2a40; letter-spacing: 2px;
-                font-weight: 700; text-transform: uppercase;
+            .nl-footer-l {{ font-size: 9px; color: #0d2a40; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }}
+            .nl-footer-r {{ display: flex; align-items: center; gap: 7px; font-size: 9px; color: #00c8ff; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }}
+
+            /* ── RESPONSIVE: stack panels on mobile ── */
+            @media (max-width: 700px) {{
+                .nl-panels {{ grid-template-columns: 1fr; }}
+                .nl-panel.nl-panel-ce {{ border-right: none; border-bottom: 2px solid #0b2540; }}
+                .nl-td-vol, .nl-th:last-child {{ display: none; }}
             }}
-            .nl-footer-r {{
-                display: flex; align-items: center; gap: 7px;
-                font-size: 9px; color: #00c8ff;
-                font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+            @media (max-width: 420px) {{
+                .nl-td-chng, .nl-th:nth-child(5) {{ display: none; }}
             }}
         </style>
 
         <div class="nl-wrap">
-
-            <!-- Master header -->
             <div class="nl-master-hdr">
                 <div class="nl-master-title">
                     <div class="nl-master-icon">&#9651;</div>
@@ -1507,11 +1339,7 @@ class NiftyAnalyzer:
                     <div class="nl-live-dot"></div>
                 </div>
             </div>
-
-            <!-- Split panels -->
             <div class="nl-panels">
-
-                <!-- CE Panel -->
                 <div class="nl-panel nl-panel-ce">
                     <div class="nl-panel-hdr">
                         <div class="nl-panel-hdr-dot nl-ce-dot"></div>
@@ -1519,14 +1347,10 @@ class NiftyAnalyzer:
                         <span class="nl-panel-hdr-sub nl-ce-sub">RESISTANCE WALL</span>
                     </div>
                     <table class="nl-table">
-                        <thead class="nl-col-hdr-row">
-                            <tr>{col_heads}</tr>
-                        </thead>
+                        <thead class="nl-col-hdr-row"><tr>{col_heads}</tr></thead>
                         <tbody>{ce_rows_html}</tbody>
                     </table>
                 </div>
-
-                <!-- PE Panel -->
                 <div class="nl-panel nl-panel-pe">
                     <div class="nl-panel-hdr">
                         <div class="nl-panel-hdr-dot nl-pe-dot"></div>
@@ -1534,28 +1358,18 @@ class NiftyAnalyzer:
                         <span class="nl-panel-hdr-sub nl-pe-sub">SUPPORT FLOOR</span>
                     </div>
                     <table class="nl-table">
-                        <thead class="nl-col-hdr-row">
-                            <tr>{col_heads}</tr>
-                        </thead>
+                        <thead class="nl-col-hdr-row"><tr>{col_heads}</tr></thead>
                         <tbody>{pe_rows_html}</tbody>
                     </table>
                 </div>
-
             </div>
-
-            <!-- Footer -->
             <div class="nl-footer">
                 <span class="nl-footer-l">WIDGET 01 &middot; NEON LEDGER &middot; OI ANALYSIS</span>
-                <span class="nl-footer-r">
-                    <div class="nl-live-dot"></div>
-                    LIVE
-                </span>
+                <span class="nl-footer-r"><div class="nl-live-dot"></div>LIVE</span>
             </div>
-
-        </div>
-        <!-- ═══ END NEON LEDGER OI WIDGET ═══ -->
-        '''
+        </div>'''
         return widget_html
+
 
     # =========================================================================
     # WIDGET 02 — PLASMA RADIAL | Option Chain Analysis
@@ -1572,29 +1386,19 @@ class NiftyAnalyzer:
         supports     = oc_analysis.get('supports', [])
 
         if oi_sentiment == 'Bullish':
-            sent_col  = '#00ff8c'
-            sent_bg   = 'rgba(0,200,120,.14)'
-            sent_brd  = '#00aa5566'
-            sent_icon = '&#8679;'
+            sent_col  = '#00ff8c'; sent_bg  = 'rgba(0,200,120,.14)'; sent_brd = '#00aa5566'; sent_icon = '&#8679;'
         else:
-            sent_col  = '#ff6070'
-            sent_bg   = 'rgba(255,60,80,.14)'
-            sent_brd  = '#cc223366'
-            sent_icon = '&#8681;'
+            sent_col  = '#ff6070'; sent_bg  = 'rgba(255,60,80,.14)'; sent_brd = '#cc223366'; sent_icon = '&#8681;'
 
         circ      = 408.4
         pcr_ratio = min(pcr / 2.0, 1.0)
         arc_len   = pcr_ratio * (circ * 0.69)
         arc_offset = -(circ * 0.155)
 
-        if pcr >= 1.2:
-            arc_col1, arc_col2 = '#00aa55', '#00ff8c'
-        elif pcr >= 1.0:
-            arc_col1, arc_col2 = '#0066ff', '#00c8ff'
-        elif pcr >= 0.8:
-            arc_col1, arc_col2 = '#ff9500', '#ffcc00'
-        else:
-            arc_col1, arc_col2 = '#cc2233', '#ff6070'
+        if pcr >= 1.2:   arc_col1, arc_col2 = '#00aa55', '#00ff8c'
+        elif pcr >= 1.0: arc_col1, arc_col2 = '#0066ff', '#00c8ff'
+        elif pcr >= 0.8: arc_col1, arc_col2 = '#ff9500', '#ffcc00'
+        else:            arc_col1, arc_col2 = '#cc2233', '#ff6070'
 
         r_bars_html = ''
         for idx, level in enumerate(resistances):
@@ -1619,197 +1423,115 @@ class NiftyAnalyzer:
             </div>'''
 
         def fmt_millions(val):
-            if abs(val) >= 1_000_000:
-                return f"{val/1_000_000:.1f}M"
-            elif abs(val) >= 1_000:
-                return f"{val/1_000:.0f}K"
+            if abs(val) >= 1_000_000: return f"{val/1_000_000:.1f}M"
+            elif abs(val) >= 1_000:   return f"{val/1_000:.0f}K"
             return str(int(val))
 
         call_b_str = fmt_millions(call_buildup)
         put_b_str  = fmt_millions(put_buildup)
 
         widget_html = f'''
-        <!-- ═══ OPTION CHAIN — WIDGET 02 PLASMA RADIAL ═══ -->
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
-
             .w2oc-wrap {{
                 font-family: 'Chakra Petch', sans-serif;
                 background: linear-gradient(135deg, #02060f, #030d1a);
-                border: 1px solid #0a2040;
-                border-radius: 14px;
-                overflow: hidden;
+                border: 1px solid #0a2040; border-radius: 14px; overflow: hidden;
                 box-shadow: 0 0 60px rgba(0,100,255,.07), 0 24px 80px rgba(0,0,0,.95);
             }}
             .w2oc-hdr {{
                 background: linear-gradient(135deg, #020810, #031220);
-                border-bottom: 1px solid #0a2040;
-                padding: 14px 22px;
-                display: flex; align-items: center; gap: 12px;
-                position: relative;
+                border-bottom: 1px solid #0a2040; padding: 14px 22px;
+                display: flex; align-items: center; gap: 12px; position: relative; flex-wrap: wrap;
             }}
             .w2oc-hdr::after {{
-                content: '';
-                position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+                content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
                 background: linear-gradient(90deg, transparent, #0066ff66, #00c8ffaa, #0066ff66, transparent);
             }}
             .w2oc-hdr-icon {{
                 width: 36px; height: 36px; border-radius: 10px;
                 background: linear-gradient(135deg, #001866, #0033aa);
-                display: flex; align-items: center; justify-content: center; font-size: 17px;
+                display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
                 box-shadow: 0 0 20px rgba(0,100,255,.5), inset 0 1px 0 rgba(255,255,255,.1);
             }}
             .w2oc-hdr-text h3 {{
-                font-size: 14px; font-weight: 700; color: #ffffff;
-                letter-spacing: 2.5px; text-transform: uppercase;
-                text-shadow: 0 0 20px rgba(0,200,255,.5);
+                font-size: clamp(12px, 2.5vw, 14px); font-weight: 700; color: #ffffff;
+                letter-spacing: 2.5px; text-transform: uppercase; text-shadow: 0 0 20px rgba(0,200,255,.5);
             }}
-            .w2oc-hdr-text p {{
-                font-size: 10px; color: #4499ff; margin-top: 3px;
-                letter-spacing: 1.5px; font-weight: 600;
-            }}
+            .w2oc-hdr-text p {{ font-size: 10px; color: #4499ff; margin-top: 3px; letter-spacing: 1.5px; font-weight: 600; }}
             .w2oc-hdr-badge {{
-                margin-left: auto;
-                background: rgba(0,200,255,.14);
-                border: 1px solid #0066ff99;
-                color: #00ddff;
-                padding: 5px 16px; border-radius: 20px;
-                font-size: 10px; font-weight: 700; letter-spacing: 2px;
-                text-shadow: 0 0 12px rgba(0,220,255,.7);
-                animation: w2oc-pulse 2s ease-in-out infinite;
+                margin-left: auto; background: rgba(0,200,255,.14); border: 1px solid #0066ff99; color: #00ddff;
+                padding: 5px 16px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 2px;
+                text-shadow: 0 0 12px rgba(0,220,255,.7); animation: w2oc-pulse 2s ease-in-out infinite;
             }}
-            @keyframes w2oc-pulse {{
-                0%,100% {{ box-shadow: 0 0 0 0 rgba(0,200,255,.3); }}
-                50%      {{ box-shadow: 0 0 0 6px rgba(0,200,255,0); }}
-            }}
-            .w2oc-body {{
-                display: grid;
-                grid-template-columns: 240px 1fr;
-            }}
+            @keyframes w2oc-pulse {{ 0%,100% {{ box-shadow: 0 0 0 0 rgba(0,200,255,.3); }} 50% {{ box-shadow: 0 0 0 6px rgba(0,200,255,0); }} }}
+            .w2oc-body {{ display: grid; grid-template-columns: 240px 1fr; }}
             .w2oc-gauge-col {{
-                padding: 24px 16px;
-                border-right: 1px solid #0a2040;
-                background: #02080f;
+                padding: 24px 16px; border-right: 1px solid #0a2040; background: #02080f;
                 display: flex; flex-direction: column; align-items: center; gap: 16px;
             }}
-            .w2oc-gauge-wrap {{
-                position: relative; width: 170px; height: 170px;
-            }}
+            .w2oc-gauge-wrap {{ position: relative; width: 170px; height: 170px; }}
             .w2oc-gauge-wrap svg {{
                 position: absolute; inset: 0; width: 100%; height: 100%;
                 filter: drop-shadow(0 0 10px {arc_col2}55);
             }}
             .w2oc-gauge-center {{
-                position: absolute; inset: 0;
-                display: flex; flex-direction: column;
+                position: absolute; inset: 0; display: flex; flex-direction: column;
                 align-items: center; justify-content: center; gap: 2px;
             }}
-            .w2oc-gauge-lbl  {{ font-size: 9px; color: #2a5a8a; letter-spacing: 3px; text-transform: uppercase; }}
-            .w2oc-gauge-val  {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 32px; font-weight: 700; color: #ffffff;
+            .w2oc-gauge-lbl {{ font-size: 9px; color: #2a5a8a; letter-spacing: 3px; text-transform: uppercase; }}
+            .w2oc-gauge-val {{
+                font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 700; color: #ffffff;
                 letter-spacing: -1px; text-shadow: 0 0 28px {arc_col2};
             }}
-            .w2oc-gauge-sub  {{ font-size: 9px; color: #2a5a8a; letter-spacing: 2px; }}
-            .w2oc-gauge-title {{
-                font-size: 11px; font-weight: 700; color: {arc_col2};
-                letter-spacing: 2px; text-transform: uppercase;
-                text-shadow: 0 0 14px {arc_col2}99;
-            }}
+            .w2oc-gauge-sub {{ font-size: 9px; color: #2a5a8a; letter-spacing: 2px; }}
+            .w2oc-gauge-title {{ font-size: 11px; font-weight: 700; color: {arc_col2}; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 14px {arc_col2}99; }}
             .w2oc-sent-pill {{
-                background: {sent_bg}; border: 1px solid {sent_brd};
-                border-radius: 10px; padding: 10px 16px;
-                text-align: center; width: 100%;
+                background: {sent_bg}; border: 1px solid {sent_brd}; border-radius: 10px;
+                padding: 10px 16px; text-align: center; width: 100%;
             }}
-            .w2oc-sent-lbl {{
-                font-size: 9px; color: #4499ff;
-                letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px;
-                font-weight: 700;
-            }}
-            .w2oc-sent-val {{
-                font-size: 20px; font-weight: 700; color: {sent_col};
-                text-shadow: 0 0 18px {sent_col}99; letter-spacing: 1px;
-            }}
-            .w2oc-maxpain {{
-                background: rgba(0,100,200,.1); border: 1px solid #0a3a5a;
-                border-radius: 10px; padding: 10px 16px;
-                text-align: center; width: 100%;
-            }}
-            .w2oc-maxpain-lbl {{
-                font-size: 9px; color: #4499ff;
-                letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px;
-                font-weight: 700;
-            }}
-            .w2oc-maxpain-val {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 20px; font-weight: 700; color: #00ddff;
-                text-shadow: 0 0 18px rgba(0,220,255,.7); letter-spacing: -0.5px;
-            }}
-            .w2oc-right {{
-                padding: 20px 22px;
-                display: flex; flex-direction: column; gap: 18px;
-            }}
-            .w2oc-stats-row {{
-                display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-            }}
+            .w2oc-sent-lbl {{ font-size: 9px; color: #4499ff; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }}
+            .w2oc-sent-val {{ font-size: 20px; font-weight: 700; color: {sent_col}; text-shadow: 0 0 18px {sent_col}99; letter-spacing: 1px; }}
+            .w2oc-maxpain {{ background: rgba(0,100,200,.1); border: 1px solid #0a3a5a; border-radius: 10px; padding: 10px 16px; text-align: center; width: 100%; }}
+            .w2oc-maxpain-lbl {{ font-size: 9px; color: #4499ff; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }}
+            .w2oc-maxpain-val {{ font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: #00ddff; text-shadow: 0 0 18px rgba(0,220,255,.7); }}
+            .w2oc-right {{ padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }}
+            .w2oc-stats-row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
             .w2oc-stat-card {{
-                background: rgba(0,60,120,.1); border: 1px solid #0a2a3a;
-                border-radius: 10px; padding: 14px 16px;
-                position: relative; overflow: hidden;
+                background: rgba(0,60,120,.1); border: 1px solid #0a2a3a; border-radius: 10px;
+                padding: 14px 16px; position: relative; overflow: hidden;
             }}
-            .w2oc-stat-card::before {{
-                content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-                background: var(--sc-accent);
-                box-shadow: 0 0 10px var(--sc-accent);
-            }}
-            .w2oc-stat-card-lbl {{
-                font-size: 10px; font-weight: 700; letter-spacing: 2px;
-                text-transform: uppercase; margin-bottom: 8px; color: #88bbdd;
-            }}
-            .w2oc-stat-card-val {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 22px; font-weight: 700;
-                color: var(--sc-col);
-                text-shadow: 0 0 16px var(--sc-accent);
-            }}
-            .w2oc-stat-card-sub {{
-                font-size: 10px; margin-top: 5px; color: var(--sc-col);
-                font-family: 'IBM Plex Mono', monospace; opacity: 0.65;
-            }}
+            .w2oc-stat-card::before {{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--sc-accent); box-shadow:0 0 10px var(--sc-accent); }}
+            .w2oc-stat-card-lbl {{ font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; color: #88bbdd; }}
+            .w2oc-stat-card-val {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(18px, 3vw, 22px); font-weight: 700; color: var(--sc-col); text-shadow: 0 0 16px var(--sc-accent); }}
+            .w2oc-stat-card-sub {{ font-size: 10px; margin-top: 5px; color: var(--sc-col); font-family: 'IBM Plex Mono', monospace; opacity: 0.65; }}
             .w2oc-div {{ height: 1px; background: linear-gradient(90deg, transparent, #0a3050, transparent); }}
             .w2oc-levels-section {{ display: flex; flex-direction: column; gap: 10px; }}
-            .w2oc-levels-title {{
-                font-size: 10px; font-weight: 700; letter-spacing: 2px;
-                text-transform: uppercase; margin-bottom: 2px;
-                display: flex; align-items: center; gap: 8px;
-            }}
+            .w2oc-levels-title {{ font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }}
             .w2oc-level-row {{ display: flex; align-items: center; gap: 12px; }}
-            .w2oc-level-tag {{
-                font-size: 10px; font-weight: 800; width: 28px; height: 28px;
-                border-radius: 6px; display: flex; align-items: center;
-                justify-content: center; flex-shrink: 0;
-            }}
+            .w2oc-level-tag {{ font-size: 10px; font-weight: 800; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }}
             .w2oc-r-tag {{ background:rgba(255,64,80,.14); border:1px solid rgba(255,64,80,.5); color:#ff5060; }}
             .w2oc-s-tag {{ background:rgba(0,230,118,.14); border:1px solid rgba(0,230,118,.5); color:#00e676; }}
             .w2oc-level-track {{ flex: 1; height: 8px; background: #0a1a2a; border-radius: 4px; overflow: hidden; }}
-            .w2oc-level-fill  {{ height: 100%; border-radius: 4px; }}
+            .w2oc-level-fill {{ height: 100%; border-radius: 4px; }}
             .w2oc-fill-r {{ background: linear-gradient(90deg,#ff405033,#ff4050cc); box-shadow:0 0 8px #ff405066; }}
             .w2oc-fill-s {{ background: linear-gradient(90deg,#00e67633,#00e676cc); box-shadow:0 0 8px #00e67666; }}
-            .w2oc-level-price {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 16px; font-weight: 700;
-                min-width: 90px; text-align: right; flex-shrink: 0;
-            }}
+            .w2oc-level-price {{ font-family: 'IBM Plex Mono', monospace; font-size: clamp(13px, 2vw, 16px); font-weight: 700; min-width: 80px; text-align: right; flex-shrink: 0; }}
             .w2oc-r-price {{ color: #ff8090; text-shadow: 0 0 10px #ff405066; }}
             .w2oc-s-price {{ color: #33ffaa; text-shadow: 0 0 10px #00e67666; }}
-            .w2oc-footer {{
-                background: #020810; border-top: 1px solid #0a2040;
-                padding: 10px 22px;
-                display: flex; justify-content: space-between; align-items: center;
-            }}
+            .w2oc-footer {{ background: #020810; border-top: 1px solid #0a2040; padding: 10px 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }}
             .w2oc-footer-l {{ font-size: 9px; color: #1a4a6a; letter-spacing: 1.5px; font-weight: 600; }}
             .w2oc-footer-r {{ display: flex; align-items: center; gap: 6px; font-size: 9px; color: #00c8ff; letter-spacing: 2px; font-weight: 700; }}
             .w2oc-footer-dot {{ width: 6px; height: 6px; border-radius: 50%; background: #00c8ff; box-shadow: 0 0 8px #00c8ff; animation: w2oc-pulse 1.5s ease-in-out infinite; }}
+
+            /* RESPONSIVE */
+            @media (max-width: 700px) {{
+                .w2oc-body {{ grid-template-columns: 1fr; }}
+                .w2oc-gauge-col {{ border-right: none; border-bottom: 1px solid #0a2040; padding: 20px; }}
+                .w2oc-gauge-wrap {{ width: 140px; height: 140px; }}
+                .w2oc-gauge-val {{ font-size: 26px; }}
+                .w2oc-stats-row {{ grid-template-columns: 1fr; gap: 8px; }}
+            }}
         </style>
 
         <div class="w2oc-wrap">
@@ -1837,25 +1559,13 @@ class NiftyAnalyzer:
                             </defs>
                             <circle cx="85" cy="85" r="80" fill="none" stroke="#061830" stroke-width="1"/>
                             <circle cx="85" cy="85" r="65" fill="none" stroke="#0a1a2a" stroke-width="11"
-                                stroke-dasharray="{circ * 0.69:.1f} {circ:.1f}"
-                                stroke-dashoffset="{arc_offset:.1f}"
-                                stroke-linecap="round"/>
+                                stroke-dasharray="{circ * 0.69:.1f} {circ:.1f}" stroke-dashoffset="{arc_offset:.1f}" stroke-linecap="round"/>
                             <circle cx="85" cy="85" r="65" fill="none" stroke="{arc_col2}" stroke-width="18"
-                                stroke-dasharray="{arc_len:.1f} {circ:.1f}"
-                                stroke-dashoffset="{arc_offset:.1f}"
-                                stroke-linecap="round" opacity="0.10"/>
-                            <circle cx="85" cy="85" r="65" fill="none"
-                                stroke="url(#pcr-arc-grad)" stroke-width="11"
-                                stroke-dasharray="{arc_len:.1f} {circ:.1f}"
-                                stroke-dashoffset="{arc_offset:.1f}"
-                                stroke-linecap="round"
-                                filter="url(#arc-glow)"/>
+                                stroke-dasharray="{arc_len:.1f} {circ:.1f}" stroke-dashoffset="{arc_offset:.1f}" stroke-linecap="round" opacity="0.10"/>
+                            <circle cx="85" cy="85" r="65" fill="none" stroke="url(#pcr-arc-grad)" stroke-width="11"
+                                stroke-dasharray="{arc_len:.1f} {circ:.1f}" stroke-dashoffset="{arc_offset:.1f}"
+                                stroke-linecap="round" filter="url(#arc-glow)"/>
                             <circle cx="85" cy="85" r="52" fill="none" stroke="#061220" stroke-width="1"/>
-                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(-110 85 85)"/>
-                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(-55 85 85)"/>
-                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(0 85 85)"/>
-                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(55 85 85)"/>
-                            <line x1="85" y1="20" x2="85" y2="30" stroke="#0a2a40" stroke-width="2" transform="rotate(110 85 85)"/>
                         </svg>
                         <div class="w2oc-gauge-center">
                             <span class="w2oc-gauge-lbl">PUT / CALL</span>
@@ -1906,15 +1616,11 @@ class NiftyAnalyzer:
             </div>
             <div class="w2oc-footer">
                 <span class="w2oc-footer-l">WIDGET 02 &middot; PLASMA RADIAL &middot; OPTION CHAIN ANALYSIS</span>
-                <span class="w2oc-footer-r">
-                    <div class="w2oc-footer-dot"></div>
-                    NIFTY &middot; WEEKLY EXPIRY
-                </span>
+                <span class="w2oc-footer-r"><div class="w2oc-footer-dot"></div>NIFTY &middot; WEEKLY EXPIRY</span>
             </div>
-        </div>
-        <!-- ═══ END PLASMA RADIAL OC WIDGET ═══ -->
-        '''
+        </div>'''
         return widget_html
+
 
     # =========================================================================
     # PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01)
@@ -1923,8 +1629,7 @@ class NiftyAnalyzer:
         pp = pivot_points
 
         def dist(val):
-            if val is None:
-                return 'N/A'
+            if val is None: return 'N/A'
             d = val - current_price
             return f"{d:+.2f}"
 
@@ -1961,31 +1666,15 @@ class NiftyAnalyzer:
 
         def res_row(lbl, val, opacity_name):
             is_near = is_nearest_r(val)
-
             if opacity_name == 'r1':
-                name_col  = '#ff6070'
-                price_col = '#ffcccc'
-                price_sz  = '18px'
-                row_bg    = 'background:rgba(255,60,80,0.06);border-left:3px solid rgba(255,96,112,0.6);'
+                name_col = '#ff6070'; price_col = '#ffcccc'; price_sz = '18px'
+                row_bg   = 'background:rgba(255,60,80,0.06);border-left:3px solid rgba(255,96,112,0.6);'
             elif opacity_name == 'r2':
-                name_col  = 'rgba(255,96,112,0.80)'
-                price_col = 'rgba(255,180,180,0.80)'
-                price_sz  = '16px'
-                row_bg    = ''
+                name_col = 'rgba(255,96,112,0.80)'; price_col = 'rgba(255,180,180,0.80)'; price_sz = '16px'; row_bg = ''
             else:
-                name_col  = 'rgba(255,96,112,0.50)'
-                price_col = 'rgba(255,180,180,0.50)'
-                price_sz  = '15px'
-                row_bg    = ''
-
-            near_html = ''
-            if is_near:
-                near_html = '<span class="w1-near-tag w1-near-r">NEAREST&nbsp;R</span>'
-
-            icon_html = ''
-            if lbl == 'R1':
-                icon_html = f'<span class="w1-icon w1-icon-r">&#9650;</span>'
-
+                name_col = 'rgba(255,96,112,0.50)'; price_col = 'rgba(255,180,180,0.50)'; price_sz = '15px'; row_bg = ''
+            near_html = '<span class="w1-near-tag w1-near-r">NEAREST&nbsp;R</span>' if is_near else ''
+            icon_html = '<span class="w1-icon w1-icon-r">&#9650;</span>' if lbl == 'R1' else ''
             return f'''
                 <div class="w1-level-row" style="{row_bg}">
                     <span class="w1-lv-name" style="color:{name_col};">{lbl}</span>
@@ -1998,31 +1687,15 @@ class NiftyAnalyzer:
 
         def sup_row(lbl, val, opacity_name):
             is_near = is_nearest_s(val)
-
             if opacity_name == 's1':
-                name_col  = '#00ff8c'
-                price_col = '#ccffee'
-                price_sz  = '18px'
-                row_bg    = 'background:rgba(0,200,140,0.06);border-right:3px solid rgba(0,255,140,0.6);'
+                name_col = '#00ff8c'; price_col = '#ccffee'; price_sz = '18px'
+                row_bg   = 'background:rgba(0,200,140,0.06);border-right:3px solid rgba(0,255,140,0.6);'
             elif opacity_name == 's2':
-                name_col  = 'rgba(0,255,140,0.80)'
-                price_col = 'rgba(180,255,220,0.80)'
-                price_sz  = '16px'
-                row_bg    = ''
+                name_col = 'rgba(0,255,140,0.80)'; price_col = 'rgba(180,255,220,0.80)'; price_sz = '16px'; row_bg = ''
             else:
-                name_col  = 'rgba(0,255,140,0.50)'
-                price_col = 'rgba(180,255,220,0.50)'
-                price_sz  = '15px'
-                row_bg    = ''
-
-            near_html = ''
-            if is_near:
-                near_html = '<span class="w1-near-tag w1-near-s">NEAREST&nbsp;S</span>'
-
-            icon_html = ''
-            if lbl == 'S1':
-                icon_html = f'<span class="w1-icon w1-icon-s">&#9660;</span>'
-
+                name_col = 'rgba(0,255,140,0.50)'; price_col = 'rgba(180,255,220,0.50)'; price_sz = '15px'; row_bg = ''
+            near_html = '<span class="w1-near-tag w1-near-s">NEAREST&nbsp;S</span>' if is_near else ''
+            icon_html = '<span class="w1-icon w1-icon-s">&#9660;</span>' if lbl == 'S1' else ''
             return f'''
                 <div class="w1-level-row w1-sup-row" style="{row_bg}">
                     {icon_html}
@@ -2033,165 +1706,108 @@ class NiftyAnalyzer:
                     <span class="w1-lv-name" style="color:{name_col};text-align:right;">{lbl}</span>
                 </div>'''
 
-        res_rows_html = (
-            res_row('R3', pp.get('r3', 'N/A'), 'r3') +
-            res_row('R2', pp.get('r2', 'N/A'), 'r2') +
-            res_row('R1', pp.get('r1', 'N/A'), 'r1')
-        )
-        sup_rows_html = (
-            sup_row('S1', pp.get('s1', 'N/A'), 's1') +
-            sup_row('S2', pp.get('s2', 'N/A'), 's2') +
-            sup_row('S3', pp.get('s3', 'N/A'), 's3')
-        )
+        res_rows_html = (res_row('R3', pp.get('r3','N/A'), 'r3') +
+                         res_row('R2', pp.get('r2','N/A'), 'r2') +
+                         res_row('R1', pp.get('r1','N/A'), 'r1'))
+        sup_rows_html = (sup_row('S1', pp.get('s1','N/A'), 's1') +
+                         sup_row('S2', pp.get('s2','N/A'), 's2') +
+                         sup_row('S3', pp.get('s3','N/A'), 's3'))
 
         pp_dist_str = dist(pp.get('pivot'))
 
         widget_html = f'''
-        <!-- ═══ PIVOT POINTS WIDGET — NEON RUNWAY (Widget 01) ═══ -->
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
-
             .w1-pv {{
-                background: #02080f;
-                border: 1px solid #0a2a40;
-                border-radius: 14px;
-                overflow: hidden;
+                background: #02080f; border: 1px solid #0a2a40; border-radius: 14px; overflow: hidden;
                 font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
-                box-shadow: 0 0 0 1px #041020, 0 20px 60px rgba(0,0,0,.95);
-                width: 100%;
+                box-shadow: 0 0 0 1px #041020, 0 20px 60px rgba(0,0,0,.95); width: 100%;
             }}
             .w1-hdr {{
-                background: linear-gradient(135deg, #031525, #020e1c);
-                padding: 14px 20px;
+                background: linear-gradient(135deg, #031525, #020e1c); padding: 14px 20px;
                 display: flex; align-items: center; justify-content: space-between;
-                border-bottom: 2px solid #00c8ff;
+                border-bottom: 2px solid #00c8ff; flex-wrap: wrap; gap: 10px;
             }}
-            .w1-hdr-title  {{ font-size: 15px; font-weight: 700; color: #ffffff; letter-spacing: 2px; }}
-            .w1-hdr-sub    {{ font-size: 11px; color: #3a8aaa; margin-top: 3px; letter-spacing: .5px; }}
-            .w1-hdr-badge  {{
-                background: #00c8ff; color: #000000;
-                font-size: 10px; font-weight: 700;
-                padding: 4px 14px; border-radius: 20px; letter-spacing: 2px;
-            }}
+            .w1-hdr-title {{ font-size: clamp(13px, 3vw, 15px); font-weight: 700; color: #ffffff; letter-spacing: 2px; }}
+            .w1-hdr-sub   {{ font-size: 11px; color: #3a8aaa; margin-top: 3px; letter-spacing: .5px; }}
+            .w1-hdr-badge {{ background: #00c8ff; color: #000000; font-size: 10px; font-weight: 700; padding: 4px 14px; border-radius: 20px; letter-spacing: 2px; }}
             .w1-gauge {{ padding: 16px 20px 4px; background: #020c18; border-bottom: 1px solid #0a2030; }}
             .w1-gauge-track {{
                 height: 10px; border-radius: 20px; position: relative; overflow: visible;
-                background: linear-gradient(90deg,
-                    rgba(0,255,140,.12) 0%, rgba(0,255,140,.35) 30%,
-                    rgba(255,255,255,.06) 50%,
-                    rgba(255,96,112,.35) 70%, rgba(255,96,112,.12) 100%);
+                background: linear-gradient(90deg, rgba(0,255,140,.12) 0%, rgba(0,255,140,.35) 30%, rgba(255,255,255,.06) 50%, rgba(255,96,112,.35) 70%, rgba(255,96,112,.12) 100%);
                 border: 1px solid #0a3050;
             }}
             .w1-gdot {{
-                position: absolute; left: {dot_pct:.1f}%; top: 50%;
-                transform: translate(-50%, -50%);
-                width: 18px; height: 18px;
-                background: #00c8ff; border-radius: 50%;
-                border: 3px solid #02080f;
-                box-shadow: 0 0 0 2px #00c8ff, 0 0 20px rgba(0,200,255,.9);
-                animation: w1-pulse 2s ease-in-out infinite;
-                z-index: 2;
+                position: absolute; left: {dot_pct:.1f}%; top: 50%; transform: translate(-50%, -50%);
+                width: 18px; height: 18px; background: #00c8ff; border-radius: 50%;
+                border: 3px solid #02080f; box-shadow: 0 0 0 2px #00c8ff, 0 0 20px rgba(0,200,255,.9);
+                animation: w1-pulse 2s ease-in-out infinite; z-index: 2;
             }}
             @keyframes w1-pulse {{
                 0%,100% {{ box-shadow: 0 0 0 2px #00c8ff, 0 0 20px rgba(0,200,255,.9); }}
                 50%      {{ box-shadow: 0 0 0 3px #00c8ff, 0 0 32px rgba(0,200,255,1); }}
             }}
             .w1-gauge-labels {{
-                display: flex; justify-content: space-between;
-                margin-top: 10px; padding-bottom: 10px;
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 13px; font-weight: 700;
+                display: flex; justify-content: space-between; margin-top: 10px; padding-bottom: 10px;
+                font-family: 'IBM Plex Mono', monospace; font-size: clamp(11px, 2vw, 13px); font-weight: 700;
+                flex-wrap: wrap; gap: 4px;
             }}
-            .w1-gl-s   {{ color: #00ff8c; }}
-            .w1-gl-ltp {{ color: #ffffff; font-size: 14px; }}
-            .w1-gl-r   {{ color: #ff6070; }}
+            .w1-gl-s {{ color: #00ff8c; }} .w1-gl-ltp {{ color: #ffffff; font-size: 14px; }} .w1-gl-r {{ color: #ff6070; }}
             .w1-zone {{
-                margin: 10px 16px;
-                padding: 10px 16px;
-                background: rgba(0,200,255,0.07);
-                border: 1px solid #0a5a7a;
-                border-radius: 8px;
-                display: flex; align-items: center; gap: 10px;
+                margin: 10px 16px; padding: 10px 16px; background: rgba(0,200,255,0.07);
+                border: 1px solid #0a5a7a; border-radius: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
             }}
-            .w1-zone-dot {{
-                width: 9px; height: 9px; border-radius: 50%;
-                background: #00c8ff; flex-shrink: 0;
-                box-shadow: 0 0 10px #00c8ff;
-                animation: w1-pulse 2s ease-in-out infinite;
-            }}
-            .w1-zone-text {{ font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: .5px; }}
+            .w1-zone-dot {{ width:9px;height:9px;border-radius:50%;background:#00c8ff;flex-shrink:0;box-shadow:0 0 10px #00c8ff;animation:w1-pulse 2s ease-in-out infinite; }}
+            .w1-zone-text {{ font-size: clamp(12px, 2.5vw, 14px); font-weight: 700; color: #ffffff; letter-spacing: .5px; }}
             .w1-zone-val  {{ margin-left: auto; font-size: 12px; color: #00c8ff; font-family: 'IBM Plex Mono'; white-space: nowrap; }}
-            .w1-candle {{
-                display: flex; margin: 0 16px 14px;
-                border: 1px solid #0a2a40; border-radius: 8px; overflow: hidden;
-            }}
+            .w1-candle {{ display: flex; margin: 0 16px 14px; border: 1px solid #0a2a40; border-radius: 8px; overflow: hidden; }}
             .w1-ci {{ flex: 1; padding: 10px 14px; border-right: 1px solid #0a2030; }}
             .w1-ci:last-child {{ border-right: none; }}
-            .w1-ci-lbl {{
-                font-size: 10px; color: #3a8aaa;
-                letter-spacing: 1.5px; margin-bottom: 5px; text-transform: uppercase;
-            }}
-            .w1-ci-val {{ font-size: 15px; font-weight: 700; font-family: 'IBM Plex Mono'; }}
-            .w1-ci-h .w1-ci-val {{ color: #ff8090; }}
-            .w1-ci-l .w1-ci-val {{ color: #80ffcc; }}
-            .w1-ci-c .w1-ci-val {{ color: #80d8ff; }}
-            .w1-grid {{
-                display: grid; grid-template-columns: 1fr auto 1fr;
-                border-top: 1px solid #0a2030;
-            }}
+            .w1-ci-lbl {{ font-size: 10px; color: #3a8aaa; letter-spacing: 1.5px; margin-bottom: 5px; text-transform: uppercase; }}
+            .w1-ci-val {{ font-size: clamp(13px, 2vw, 15px); font-weight: 700; font-family: 'IBM Plex Mono'; }}
+            .w1-ci-h .w1-ci-val {{ color: #ff8090; }} .w1-ci-l .w1-ci-val {{ color: #80ffcc; }} .w1-ci-c .w1-ci-val {{ color: #80d8ff; }}
+            .w1-grid {{ display: grid; grid-template-columns: 1fr auto 1fr; border-top: 1px solid #0a2030; }}
             .w1-col-res {{ border-right: 1px solid #0a2030; }}
             .w1-level-row {{
-                display: flex; align-items: center; justify-content: space-between;
-                padding: 13px 18px; border-bottom: 1px solid #061520;
-                gap: 8px; min-height: 54px; transition: background .15s;
-                cursor: default;
+                display: flex; align-items: center; justify-content: space-between; padding: 13px 18px;
+                border-bottom: 1px solid #061520; gap: 8px; min-height: 54px; transition: background .15s; cursor: default;
             }}
             .w1-level-row:last-child {{ border-bottom: none; }}
             .w1-level-row:hover {{ background: rgba(0,100,160,0.07) !important; }}
             .w1-sup-row {{ flex-direction: row-reverse; }}
-            .w1-lv-name  {{ font-size: 14px; font-weight: 700; letter-spacing: 1px; min-width: 26px; flex-shrink: 0; }}
+            .w1-lv-name  {{ font-size: clamp(12px, 2vw, 14px); font-weight: 700; letter-spacing: 1px; min-width: 26px; flex-shrink: 0; }}
             .w1-lv-price {{ font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: .5px; }}
-            .w1-icon     {{ width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }}
-            .w1-icon-r   {{ background: rgba(255,96,112,.15); color: #ff6070; border: 1px solid rgba(255,96,112,.5); }}
-            .w1-icon-s   {{ background: rgba(0,255,140,.15); color: #00ff8c; border: 1px solid rgba(0,255,140,.5); }}
-            .w1-near-tag {{
-                font-size: 10px; padding: 2px 8px; border-radius: 6px;
-                font-weight: 800; letter-spacing: .5px; white-space: nowrap;
-            }}
-            .w1-near-r {{ background: rgba(255,96,112,.18); color: #ff6070; border: 1px solid rgba(255,96,112,.55); }}
-            .w1-near-s {{ background: rgba(0,255,140,.18); color: #00ff8c; border: 1px solid rgba(0,255,140,.55); }}
+            .w1-icon {{ width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0; }}
+            .w1-icon-r {{ background:rgba(255,96,112,.15);color:#ff6070;border:1px solid rgba(255,96,112,.5); }}
+            .w1-icon-s {{ background:rgba(0,255,140,.15);color:#00ff8c;border:1px solid rgba(0,255,140,.5); }}
+            .w1-near-tag {{ font-size:10px;padding:2px 8px;border-radius:6px;font-weight:800;letter-spacing:.5px;white-space:nowrap; }}
+            .w1-near-r {{ background:rgba(255,96,112,.18);color:#ff6070;border:1px solid rgba(255,96,112,.55); }}
+            .w1-near-s {{ background:rgba(0,255,140,.18);color:#00ff8c;border:1px solid rgba(0,255,140,.55); }}
             .w1-pivot-col {{
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
-                padding: 18px 16px; gap: 6px;
-                background: rgba(0,200,255,.04);
-                border-left: 1px solid #0a2030;
-                border-right: 1px solid #0a2030;
-                min-width: 148px;
+                padding: 18px 16px; gap: 6px; background: rgba(0,200,255,.04);
+                border-left: 1px solid #0a2030; border-right: 1px solid #0a2030; min-width: 130px;
             }}
             .w1-pp-tag  {{ font-size: 10px; color: #3a8aaa; letter-spacing: 2px; text-transform: uppercase; }}
-            .w1-pp-val  {{
-                font-size: 20px; font-weight: 700; color: #00c8ff;
-                font-family: 'IBM Plex Mono', monospace;
-                text-shadow: 0 0 14px rgba(0,200,255,.6);
-                text-align: center;
-            }}
+            .w1-pp-val  {{ font-size: clamp(16px, 3vw, 20px); font-weight: 700; color: #00c8ff; font-family: 'IBM Plex Mono', monospace; text-shadow: 0 0 14px rgba(0,200,255,.6); text-align: center; }}
             .w1-pp-dist {{ font-size: 12px; color: #3a8aaa; font-family: 'IBM Plex Mono'; }}
             .w1-pp-sep  {{ width: 36px; height: 1px; background: #0a3050; margin: 3px 0; }}
-            .w1-ltp-chip {{
-                background: #00c8ff; color: #000000;
-                border-radius: 8px; padding: 7px 18px;
-                text-align: center; margin-top: 4px;
-            }}
+            .w1-ltp-chip {{ background: #00c8ff; color: #000000; border-radius: 8px; padding: 7px 18px; text-align: center; margin-top: 4px; }}
             .w1-ltp-chip-lbl {{ font-size: 9px; font-weight: 700; letter-spacing: 2px; }}
-            .w1-ltp-chip-val {{ font-size: 15px; font-weight: 700; font-family: 'IBM Plex Mono'; }}
-            .w1-footer {{
-                display: flex; justify-content: space-between; align-items: center;
-                padding: 10px 20px;
-                background: #020c18; border-top: 1px solid #0a2030;
-                font-family: 'IBM Plex Mono', monospace; font-size: 12px;
-            }}
+            .w1-ltp-chip-val {{ font-size: clamp(13px, 2.5vw, 15px); font-weight: 700; font-family: 'IBM Plex Mono'; }}
+            .w1-footer {{ display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#020c18;border-top:1px solid #0a2030;font-family:'IBM Plex Mono',monospace;font-size:12px;flex-wrap:wrap;gap:8px; }}
             .w1-footer-l {{ color: #2a6a8a; letter-spacing: 1px; }}
             .w1-footer-r {{ color: #00c8ff; font-weight: 700; text-shadow: 0 0 8px rgba(0,200,255,.5); }}
+
+            /* RESPONSIVE */
+            @media (max-width: 600px) {{
+                .w1-grid {{ grid-template-columns: 1fr; }}
+                .w1-pivot-col {{ border: none; border-top: 1px solid #0a2030; border-bottom: 1px solid #0a2030; flex-direction: row; justify-content: space-around; padding: 12px 16px; }}
+                .w1-col-res {{ border-right: none; }}
+                .w1-candle {{ flex-direction: column; }}
+                .w1-ci {{ border-right: none; border-bottom: 1px solid #0a2030; }}
+                .w1-ci:last-child {{ border-bottom: none; }}
+            }}
         </style>
 
         <div class="w1-pv">
@@ -2203,9 +1819,7 @@ class NiftyAnalyzer:
                 <div class="w1-hdr-badge">30 MIN</div>
             </div>
             <div class="w1-gauge">
-                <div class="w1-gauge-track">
-                    <div class="w1-gdot"></div>
-                </div>
+                <div class="w1-gauge-track"><div class="w1-gdot"></div></div>
                 <div class="w1-gauge-labels">
                     <span class="w1-gl-s">S1 &#8377;{pp.get('s1','N/A')}</span>
                     <span class="w1-gl-ltp">&#9650; &#8377;{current_price} LTP</span>
@@ -2218,18 +1832,9 @@ class NiftyAnalyzer:
                 <span class="w1-zone-val">{zone_detail}</span>
             </div>
             <div class="w1-candle">
-                <div class="w1-ci w1-ci-h">
-                    <div class="w1-ci-lbl">&#9650; PREV HIGH</div>
-                    <div class="w1-ci-val">&#8377;{pp.get('prev_high','N/A')}</div>
-                </div>
-                <div class="w1-ci w1-ci-l">
-                    <div class="w1-ci-lbl">&#9660; PREV LOW</div>
-                    <div class="w1-ci-val">&#8377;{pp.get('prev_low','N/A')}</div>
-                </div>
-                <div class="w1-ci w1-ci-c">
-                    <div class="w1-ci-lbl">&#9679; PREV CLOSE</div>
-                    <div class="w1-ci-val">&#8377;{pp.get('prev_close','N/A')}</div>
-                </div>
+                <div class="w1-ci w1-ci-h"><div class="w1-ci-lbl">&#9650; PREV HIGH</div><div class="w1-ci-val">&#8377;{pp.get('prev_high','N/A')}</div></div>
+                <div class="w1-ci w1-ci-l"><div class="w1-ci-lbl">&#9660; PREV LOW</div><div class="w1-ci-val">&#8377;{pp.get('prev_low','N/A')}</div></div>
+                <div class="w1-ci w1-ci-c"><div class="w1-ci-lbl">&#9679; PREV CLOSE</div><div class="w1-ci-val">&#8377;{pp.get('prev_close','N/A')}</div></div>
             </div>
             <div class="w1-grid">
                 <div class="w1-col-res">{res_rows_html}</div>
@@ -2249,9 +1854,7 @@ class NiftyAnalyzer:
                 <span class="w1-footer-l">Traditional &middot; 30 Min Candle</span>
                 <span class="w1-footer-r">LTP &#8377;{current_price}</span>
             </div>
-        </div>
-        <!-- ═══ END NEON RUNWAY PIVOT WIDGET ═══ -->
-        '''
+        </div>'''
         return widget_html
 
     def _nearest_level_name(self, pivot_points, value):
@@ -2264,26 +1867,20 @@ class NiftyAnalyzer:
         }
         return mapping.get(value, str(value))
 
+
     # =========================================================================
     # WIDGET 04 — BLOOMBERG TABLE  |  Support & Resistance (1H)
     # =========================================================================
     def _build_sr_bloomberg_widget(self, tech_resistances, tech_supports, current_price):
         def strength_dots(distance_pct, level_type):
             abs_dist = abs(distance_pct)
-            if abs_dist <= 0.3:
-                filled = 5
-            elif abs_dist <= 0.6:
-                filled = 4
-            elif abs_dist <= 1.0:
-                filled = 3
-            elif abs_dist <= 1.5:
-                filled = 2
-            else:
-                filled = 1
-
-            dot_color = '#ff4d6d' if level_type == 'R' else '#00e676'
+            if abs_dist <= 0.3:   filled = 5
+            elif abs_dist <= 0.6: filled = 4
+            elif abs_dist <= 1.0: filled = 3
+            elif abs_dist <= 1.5: filled = 2
+            else:                 filled = 1
+            dot_color   = '#ff4d6d' if level_type == 'R' else '#00e676'
             empty_color = '#1a1a2e'
-
             dots_html = ''
             for i in range(5):
                 if i < filled:
@@ -2295,19 +1892,17 @@ class NiftyAnalyzer:
         def build_resistance_rows(resistances):
             rows = ''
             for idx, level in enumerate(resistances):
-                label     = f"R{idx + 1}"
-                dist      = level - current_price
-                dist_pct  = (dist / current_price) * 100
-                dist_str  = f"+{dist:.1f}"
+                label    = f"R{idx + 1}"
+                dist     = level - current_price
+                dist_pct = (dist / current_price) * 100
+                dist_str     = f"+{dist:.1f}"
                 dist_pct_str = f"+{dist_pct:.2f}%"
-                dots      = strength_dots(dist_pct, 'R')
+                dots    = strength_dots(dist_pct, 'R')
                 row_opacity = '1' if idx == 0 else ('0.82' if idx == 1 else '0.65')
                 price_size  = '20px' if idx == 0 else ('17px' if idx == 1 else '15px')
                 rows += f'''
                 <tr class="w4-row w4-row-r" style="opacity:{row_opacity};">
-                    <td class="w4-td-label">
-                        <span class="w4-badge w4-badge-r">{label}</span>
-                    </td>
+                    <td class="w4-td-label"><span class="w4-badge w4-badge-r">{label}</span></td>
                     <td class="w4-td-price">
                         <span style="font-family:'IBM Plex Mono',monospace;font-size:{price_size};font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
                             &#8377;{level:,.1f}
@@ -2317,33 +1912,25 @@ class NiftyAnalyzer:
                         <span class="w4-dist w4-dist-r">{dist_str}</span>
                         <span class="w4-dist-pct w4-dist-pct-r">{dist_pct_str}</span>
                     </td>
-                    <td class="w4-td-strength">
-                        <div class="w4-dots">{dots}</div>
-                    </td>
-                    <td class="w4-td-bar">
-                        <div class="w4-bar-track">
-                            <div class="w4-bar-fill w4-bar-r" style="width:{min(100, dist_pct * 30):.0f}%;"></div>
-                        </div>
-                    </td>
+                    <td class="w4-td-strength"><div class="w4-dots">{dots}</div></td>
+                    <td class="w4-td-bar"><div class="w4-bar-track"><div class="w4-bar-fill w4-bar-r" style="width:{min(100, dist_pct * 30):.0f}%;"></div></div></td>
                 </tr>'''
             return rows
 
         def build_support_rows(supports):
             rows = ''
             for idx, level in enumerate(supports):
-                label     = f"S{idx + 1}"
-                dist      = current_price - level
-                dist_pct  = (dist / current_price) * 100
-                dist_str  = f"-{dist:.1f}"
+                label    = f"S{idx + 1}"
+                dist     = current_price - level
+                dist_pct = (dist / current_price) * 100
+                dist_str     = f"-{dist:.1f}"
                 dist_pct_str = f"-{dist_pct:.2f}%"
-                dots      = strength_dots(dist_pct, 'S')
+                dots    = strength_dots(dist_pct, 'S')
                 row_opacity = '1' if idx == 0 else ('0.82' if idx == 1 else '0.65')
                 price_size  = '20px' if idx == 0 else ('17px' if idx == 1 else '15px')
                 rows += f'''
                 <tr class="w4-row w4-row-s" style="opacity:{row_opacity};">
-                    <td class="w4-td-label">
-                        <span class="w4-badge w4-badge-s">{label}</span>
-                    </td>
+                    <td class="w4-td-label"><span class="w4-badge w4-badge-s">{label}</span></td>
                     <td class="w4-td-price">
                         <span style="font-family:'IBM Plex Mono',monospace;font-size:{price_size};font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
                             &#8377;{level:,.1f}
@@ -2353,14 +1940,8 @@ class NiftyAnalyzer:
                         <span class="w4-dist w4-dist-s">{dist_str}</span>
                         <span class="w4-dist-pct w4-dist-pct-s">{dist_pct_str}</span>
                     </td>
-                    <td class="w4-td-strength">
-                        <div class="w4-dots">{dots}</div>
-                    </td>
-                    <td class="w4-td-bar">
-                        <div class="w4-bar-track">
-                            <div class="w4-bar-fill w4-bar-s" style="width:{min(100, dist_pct * 30):.0f}%;"></div>
-                        </div>
-                    </td>
+                    <td class="w4-td-strength"><div class="w4-dots">{dots}</div></td>
+                    <td class="w4-td-bar"><div class="w4-bar-track"><div class="w4-bar-fill w4-bar-s" style="width:{min(100, dist_pct * 30):.0f}%;"></div></div></td>
                 </tr>'''
             return rows
 
@@ -2368,221 +1949,65 @@ class NiftyAnalyzer:
         support_rows_html    = build_support_rows(tech_supports)
 
         widget_html = f'''
-        <!-- ═══ SUPPORT & RESISTANCE — WIDGET 04 BLOOMBERG TABLE ═══ -->
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
-
             .w4-wrap {{
-                font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
-                background: #000000;
-                border: 1px solid #1a1a1a;
-                border-radius: 14px;
-                overflow: hidden;
-                box-shadow:
-                    0 0 0 1px #0d0d0d,
-                    0 0 40px rgba(255, 180, 0, 0.04),
-                    0 24px 60px rgba(0,0,0,0.95);
+                font-family: 'Space Grotesk', 'Segoe UI', sans-serif; background: #000000;
+                border: 1px solid #1a1a1a; border-radius: 14px; overflow: hidden;
+                box-shadow: 0 0 0 1px #0d0d0d, 0 0 40px rgba(255,180,0,.04), 0 24px 60px rgba(0,0,0,0.95);
             }}
-            .w4-header {{
-                background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
-                border-bottom: 1px solid #1e1e1e;
-                padding: 0;
-                display: flex;
-            }}
-            .w4-hdr-half {{
-                flex: 1;
-                padding: 14px 20px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }}
-            .w4-hdr-half.resistance-hdr {{
-                border-right: 1px solid #1e1e1e;
-                border-bottom: 2px solid #ff4d6d;
-            }}
-            .w4-hdr-half.support-hdr {{
-                border-bottom: 2px solid #00e676;
-            }}
-            .w4-hdr-dot {{
-                width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-            }}
-            .w4-hdr-dot.r-dot {{
-                background: #ff4d6d;
-                box-shadow: 0 0 8px #ff4d6d;
-            }}
-            .w4-hdr-dot.s-dot {{
-                background: #00e676;
-                box-shadow: 0 0 8px #00e676;
-            }}
-            .w4-hdr-title {{
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 2.5px;
-                text-transform: uppercase;
-            }}
-            .w4-hdr-title.r-title {{ color: #ff4d6d; }}
-            .w4-hdr-title.s-title {{ color: #00e676; }}
-            .w4-hdr-tf {{
-                margin-left: auto;
-                font-size: 10px;
-                font-weight: 600;
-                letter-spacing: 1.5px;
-                color: #3a3a4a;
-            }}
-            .w4-ltp-bar {{
-                background: #0a0800;
-                border-bottom: 1px solid #1e1e1e;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 10px 20px;
-                gap: 12px;
-            }}
-            .w4-ltp-line {{
-                flex: 1; height: 1px;
-                background: linear-gradient(90deg, transparent, #2a2000, transparent);
-            }}
-            .w4-ltp-chip {{
-                background: linear-gradient(135deg, #1a1200, #221800);
-                border: 1px solid #ffd70044;
-                border-radius: 8px;
-                padding: 8px 20px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }}
-            .w4-ltp-label {{
-                font-size: 9px;
-                font-weight: 700;
-                letter-spacing: 2px;
-                color: #8a7200;
-                text-transform: uppercase;
-            }}
-            .w4-ltp-value {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 18px;
-                font-weight: 800;
-                color: #ffd700;
-                letter-spacing: -0.5px;
-                text-shadow: 0 0 16px rgba(255,215,0,0.5);
-            }}
-            .w4-body {{
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-            }}
-            .w4-col {{
-                padding: 4px 0;
-            }}
-            .w4-col.r-col {{ border-right: 1px solid #111; }}
-            .w4-col-hdr {{
-                display: grid;
-                grid-template-columns: 44px 1fr 90px 80px 1fr;
-                padding: 6px 14px;
-                border-bottom: 1px solid #111;
-                gap: 0;
-            }}
-            .w4-col-hdr span {{
-                font-size: 9px;
-                font-weight: 700;
-                letter-spacing: 1.5px;
-                text-transform: uppercase;
-                color: #333;
-            }}
-            .w4-table {{
-                width: 100%;
-                border-collapse: collapse;
-            }}
-            .w4-row {{
-                transition: background 0.15s;
-                cursor: default;
-            }}
+            .w4-header {{ background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%); border-bottom: 1px solid #1e1e1e; display: flex; }}
+            .w4-hdr-half {{ flex: 1; padding: 14px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }}
+            .w4-hdr-half.resistance-hdr {{ border-right: 1px solid #1e1e1e; border-bottom: 2px solid #ff4d6d; }}
+            .w4-hdr-half.support-hdr {{ border-bottom: 2px solid #00e676; }}
+            .w4-hdr-dot {{ width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }}
+            .w4-hdr-dot.r-dot {{ background: #ff4d6d; box-shadow: 0 0 8px #ff4d6d; }}
+            .w4-hdr-dot.s-dot {{ background: #00e676; box-shadow: 0 0 8px #00e676; }}
+            .w4-hdr-title {{ font-size: clamp(10px, 2vw, 12px); font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; }}
+            .w4-hdr-title.r-title {{ color: #ff4d6d; }} .w4-hdr-title.s-title {{ color: #00e676; }}
+            .w4-hdr-tf {{ margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: #3a3a4a; }}
+            .w4-ltp-bar {{ background: #0a0800; border-bottom: 1px solid #1e1e1e; display: flex; align-items: center; justify-content: center; padding: 10px 20px; gap: 12px; }}
+            .w4-ltp-line {{ flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #2a2000, transparent); }}
+            .w4-ltp-chip {{ background: linear-gradient(135deg, #1a1200, #221800); border: 1px solid #ffd70044; border-radius: 8px; padding: 8px 20px; display: flex; align-items: center; gap: 10px; }}
+            .w4-ltp-label {{ font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #8a7200; text-transform: uppercase; }}
+            .w4-ltp-value {{ font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 800; color: #ffd700; text-shadow: 0 0 16px rgba(255,215,0,0.5); }}
+            .w4-body {{ display: grid; grid-template-columns: 1fr 1fr; }}
+            .w4-col {{ padding: 4px 0; }} .w4-col.r-col {{ border-right: 1px solid #111; }}
+            .w4-col-hdr {{ display: grid; grid-template-columns: 44px 1fr 90px 80px 1fr; padding: 6px 14px; border-bottom: 1px solid #111; }}
+            .w4-col-hdr span {{ font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #333; }}
+            .w4-table {{ width: 100%; border-collapse: collapse; min-width: 220px; }}
+            .w4-row {{ transition: background 0.15s; cursor: default; }}
             .w4-row:hover {{ background: rgba(255,215,0,0.03); }}
-            .w4-row-r {{ border-bottom: 1px solid #0f0f0f; }}
-            .w4-row-s {{ border-bottom: 1px solid #0f0f0f; }}
-            .w4-row:last-child {{ border-bottom: none; }}
-            .w4-td-label   {{ padding: 14px 6px 14px 16px; width: 48px; vertical-align: middle; }}
-            .w4-td-price   {{ padding: 14px 8px; vertical-align: middle; }}
-            .w4-td-dist    {{ padding: 14px 8px; vertical-align: middle; white-space: nowrap; text-align: right; }}
-            .w4-td-strength{{ padding: 14px 8px; vertical-align: middle; text-align: center; }}
-            .w4-td-bar     {{ padding: 14px 14px 14px 4px; vertical-align: middle; width: 60px; }}
-            .w4-badge {{
-                display: inline-flex; align-items: center; justify-content: center;
-                width: 32px; height: 32px;
-                border-radius: 7px;
-                font-size: 12px; font-weight: 800;
-                letter-spacing: 0.5px;
-            }}
-            .w4-badge-r {{
-                background: rgba(255,77,109,0.12);
-                border: 1px solid rgba(255,77,109,0.45);
-                color: #ff4d6d;
-            }}
-            .w4-badge-s {{
-                background: rgba(0,230,118,0.12);
-                border: 1px solid rgba(0,230,118,0.45);
-                color: #00e676;
-            }}
-            .w4-dist {{
-                display: block;
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 13px;
-                font-weight: 700;
-            }}
-            .w4-dist-pct {{
-                display: block;
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 10px;
-                font-weight: 600;
-                margin-top: 2px;
-            }}
-            .w4-dist-r     {{ color: #ff8099; }}
-            .w4-dist-pct-r {{ color: rgba(255,128,153,0.65); }}
-            .w4-dist-s     {{ color: #33ffaa; }}
-            .w4-dist-pct-s {{ color: rgba(51,255,170,0.65); }}
+            .w4-row-r, .w4-row-s {{ border-bottom: 1px solid #0f0f0f; }} .w4-row:last-child {{ border-bottom: none; }}
+            .w4-td-label {{ padding: 14px 6px 14px 16px; width: 48px; vertical-align: middle; }}
+            .w4-td-price {{ padding: 14px 8px; vertical-align: middle; }}
+            .w4-td-dist {{ padding: 14px 8px; vertical-align: middle; white-space: nowrap; text-align: right; }}
+            .w4-td-strength {{ padding: 14px 8px; vertical-align: middle; text-align: center; }}
+            .w4-td-bar {{ padding: 14px 14px 14px 4px; vertical-align: middle; width: 60px; }}
+            .w4-badge {{ display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 7px; font-size: 12px; font-weight: 800; }}
+            .w4-badge-r {{ background: rgba(255,77,109,0.12); border: 1px solid rgba(255,77,109,0.45); color: #ff4d6d; }}
+            .w4-badge-s {{ background: rgba(0,230,118,0.12); border: 1px solid rgba(0,230,118,0.45); color: #00e676; }}
+            .w4-dist {{ display: block; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; }}
+            .w4-dist-pct {{ display: block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; margin-top: 2px; }}
+            .w4-dist-r {{ color: #ff8099; }} .w4-dist-pct-r {{ color: rgba(255,128,153,0.65); }}
+            .w4-dist-s {{ color: #33ffaa; }} .w4-dist-pct-s {{ color: rgba(51,255,170,0.65); }}
             .w4-dots {{ display: flex; align-items: center; justify-content: center; }}
-            .w4-bar-track {{
-                height: 4px;
-                background: #111;
-                border-radius: 2px;
-                overflow: hidden;
-            }}
-            .w4-bar-fill {{
-                height: 100%;
-                border-radius: 2px;
-                min-width: 4px;
-            }}
+            .w4-bar-track {{ height: 4px; background: #111; border-radius: 2px; overflow: hidden; }}
+            .w4-bar-fill {{ height: 100%; border-radius: 2px; min-width: 4px; }}
             .w4-bar-r {{ background: linear-gradient(90deg, #ff4d6d44, #ff4d6d); }}
             .w4-bar-s {{ background: linear-gradient(90deg, #00e67644, #00e676); }}
-            .w4-footer {{
-                background: #060606;
-                border-top: 1px solid #111;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 20px;
-            }}
-            .w4-footer-left {{
-                font-size: 10px;
-                color: #2a2a2a;
-                letter-spacing: 1px;
-                font-weight: 600;
-            }}
-            .w4-footer-right {{
-                font-size: 10px;
-                color: #8a7200;
-                font-family: 'IBM Plex Mono', monospace;
-                font-weight: 700;
-            }}
-            .w4-footer-dot {{
-                width: 5px; height: 5px; border-radius: 50%;
-                background: #ffd700;
-                display: inline-block; margin-right: 6px;
-                box-shadow: 0 0 6px #ffd700;
-                animation: w4-blink 2s ease-in-out infinite;
-            }}
-            @keyframes w4-blink {{
-                0%,100% {{ opacity: 1; }}
-                50%      {{ opacity: 0.4; }}
+            .w4-footer {{ background: #060606; border-top: 1px solid #111; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; flex-wrap: wrap; gap: 8px; }}
+            .w4-footer-left {{ font-size: 10px; color: #2a2a2a; letter-spacing: 1px; font-weight: 600; }}
+            .w4-footer-right {{ font-size: 10px; color: #8a7200; font-family: 'IBM Plex Mono', monospace; font-weight: 700; }}
+            .w4-footer-dot {{ width:5px;height:5px;border-radius:50%;background:#ffd700;display:inline-block;margin-right:6px;box-shadow:0 0 6px #ffd700;animation:w4-blink 2s ease-in-out infinite; }}
+            @keyframes w4-blink {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.4; }} }}
+
+            /* RESPONSIVE */
+            @media (max-width: 600px) {{
+                .w4-body {{ grid-template-columns: 1fr; }}
+                .w4-col.r-col {{ border-right: none; border-bottom: 2px solid #222; }}
+                .w4-td-dist, .w4-col-hdr span:nth-child(3) {{ display: none; }}
+                .w4-td-bar, .w4-col-hdr span:nth-child(5) {{ display: none; }}
             }}
         </style>
 
@@ -2609,123 +2034,78 @@ class NiftyAnalyzer:
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #111;">
                 <div class="w4-col-hdr" style="border-right:1px solid #111;">
-                    <span></span>
-                    <span>PRICE</span>
-                    <span style="text-align:right;">DISTANCE</span>
-                    <span style="text-align:center;">STRENGTH</span>
-                    <span></span>
+                    <span></span><span>PRICE</span><span style="text-align:right;">DISTANCE</span><span style="text-align:center;">STRENGTH</span><span></span>
                 </div>
                 <div class="w4-col-hdr">
-                    <span></span>
-                    <span>PRICE</span>
-                    <span style="text-align:right;">DISTANCE</span>
-                    <span style="text-align:center;">STRENGTH</span>
-                    <span></span>
+                    <span></span><span>PRICE</span><span style="text-align:right;">DISTANCE</span><span style="text-align:center;">STRENGTH</span><span></span>
                 </div>
             </div>
             <div class="w4-body">
-                <div class="w4-col r-col">
-                    <table class="w4-table">
-                        <tbody>{resistance_rows_html}</tbody>
-                    </table>
-                </div>
-                <div class="w4-col s-col">
-                    <table class="w4-table">
-                        <tbody>{support_rows_html}</tbody>
-                    </table>
-                </div>
+                <div class="w4-col r-col"><table class="w4-table"><tbody>{resistance_rows_html}</tbody></table></div>
+                <div class="w4-col s-col"><table class="w4-table"><tbody>{support_rows_html}</tbody></table></div>
             </div>
             <div class="w4-footer">
                 <span class="w4-footer-left">WIDGET 04 &middot; BLOOMBERG TABLE &middot; PRICE ACTION S/R</span>
-                <span class="w4-footer-right">
-                    <span class="w4-footer-dot"></span>
-                    LTP &#8377;{current_price:,.1f}
-                </span>
+                <span class="w4-footer-right"><span class="w4-footer-dot"></span>LTP &#8377;{current_price:,.1f}</span>
             </div>
-        </div>
-        <!-- ═══ END BLOOMBERG TABLE S/R WIDGET ═══ -->
-        '''
+        </div>'''
         return widget_html
+
 
     # =========================================================================
     # DARK TICKER CARD WIDGET — Strike Recommendations
-    # High-contrast · Neon highlights · All fields clearly readable
     # =========================================================================
     def _build_strike_ticker_card_widget(self, strike_recommendations, recommendation, tech_analysis):
-        """
-        DARK TICKER CARD widget for Strike Recommendations.
-        Matching the image: dark cards · bright cyan LTP · neon green/red targets
-        · ALL text clearly visible with proper highlight colors
-        """
         bias          = recommendation['bias']
         current_price = tech_analysis.get('current_price', 0)
         confidence    = recommendation['confidence']
 
-        # Header accent color based on bias
         if bias == 'Bullish':
-            hdr_accent  = '#00ff88'
-            hdr_bg_from = '#003322'
-            hdr_bg_to   = '#001a11'
-            hdr_border  = '#00aa55'
-            bias_color  = '#00ff88'
-            bias_bg     = 'rgba(0,255,136,0.12)'
-            bias_brd    = 'rgba(0,255,136,0.5)'
+            hdr_accent = '#00ff88'; hdr_bg_from = '#003322'; hdr_bg_to = '#001a11'
+            hdr_border = '#00aa55'; bias_color = '#00ff88'
+            bias_bg    = 'rgba(0,255,136,0.12)'; bias_brd = 'rgba(0,255,136,0.5)'
         elif bias == 'Bearish':
-            hdr_accent  = '#ff4060'
-            hdr_bg_from = '#330011'
-            hdr_bg_to   = '#1a0008'
-            hdr_border  = '#cc2233'
-            bias_color  = '#ff4060'
-            bias_bg     = 'rgba(255,64,96,0.12)'
-            bias_brd    = 'rgba(255,64,96,0.5)'
+            hdr_accent = '#ff4060'; hdr_bg_from = '#330011'; hdr_bg_to = '#1a0008'
+            hdr_border = '#cc2233'; bias_color = '#ff4060'
+            bias_bg    = 'rgba(255,64,96,0.12)'; bias_brd = 'rgba(255,64,96,0.5)'
         else:
-            hdr_accent  = '#00c8ff'
-            hdr_bg_from = '#001833'
-            hdr_bg_to   = '#000f1f'
-            hdr_border  = '#0088bb'
-            bias_color  = '#00c8ff'
-            bias_bg     = 'rgba(0,200,255,0.12)'
-            bias_brd    = 'rgba(0,200,255,0.5)'
+            hdr_accent = '#00c8ff'; hdr_bg_from = '#001833'; hdr_bg_to = '#000f1f'
+            hdr_border = '#0088bb'; bias_color = '#00c8ff'
+            bias_bg    = 'rgba(0,200,255,0.12)'; bias_brd = 'rgba(0,200,255,0.5)'
 
         def get_option_type_style(opt_type):
             t = opt_type.upper()
             if 'ATM' in t and 'OTM' not in t:
-                return {'bg': 'rgba(255,220,0,0.15)', 'color': '#ffe033', 'border': 'rgba(255,220,0,0.6)', 'label': 'ATM'}
+                return {'bg':'rgba(255,220,0,0.15)','color':'#ffe033','border':'rgba(255,220,0,0.6)','label':'ATM'}
             elif 'OTM' in t:
-                return {'bg': 'rgba(80,160,220,0.15)', 'color': '#55aaff', 'border': 'rgba(80,160,220,0.6)', 'label': 'OTM'}
+                return {'bg':'rgba(80,160,220,0.15)','color':'#55aaff','border':'rgba(80,160,220,0.6)','label':'OTM'}
             elif 'ITM' in t:
-                return {'bg': 'rgba(0,220,120,0.15)', 'color': '#00dd88', 'border': 'rgba(0,220,120,0.6)', 'label': 'ITM'}
+                return {'bg':'rgba(0,220,120,0.15)','color':'#00dd88','border':'rgba(0,220,120,0.6)','label':'ITM'}
             elif 'SPREAD' in t or '/' in t:
-                return {'bg': 'rgba(180,80,255,0.15)', 'color': '#cc66ff', 'border': 'rgba(180,80,255,0.6)', 'label': 'SPREAD'}
+                return {'bg':'rgba(180,80,255,0.15)','color':'#cc66ff','border':'rgba(180,80,255,0.6)','label':'SPREAD'}
             else:
-                return {'bg': 'rgba(0,200,255,0.15)', 'color': '#00ccff', 'border': 'rgba(0,200,255,0.6)', 'label': opt_type}
+                return {'bg':'rgba(0,200,255,0.15)','color':'#00ccff','border':'rgba(0,200,255,0.6)','label':opt_type}
 
         def get_action_style(action):
             a = str(action).upper()
             if a == 'BUY':
-                return {'bg': 'rgba(0,220,120,0.2)', 'color': '#00ff88', 'border': '#00aa55', 'glow': '#00ff8844'}
+                return {'bg':'rgba(0,220,120,0.2)','color':'#00ff88','border':'#00aa55','glow':'#00ff8844'}
             elif a == 'SELL':
-                return {'bg': 'rgba(255,64,80,0.2)', 'color': '#ff4050', 'border': '#cc2233', 'glow': '#ff405044'}
+                return {'bg':'rgba(255,64,80,0.2)','color':'#ff4050','border':'#cc2233','glow':'#ff405044'}
             else:
-                # BUY+SELL spread
-                return {'bg': 'rgba(255,180,0,0.15)', 'color': '#ffcc00', 'border': '#cc9900', 'glow': '#ffcc0033'}
+                return {'bg':'rgba(255,180,0,0.15)','color':'#ffcc00','border':'#cc9900','glow':'#ffcc0033'}
 
         def fmt_oi_short(val):
-            if isinstance(val, str):
-                return val
-            if val >= 1_000_000:
-                return f"{val/1_000_000:.2f}M"
-            elif val >= 1_000:
-                return f"{val/1_000:.1f}L" if val >= 100_000 else f"{val/1_000:.1f}K"
+            if isinstance(val, str): return val
+            if val >= 1_000_000: return f"{val/1_000_000:.2f}M"
+            elif val >= 100_000: return f"{val/100_000:.1f}L"
+            elif val >= 1_000:   return f"{val/1_000:.1f}K"
             return str(val)
 
         def fmt_vol_short(val):
-            if isinstance(val, str):
-                return val
-            if val >= 100_000:
-                return f"{val/100_000:.1f}L"
-            elif val >= 1_000:
-                return f"{val/1_000:.1f}K"
+            if isinstance(val, str): return val
+            if val >= 100_000: return f"{val/100_000:.1f}L"
+            elif val >= 1_000: return f"{val/1_000:.1f}K"
             return str(val)
 
         cards_html = ''
@@ -2747,28 +2127,19 @@ class NiftyAnalyzer:
             ot_style     = get_option_type_style(option_type)
             action_style = get_action_style(action if action in ['BUY','SELL'] else 'BUY+SELL')
 
-            p_at_t1_label = self._fmt_profit_label(p_at_t1)
-            p_at_t2_label = self._fmt_profit_label(p_at_t2)
+            p_at_t1_label  = self._fmt_profit_label(p_at_t1)
+            p_at_t2_label  = self._fmt_profit_label(p_at_t2)
             example_invest = ltp * 50 if isinstance(ltp, (int, float)) else 0
             example_t1     = self._fmt_profit(p_at_t1, 50)
             example_t2     = self._fmt_profit(p_at_t2, 50)
 
-            # Determine if profit is positive for coloring
             t1_profit_color = '#00ff88' if isinstance(p_at_t1, (int, float)) and p_at_t1 > 0 else '#ff6070'
             t2_profit_color = '#00ff88' if isinstance(p_at_t2, (int, float)) and p_at_t2 > 0 else ('#ffcc00' if isinstance(p_at_t2, str) else '#ff6070')
 
-            # Card left border color
-            if idx == 0:
-                card_border_color = '#00c8ff'
-                card_glow = 'rgba(0,200,255,0.08)'
-            elif idx == 1:
-                card_border_color = '#00ff88' if bias == 'Bullish' else '#ff4060'
-                card_glow = 'rgba(0,255,136,0.06)' if bias == 'Bullish' else 'rgba(255,64,96,0.06)'
-            else:
-                card_border_color = '#cc66ff'
-                card_glow = 'rgba(200,100,255,0.06)'
+            if idx == 0:   card_border_color = '#00c8ff'; card_glow = 'rgba(0,200,255,0.08)'
+            elif idx == 1: card_border_color = '#00ff88' if bias == 'Bullish' else '#ff4060'; card_glow = 'rgba(0,255,136,0.06)' if bias == 'Bullish' else 'rgba(255,64,96,0.06)'
+            else:          card_border_color = '#cc66ff'; card_glow = 'rgba(200,100,255,0.06)'
 
-            # Format strike display
             strike_display = f"₹{strike:,}" if isinstance(strike, (int, float)) else f"₹{strike}"
             ltp_display    = f"₹{ltp:,.2f}" if isinstance(ltp, (int, float)) else f"₹{ltp}"
             sl_display     = f"₹{stop_loss:,.2f}" if isinstance(stop_loss, (int, float)) else f"₹{stop_loss}"
@@ -2779,395 +2150,138 @@ class NiftyAnalyzer:
             oi_display     = fmt_oi_short(oi_val)
             vol_display    = fmt_vol_short(vol_val)
 
-            # Action pill
-            action_pill = f'''<span style="
-                display:inline-flex;align-items:center;gap:5px;
-                background:{action_style['bg']};
-                border:1.5px solid {action_style['border']};
-                color:{action_style['color']};
-                padding:5px 14px;border-radius:20px;
-                font-size:11px;font-weight:800;letter-spacing:1.5px;
-                text-shadow:0 0 12px {action_style['glow']};
-                box-shadow:0 0 14px {action_style['glow']};
-            ">{action}</span>'''
+            action_pill = f'''<span style="display:inline-flex;align-items:center;gap:5px;background:{action_style['bg']};border:1.5px solid {action_style['border']};color:{action_style['color']};padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:1.5px;text-shadow:0 0 12px {action_style['glow']};box-shadow:0 0 14px {action_style['glow']};">{action}</span>'''
+            ot_badge    = f'''<span style="background:{ot_style['bg']};border:1px solid {ot_style['border']};color:{ot_style['color']};padding:4px 12px;border-radius:16px;font-size:10px;font-weight:800;letter-spacing:1px;">{ot_style['label']}</span>'''
 
-            # Option type badge
-            ot_badge = f'''<span style="
-                background:{ot_style['bg']};
-                border:1px solid {ot_style['border']};
-                color:{ot_style['color']};
-                padding:4px 12px;border-radius:16px;
-                font-size:10px;font-weight:800;letter-spacing:1px;
-            ">{ot_style['label']}</span>'''
+            rr_ratio = abs(p_at_t2 / max_loss) if isinstance(p_at_t2, (int, float)) and isinstance(max_loss, (int, float)) and max_loss != 0 else 0
+            risk_per_lot = f"₹{max_loss * 50:.0f}" if isinstance(max_loss, (int, float)) else 'N/A'
 
             cards_html += f'''
-            <div style="
-                background: linear-gradient(135deg, #030d18 0%, #020910 100%);
-                border: 1px solid #0a2a40;
-                border-left: 4px solid {card_border_color};
-                border-radius: 14px;
-                overflow: hidden;
-                box-shadow: 0 0 30px {card_glow}, 0 12px 40px rgba(0,0,0,0.8);
-                font-family: 'Chakra Petch', sans-serif;
-            ">
+            <div style="background:linear-gradient(135deg,#030d18 0%,#020910 100%);border:1px solid #0a2a40;border-left:4px solid {card_border_color};border-radius:14px;overflow:hidden;box-shadow:0 0 30px {card_glow},0 12px 40px rgba(0,0,0,0.8);font-family:'Chakra Petch',sans-serif;">
                 <!-- Card Header -->
-                <div style="
-                    background: linear-gradient(135deg, #031525 0%, #020e1c 100%);
-                    border-bottom: 1px solid #0a3050;
-                    padding: 14px 20px;
-                    display: flex; align-items: center; justify-content: space-between;
-                    flex-wrap: wrap; gap: 10px;
-                ">
+                <div style="background:linear-gradient(135deg,#031525 0%,#020e1c 100%);border-bottom:1px solid #0a3050;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                        <span style="
-                            font-size:17px;font-weight:800;color:#ffffff;
-                            letter-spacing:1px;
-                            text-shadow:0 0 20px rgba(0,200,255,0.3);
-                        ">{strategy}</span>
+                        <span style="font-size:clamp(14px,3vw,17px);font-weight:800;color:#ffffff;letter-spacing:1px;text-shadow:0 0 20px rgba(0,200,255,0.3);">{strategy}</span>
                         {action_pill}
                         {ot_badge}
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:10px;color:#1a5a7a;letter-spacing:1.5px;font-weight:600;">NIFTY</span>
-                        <span style="
-                            width:6px;height:6px;border-radius:50%;
-                            background:#00c8ff;
-                            box-shadow:0 0 8px #00c8ff;
-                            display:inline-block;
-                            animation:stc-pulse 1.5s ease-in-out infinite;
-                        "></span>
+                        <span style="width:6px;height:6px;border-radius:50%;background:#00c8ff;box-shadow:0 0 8px #00c8ff;display:inline-block;animation:stc-pulse 1.5s ease-in-out infinite;"></span>
                         <span style="font-size:10px;color:#00c8ff;font-weight:700;letter-spacing:1.5px;">LIVE</span>
                     </div>
                 </div>
-
-                <!-- Main metrics row -->
-                <div style="
-                    display: grid;
-                    grid-template-columns: repeat(5, 1fr);
-                    border-bottom: 1px solid #0a2030;
-                ">
-                    <!-- LTP -->
-                    <div style="
-                        padding: 16px 16px;
-                        border-right: 1px solid #0a2030;
-                        background: rgba(0,200,255,0.04);
-                    ">
+                <!-- Main metrics row — responsive grid -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));border-bottom:1px solid #0a2030;">
+                    <div style="padding:16px;border-right:1px solid #0a2030;background:rgba(0,200,255,0.04);">
                         <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">LTP</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:24px;font-weight:800;
-                            color:#00c8ff;
-                            text-shadow:0 0 20px rgba(0,200,255,0.7);
-                            letter-spacing:-0.5px;
-                        ">{ltp_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,24px);font-weight:800;color:#00c8ff;text-shadow:0 0 20px rgba(0,200,255,0.7);">{ltp_display}</div>
                         <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">CURRENT PREMIUM</div>
                     </div>
-
-                    <!-- Strike -->
                     <div style="padding:16px;border-right:1px solid #0a2030;">
                         <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">STRIKE</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:20px;font-weight:800;color:#e8f4ff;
-                            letter-spacing:-0.5px;
-                        ">{strike_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,20px);font-weight:800;color:#e8f4ff;">{strike_display}</div>
                         <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">PRICE</div>
                     </div>
-
-                    <!-- INVEST -->
                     <div style="padding:16px;border-right:1px solid #0a2030;background:rgba(255,180,0,0.03);">
                         <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">INVEST</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:18px;font-weight:800;color:#ffcc00;
-                            text-shadow:0 0 14px rgba(255,200,0,0.5);
-                        ">{invest_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#ffcc00;text-shadow:0 0 14px rgba(255,200,0,0.5);">{invest_display}</div>
                         <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">1 LOT (50 QTY)</div>
                     </div>
-
-                    <!-- OI -->
                     <div style="padding:16px;border-right:1px solid #0a2030;">
                         <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">OI</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:18px;font-weight:800;color:#aaccee;
-                        ">{oi_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#aaccee;">{oi_display}</div>
                         <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">OPEN INTEREST</div>
                     </div>
-
-                    <!-- VOL -->
                     <div style="padding:16px;">
                         <div style="font-size:9px;color:#1a6a8a;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">VOL</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:18px;font-weight:800;color:#8899bb;
-                        ">{vol_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#8899bb;">{vol_display}</div>
                         <div style="font-size:9px;color:#1a5a7a;margin-top:4px;letter-spacing:1px;">VOLUME</div>
                     </div>
                 </div>
-
-                <!-- Targets + Stop Loss Row -->
-                <div style="
-                    display: grid;
-                    grid-template-columns: 1fr 1fr 1fr;
-                    border-bottom: 1px solid #0a2030;
-                ">
-                    <!-- Target 1 -->
-                    <div style="
-                        padding: 16px 18px;
-                        border-right: 1px solid #0a2030;
-                        background: rgba(0,200,80,0.05);
-                        border-bottom: 2px solid rgba(0,200,80,0.3);
-                    ">
+                <!-- Targets + Stop Loss — responsive grid -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid #0a2030;">
+                    <div style="padding:16px 18px;border-right:1px solid #0a2030;background:rgba(0,200,80,0.05);border-bottom:2px solid rgba(0,200,80,0.3);">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                            <span style="
-                                background:rgba(0,220,120,0.2);
-                                border:1px solid #00aa55;
-                                color:#00ff88;
-                                padding:3px 10px;border-radius:12px;
-                                font-size:10px;font-weight:800;letter-spacing:1.5px;
-                                text-shadow:0 0 10px rgba(0,255,136,0.5);
-                            ">TARGET 1</span>
+                            <span style="background:rgba(0,220,120,0.2);border:1px solid #00aa55;color:#00ff88;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;">TARGET 1</span>
                         </div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:22px;font-weight:800;
-                            color:#ffffff;
-                            text-shadow:0 0 16px rgba(0,255,136,0.2);
-                            margin-bottom:6px;
-                        ">{t1_display}</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:14px;font-weight:700;
-                            color:{t1_profit_color};
-                            text-shadow:0 0 12px {t1_profit_color}66;
-                        ">{p_at_t1_label}</div>
-                        <div style="
-                            font-size:11px;color:#2a8a4a;margin-top:4px;
-                            font-weight:600;letter-spacing:0.5px;
-                        ">Per lot: {example_t1}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ffffff;margin-bottom:6px;">{t1_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:{t1_profit_color};">{p_at_t1_label}</div>
+                        <div style="font-size:11px;color:#2a8a4a;margin-top:4px;font-weight:600;">Per lot: {example_t1}</div>
                     </div>
-
-                    <!-- Target 2 -->
-                    <div style="
-                        padding: 16px 18px;
-                        border-right: 1px solid #0a2030;
-                        background: rgba(0,150,255,0.05);
-                        border-bottom: 2px solid rgba(0,150,255,0.3);
-                    ">
+                    <div style="padding:16px 18px;border-right:1px solid #0a2030;background:rgba(0,150,255,0.05);border-bottom:2px solid rgba(0,150,255,0.3);">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                            <span style="
-                                background:rgba(0,150,255,0.2);
-                                border:1px solid #0066aa;
-                                color:#55aaff;
-                                padding:3px 10px;border-radius:12px;
-                                font-size:10px;font-weight:800;letter-spacing:1.5px;
-                                text-shadow:0 0 10px rgba(85,170,255,0.5);
-                            ">TARGET 2</span>
+                            <span style="background:rgba(0,150,255,0.2);border:1px solid #0066aa;color:#55aaff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;">TARGET 2</span>
                         </div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:22px;font-weight:800;
-                            color:#ffffff;
-                            text-shadow:0 0 16px rgba(85,170,255,0.2);
-                            margin-bottom:6px;
-                        ">{t2_display}</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:14px;font-weight:700;
-                            color:{t2_profit_color};
-                            text-shadow:0 0 12px {t2_profit_color}66;
-                        ">{p_at_t2_label}</div>
-                        <div style="
-                            font-size:11px;color:#2a6a9a;margin-top:4px;
-                            font-weight:600;letter-spacing:0.5px;
-                        ">Per lot: {example_t2}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ffffff;margin-bottom:6px;">{t2_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:{t2_profit_color};">{p_at_t2_label}</div>
+                        <div style="font-size:11px;color:#2a6a9a;margin-top:4px;font-weight:600;">Per lot: {example_t2}</div>
                     </div>
-
-                    <!-- Stop Loss -->
-                    <div style="
-                        padding: 16px 18px;
-                        background: rgba(255,50,80,0.05);
-                        border-bottom: 2px solid rgba(255,50,80,0.3);
-                    ">
+                    <div style="padding:16px 18px;background:rgba(255,50,80,0.05);border-bottom:2px solid rgba(255,50,80,0.3);">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                            <span style="
-                                background:rgba(255,50,80,0.2);
-                                border:1px solid #cc2233;
-                                color:#ff4455;
-                                padding:3px 10px;border-radius:12px;
-                                font-size:10px;font-weight:800;letter-spacing:1.5px;
-                                text-shadow:0 0 10px rgba(255,68,85,0.5);
-                            ">STOP LOSS</span>
+                            <span style="background:rgba(255,50,80,0.2);border:1px solid #cc2233;color:#ff4455;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;">STOP LOSS</span>
                         </div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:22px;font-weight:800;
-                            color:#ff6677;
-                            text-shadow:0 0 16px rgba(255,100,120,0.4);
-                            margin-bottom:6px;
-                        ">{sl_display}</div>
-                        <div style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:14px;font-weight:700;
-                            color:#ff3344;
-                        ">Max: -{ml_display}</div>
-                        <div style="
-                            font-size:11px;color:#8a2233;margin-top:4px;
-                            font-weight:600;letter-spacing:0.5px;
-                        ">Risk per lot: ₹{max_loss * 50 if isinstance(max_loss,(int,float)) else 'N/A'}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ff6677;margin-bottom:6px;">{sl_display}</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#ff3344;">Max: -{ml_display}</div>
+                        <div style="font-size:11px;color:#8a2233;margin-top:4px;font-weight:600;">Risk per lot: {risk_per_lot}</div>
                     </div>
                 </div>
-
-                <!-- R:R Ratio footer bar -->
-                <div style="
-                    padding: 10px 18px;
-                    background: #020810;
-                    display: flex; align-items: center; justify-content: space-between;
-                    flex-wrap: wrap; gap: 8px;
-                ">
+                <!-- R:R footer bar -->
+                <div style="padding:10px 18px;background:#020810;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                         <span style="font-size:10px;color:#1a4a6a;letter-spacing:1.5px;font-weight:600;">RISK:REWARD</span>
-                        <span style="
-                            font-family:'IBM Plex Mono',monospace;
-                            font-size:14px;font-weight:800;color:#ffcc00;
-                            text-shadow:0 0 12px rgba(255,200,0,0.5);
-                        ">1 : {(abs(p_at_t2 / max_loss) if isinstance(p_at_t2,(int,float)) and isinstance(max_loss,(int,float)) and max_loss != 0 else 0):.1f}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:800;color:#ffcc00;text-shadow:0 0 12px rgba(255,200,0,0.5);">1 : {rr_ratio:.1f}</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
                         <span style="font-size:10px;color:#1a4a6a;letter-spacing:1px;">TYPE: <span style="color:{ot_style['color']};font-weight:700;">{option_type}</span></span>
                         <span style="font-size:10px;color:#1a4a6a;letter-spacing:1px;">LOT SIZE: <span style="color:#aaccee;font-weight:700;">50</span></span>
                     </div>
                 </div>
-            </div>
-            '''
+            </div>'''
 
         if not strike_recommendations:
-            cards_html = '''
-            <div style="
-                background:rgba(200,50,70,0.06);
-                border:1px solid rgba(200,50,70,0.3);
-                border-radius:12px;padding:30px;text-align:center;
-            ">
+            cards_html = '''<div style="background:rgba(200,50,70,0.06);border:1px solid rgba(200,50,70,0.3);border-radius:12px;padding:30px;text-align:center;">
                 <div style="font-size:28px;margin-bottom:12px;">⚠️</div>
                 <div style="font-size:16px;color:#886677;font-weight:700;letter-spacing:1px;">No Strike Recommendations Available</div>
                 <div style="font-size:12px;color:#554455;margin-top:8px;">Check general strategies section below</div>
             </div>'''
 
         widget_html = f'''
-        <!-- ═══ STRIKE RECOMMENDATIONS — DARK TICKER CARD WIDGET ═══ -->
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-
-            .stc-wrap {{
-                font-family: 'Chakra Petch', sans-serif;
-            }}
-
-            /* Master header bar */
+            .stc-wrap {{ font-family: 'Chakra Petch', sans-serif; }}
             .stc-master-hdr {{
                 background: linear-gradient(135deg, {hdr_bg_from} 0%, {hdr_bg_to} 100%);
-                border: 1px solid {hdr_border}44;
-                border-bottom: 2px solid {hdr_accent};
-                border-radius: 12px 12px 0 0;
-                padding: 16px 22px;
-                display: flex; align-items: center; justify-content: space-between;
-                flex-wrap: wrap; gap: 12px;
-                margin-bottom: 0;
+                border: 1px solid {hdr_border}44; border-bottom: 2px solid {hdr_accent};
+                border-radius: 12px 12px 0 0; padding: 16px 22px;
+                display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
             }}
-            .stc-master-title {{
-                display: flex; align-items: center; gap: 14px;
-            }}
+            .stc-master-title {{ display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }}
             .stc-master-icon {{
                 width: 44px; height: 44px; border-radius: 12px;
-                background: linear-gradient(135deg, #020e1c, #031a2c);
-                border: 1px solid {hdr_border}66;
-                display: flex; align-items: center; justify-content: center;
-                font-size: 20px;
+                background: linear-gradient(135deg, #020e1c, #031a2c); border: 1px solid {hdr_border}66;
+                display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
                 box-shadow: 0 0 20px {hdr_accent}33;
             }}
             .stc-master-text h2 {{
-                font-size: 18px; font-weight: 800; color: #ffffff;
-                letter-spacing: 3px; text-transform: uppercase;
-                text-shadow: 0 0 24px {hdr_accent}88;
+                font-size: clamp(15px, 3.5vw, 18px); font-weight: 800; color: #ffffff;
+                letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 24px {hdr_accent}88;
             }}
-            .stc-master-text p {{
-                font-size: 10px; color: #2a6a8a;
-                margin-top: 3px; letter-spacing: 2px;
-                font-weight: 600; text-transform: uppercase;
-            }}
-            .stc-master-right {{
-                display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-            }}
-            .stc-bias-pill {{
-                background: {bias_bg};
-                border: 1.5px solid {bias_brd};
-                color: {bias_color};
-                padding: 7px 20px; border-radius: 22px;
-                font-size: 13px; font-weight: 800; letter-spacing: 2px;
-                text-shadow: 0 0 14px {bias_color}88;
-                box-shadow: 0 0 18px {bias_color}22;
-            }}
-            .stc-price-chip {{
-                background: rgba(0,0,0,0.4);
-                border: 1px solid #0a3050;
-                border-radius: 10px;
-                padding: 7px 16px;
-                display: flex; align-items: center; gap: 8px;
-            }}
-            .stc-price-lbl {{
-                font-size: 9px; color: #2a6a8a;
-                letter-spacing: 2px; font-weight: 700;
-                text-transform: uppercase;
-            }}
-            .stc-price-val {{
-                font-family: 'IBM Plex Mono', monospace;
-                font-size: 15px; font-weight: 800;
-                color: #00c8ff;
-                text-shadow: 0 0 14px rgba(0,200,255,0.6);
-            }}
-
-            /* Cards container */
-            .stc-cards {{
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-                padding: 16px 0 0 0;
-            }}
-
-            @keyframes stc-pulse {{
-                0%,100% {{ opacity:1;transform:scale(1); }}
-                50%      {{ opacity:0.5;transform:scale(0.8); }}
-            }}
-
-            /* Footer */
-            .stc-footer {{
-                background: #010810;
-                border: 1px solid #0a2030;
-                border-top: none;
-                border-radius: 0 0 12px 12px;
-                padding: 10px 22px;
-                display: flex; justify-content: space-between; align-items: center;
-                margin-top: 0;
-            }}
-            .stc-footer-l {{
-                font-size: 9px; color: #0d2a40;
-                letter-spacing: 2px; font-weight: 700; text-transform: uppercase;
-            }}
-            .stc-footer-r {{
-                display: flex; align-items: center; gap: 7px;
-                font-size: 9px; color: {hdr_accent};
-                font-weight: 700; letter-spacing: 2px;
-            }}
-            .stc-footer-dot {{
-                width: 6px; height: 6px; border-radius: 50%;
-                background: {hdr_accent};
-                box-shadow: 0 0 8px {hdr_accent};
-                animation: stc-pulse 1.5s ease-in-out infinite;
-            }}
+            .stc-master-text p {{ font-size: 10px; color: #2a6a8a; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }}
+            .stc-master-right {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }}
+            .stc-bias-pill {{ background:{bias_bg};border:1.5px solid {bias_brd};color:{bias_color};padding:7px 20px;border-radius:22px;font-size:13px;font-weight:800;letter-spacing:2px;text-shadow:0 0 14px {bias_color}88;box-shadow:0 0 18px {bias_color}22; }}
+            .stc-price-chip {{ background:rgba(0,0,0,0.4);border:1px solid #0a3050;border-radius:10px;padding:7px 16px;display:flex;align-items:center;gap:8px; }}
+            .stc-price-lbl {{ font-size:9px;color:#2a6a8a;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
+            .stc-price-val {{ font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:800;color:#00c8ff;text-shadow:0 0 14px rgba(0,200,255,0.6); }}
+            .stc-cards {{ display:flex;flex-direction:column;gap:16px;padding:16px 0 0 0; }}
+            @keyframes stc-pulse {{ 0%,100% {{ opacity:1;transform:scale(1); }} 50% {{ opacity:0.5;transform:scale(0.8); }} }}
+            .stc-footer {{ background:#010810;border:1px solid #0a2030;border-top:none;border-radius:0 0 12px 12px;padding:10px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }}
+            .stc-footer-l {{ font-size:9px;color:#0d2a40;letter-spacing:2px;font-weight:700;text-transform:uppercase; }}
+            .stc-footer-r {{ display:flex;align-items:center;gap:7px;font-size:9px;color:{hdr_accent};font-weight:700;letter-spacing:2px; }}
+            .stc-footer-dot {{ width:6px;height:6px;border-radius:50%;background:{hdr_accent};box-shadow:0 0 8px {hdr_accent};animation:stc-pulse 1.5s ease-in-out infinite; }}
         </style>
 
         <div class="stc-wrap">
-            <!-- Master Header -->
             <div class="stc-master-hdr">
                 <div class="stc-master-title">
                     <div class="stc-master-icon">&#9654;</div>
@@ -3184,59 +2298,33 @@ class NiftyAnalyzer:
                     </div>
                 </div>
             </div>
-
-            <!-- Cards -->
-            <div class="stc-cards">
-                {cards_html}
-            </div>
-
-            <!-- Footer -->
+            <div class="stc-cards">{cards_html}</div>
             <div class="stc-footer">
                 <span class="stc-footer-l">DARK TICKER CARD &middot; STRIKE RECOMMENDATIONS &middot; {confidence.upper()} CONFIDENCE</span>
-                <span class="stc-footer-r">
-                    <div class="stc-footer-dot"></div>
-                    {len(strike_recommendations)} TRADE{'S' if len(strike_recommendations) != 1 else ''} IDENTIFIED
-                </span>
+                <span class="stc-footer-r"><div class="stc-footer-dot"></div>{len(strike_recommendations)} TRADE{'S' if len(strike_recommendations) != 1 else ''} IDENTIFIED</span>
             </div>
-        </div>
-        <!-- ═══ END DARK TICKER CARD STRIKE WIDGET ═══ -->
-        '''
+        </div>'''
         return widget_html
 
+
     # =========================================================================
-    # HTML REPORT — Deep Ocean Trading Desk Theme
+    # HTML REPORT — Deep Ocean Trading Desk Theme (FULL RESPONSIVE)
     # =========================================================================
     def create_html_report(self, oc_analysis, tech_analysis, recommendation):
         """Create professional HTML report — Deep Ocean Trading Desk Theme"""
         now_ist = self.format_ist_time()
-
         rec = recommendation['recommendation']
 
         if 'STRONG BUY' in rec:
-            rec_color     = '#004d2e'
-            rec_text_col  = '#00ff8c'
-            rec_border    = '#00aa55'
-            rec_glow      = 'rgba(0,200,140,0.25)'
+            rec_color='#004d2e'; rec_text_col='#00ff8c'; rec_border='#00aa55'; rec_glow='rgba(0,200,140,0.25)'
         elif 'BUY' in rec:
-            rec_color     = '#003348'
-            rec_text_col  = '#00c8ff'
-            rec_border    = '#0088bb'
-            rec_glow      = 'rgba(0,170,255,0.2)'
+            rec_color='#003348'; rec_text_col='#00c8ff'; rec_border='#0088bb'; rec_glow='rgba(0,170,255,0.2)'
         elif 'STRONG SELL' in rec:
-            rec_color     = '#4a0010'
-            rec_text_col  = '#ff6070'
-            rec_border    = '#cc2233'
-            rec_glow      = 'rgba(220,50,70,0.25)'
+            rec_color='#4a0010'; rec_text_col='#ff6070'; rec_border='#cc2233'; rec_glow='rgba(220,50,70,0.25)'
         elif 'SELL' in rec:
-            rec_color     = '#3a1500'
-            rec_text_col  = '#ff8855'
-            rec_border    = '#cc4400'
-            rec_glow      = 'rgba(200,80,0,0.2)'
+            rec_color='#3a1500'; rec_text_col='#ff8855'; rec_border='#cc4400'; rec_glow='rgba(200,80,0,0.2)'
         else:
-            rec_color     = '#0a1e2e'
-            rec_text_col  = '#5a9ab5'
-            rec_border    = '#0d3a52'
-            rec_glow      = 'rgba(0,100,160,0.15)'
+            rec_color='#0a1e2e'; rec_text_col='#5a9ab5'; rec_border='#0d3a52'; rec_glow='rgba(0,100,160,0.15)'
 
         title      = self.config['report'].get('title', 'NIFTY DAY TRADING ANALYSIS (1H)')
         strategies = self.get_options_strategies(recommendation, oc_analysis, tech_analysis)
@@ -3250,43 +2338,30 @@ class NiftyAnalyzer:
         nearest_levels = self.find_nearest_levels(current_price, pivot_points)
         pivot_widget_html = self._build_pivot_widget(pivot_points, current_price, nearest_levels)
 
-        # Bloomberg S/R widget
         tech_resistances = tech_analysis.get('tech_resistances', [])
         tech_supports    = tech_analysis.get('tech_supports', [])
         sr_widget_html   = self._build_sr_bloomberg_widget(tech_resistances, tech_supports, current_price)
 
-        # Plasma Radial OC widget (Widget 02)
         oc_plasma_widget_html = self._build_oc_plasma_widget(oc_analysis)
 
-        # NEON LEDGER OI widget (Widget 01)
         top_ce_strikes = oc_analysis.get('top_ce_strikes', [])
         top_pe_strikes = oc_analysis.get('top_pe_strikes', [])
         oi_neon_ledger_html = self._build_oi_neon_ledger_widget(top_ce_strikes, top_pe_strikes)
 
-        # DARK TICKER CARD Strike widget (NEW)
         strike_ticker_card_html = self._build_strike_ticker_card_widget(
             strike_recommendations, recommendation, tech_analysis
         )
 
         momentum_1h_pct    = tech_analysis.get('price_change_pct_1h', 0)
         momentum_1h_signal = tech_analysis.get('momentum_1h_signal', 'Sideways')
-        momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {
-            'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
-        })
-
+        momentum_1h_colors = tech_analysis.get('momentum_1h_colors', {'bg':'#0a1e2e','bg_dark':'#061420','text':'#5a9ab5','border':'#0d3a52'})
         momentum_5h_pct    = tech_analysis.get('momentum_5h_pct', 0)
         momentum_5h_signal = tech_analysis.get('momentum_5h_signal', 'Sideways')
-        momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {
-            'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
-        })
-
+        momentum_5h_colors = tech_analysis.get('momentum_5h_colors', {'bg':'#0a1e2e','bg_dark':'#061420','text':'#5a9ab5','border':'#0d3a52'})
         momentum_2d_pct    = tech_analysis.get('momentum_2d_pct', 0)
         momentum_2d_signal = tech_analysis.get('momentum_2d_signal', 'Sideways')
-        momentum_2d_colors = tech_analysis.get('momentum_2d_colors', {
-            'bg': '#0a1e2e', 'bg_dark': '#061420', 'text': '#5a9ab5', 'border': '#0d3a52'
-        })
+        momentum_2d_colors = tech_analysis.get('momentum_2d_colors', {'bg':'#0a1e2e','bg_dark':'#061420','text':'#5a9ab5','border':'#0d3a52'})
 
-        # Build 2D progress bar width (cap at 100%)
         bar_1h = min(abs(momentum_1h_pct) * 40, 100)
         bar_5h = min(abs(momentum_5h_pct) * 20, 100)
         bar_2d = min(abs(momentum_2d_pct) * 10, 100)
@@ -3336,17 +2411,13 @@ class NiftyAnalyzer:
             font-family: 'Cormorant Garamond', 'Georgia', serif;
             background: linear-gradient(160deg, #0d0800 0%, #130e02 50%, #0a0700 100%);
             color: var(--text-main);
-            padding: 15px;
+            padding: clamp(4px, 2vw, 15px);
             line-height: 1.6;
             min-height: 100vh;
         }}
         body::before {{
-            content: '';
-            position: fixed; inset: 0; pointer-events: none; z-index: 0;
-            background: repeating-linear-gradient(
-                0deg, transparent, transparent 2px,
-                rgba(201,168,76,.003) 2px, rgba(201,168,76,.003) 4px
-            );
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(201,168,76,.003) 2px, rgba(201,168,76,.003) 4px);
         }}
         .container {{
             position: relative; z-index: 1;
@@ -3354,530 +2425,163 @@ class NiftyAnalyzer:
             background: linear-gradient(160deg, #100c01 0%, #1a1200 100%);
             border-radius: 4px;
             box-shadow: 0 0 0 1px #2a1e06, 0 0 60px rgba(201,168,76,.06), 0 24px 80px rgba(0,0,0,.9);
-            padding: 30px;
+            padding: clamp(12px, 3vw, 30px);
             border: 1px solid #3a2a08;
         }}
 
-        /* ══════════════════════════════════════════
-           HEADER — Art Deco Gold
-        ══════════════════════════════════════════ */
+        /* ── HEADER ── */
         .header {{
             text-align: center;
             background: linear-gradient(180deg, #0d0800 0%, #1a1200 60%, #0d0800 100%);
-            padding: 32px 25px 28px;
-            margin-bottom: 28px;
-            border: 1px solid #3a2a08;
-            position: relative;
-            overflow: hidden;
+            padding: clamp(18px, 4vw, 32px) clamp(14px, 3vw, 25px) clamp(16px, 3vw, 28px);
+            margin-bottom: clamp(16px, 3vw, 28px);
+            border: 1px solid #3a2a08; position: relative; overflow: hidden;
         }}
-        /* top ornamental line */
-        .header::after {{
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 2px;
-            background: linear-gradient(90deg, transparent 5%, var(--gold-dim) 25%, var(--gold-bright) 50%, var(--gold-dim) 75%, transparent 95%);
-        }}
-        /* bottom ornamental line */
-        .header::before {{
-            content: '';
-            position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
-        }}
-        /* corner diamonds */
-        .header-corner-tl, .header-corner-tr, .header-corner-bl, .header-corner-br {{
-            position: absolute; width: 8px; height: 8px;
-            background: var(--gold);
-            transform: rotate(45deg);
-        }}
-        .header-corner-tl {{ top: 8px; left: 16px; }}
-        .header-corner-tr {{ top: 8px; right: 16px; }}
-        .header-corner-bl {{ bottom: 8px; left: 16px; }}
-        .header-corner-br {{ bottom: 8px; right: 16px; }}
-
+        .header::after {{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent 5%,var(--gold-dim) 25%,var(--gold-bright) 50%,var(--gold-dim) 75%,transparent 95%); }}
+        .header::before {{ content:''; position:absolute; bottom:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--gold-dim),transparent); }}
+        .header-corner-tl,.header-corner-tr,.header-corner-bl,.header-corner-br {{ position:absolute;width:8px;height:8px;background:var(--gold);transform:rotate(45deg); }}
+        .header-corner-tl {{ top:8px;left:16px; }} .header-corner-tr {{ top:8px;right:16px; }}
+        .header-corner-bl {{ bottom:8px;left:16px; }} .header-corner-br {{ bottom:8px;right:16px; }}
         .header h1 {{
             font-family: 'Cinzel Decorative', serif;
             color: var(--gold-light);
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 14px;
-            letter-spacing: 5px;
-            text-transform: uppercase;
-            text-shadow: 0 0 40px rgba(201,168,76,.5), 0 2px 4px rgba(0,0,0,.8);
+            font-size: clamp(14px, 4vw, 24px);
+            font-weight: 700; margin-bottom: 14px; letter-spacing: clamp(2px, 1vw, 5px);
+            text-transform: uppercase; text-shadow: 0 0 40px rgba(201,168,76,.5), 0 2px 4px rgba(0,0,0,.8);
         }}
-        .timestamp {{ color: var(--gold-dim); font-size: 12px; font-weight: 600; margin-top: 10px; letter-spacing: 2px; font-family: 'Cinzel', serif; }}
+        .timestamp {{ color: var(--gold-dim); font-size: clamp(10px, 2vw, 12px); font-weight: 600; margin-top: 10px; letter-spacing: 2px; font-family: 'Cinzel', serif; }}
         .timeframe-badge {{
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--gold-dim);
-            padding: 8px 0;
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 10px;
-            letter-spacing: 4px;
-            font-family: 'Cinzel', serif;
-            text-transform: uppercase;
+            display: inline-flex; align-items: center; gap: 12px;
+            color: var(--gold-dim); padding: 8px 0; font-size: clamp(9px, 1.5vw, 11px);
+            font-weight: 600; margin-top: 10px; letter-spacing: 4px; font-family: 'Cinzel', serif; text-transform: uppercase;
         }}
-        .timeframe-badge::before, .timeframe-badge::after {{
-            content: '';
-            display: inline-block;
-            width: 60px; height: 1px;
-            background: linear-gradient(90deg, transparent, var(--gold-dim));
-        }}
-        .timeframe-badge::after {{ background: linear-gradient(90deg, var(--gold-dim), transparent); }}
-        /* diamond dot in timeframe badge */
-        .timeframe-inner {{
-            display: inline-flex; align-items: center; gap: 10px;
-        }}
-        .timeframe-inner::before, .timeframe-inner::after {{
-            content: '◆';
-            color: var(--gold);
-            font-size: 8px;
-        }}
+        .timeframe-badge::before,.timeframe-badge::after {{ content:''; display:inline-block; width:60px; height:1px; background:linear-gradient(90deg,transparent,var(--gold-dim)); }}
+        .timeframe-badge::after {{ background:linear-gradient(90deg,var(--gold-dim),transparent); }}
+        .timeframe-inner {{ display:inline-flex; align-items:center; gap:10px; }}
+        .timeframe-inner::before,.timeframe-inner::after {{ content:'◆'; color:var(--gold); font-size:8px; }}
 
-        /* ══════════════════════════════════════════
-           MOMENTUM BOXES
-        ══════════════════════════════════════════ */
-        .momentum-container {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 22px; }}
+        /* ── MOMENTUM BOXES ── */
+        .momentum-container {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: clamp(10px, 2vw, 20px);
+            margin-bottom: clamp(14px, 2.5vw, 22px);
+        }}
         .momentum-box {{
             background: linear-gradient(135deg, var(--momentum-bg) 0%, var(--momentum-bg-dark) 100%);
-            color: var(--momentum-text);
-            padding: 22px;
-            border-radius: 2px;
-            text-align: center;
-            box-shadow: 0 8px 28px rgba(0,0,0,.7);
-            border: 1px solid var(--momentum-border);
-            position: relative;
-            overflow: hidden;
+            color: var(--momentum-text); padding: clamp(14px, 2.5vw, 22px);
+            border-radius: 2px; text-align: center;
+            box-shadow: 0 8px 28px rgba(0,0,0,.7); border: 1px solid var(--momentum-border);
+            position: relative; overflow: hidden;
         }}
-        .momentum-box::after {{
-            content: '';
-            position: absolute; top: 0; left: 20%; right: 20%; height: 1px;
-            background: var(--momentum-border);
-            opacity: 0.5;
-        }}
-        .momentum-box h3 {{
-            font-family: 'Cinzel', serif;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 10px;
-            opacity: 0.85;
-        }}
-        .momentum-box .value {{
-            font-family: 'Cinzel', serif;
-            font-size: 32px;
-            font-weight: 700;
-            margin: 10px 0;
-            text-shadow: 0 0 20px currentColor;
-        }}
-        .momentum-box .signal {{ font-size: 12px; font-weight: 600; opacity: 0.9; letter-spacing: 1px; font-family: 'Cinzel', serif; }}
+        .momentum-box::before {{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--momentum-border); box-shadow:0 0 10px var(--momentum-border); }}
+        .momentum-box::after {{ content:''; position:absolute; top:0; left:20%; right:20%; height:1px; background:var(--momentum-border); opacity:0.5; }}
+        .momentum-box h3 {{ font-family:'Cinzel',serif; font-size:clamp(9px,1.5vw,11px); font-weight:600; text-transform:uppercase; letter-spacing:3px; margin-bottom:10px; opacity:0.85; }}
+        .momentum-box .value {{ font-family:'Cinzel',serif; font-size:clamp(22px,5vw,32px); font-weight:700; margin:10px 0; text-shadow:0 0 20px currentColor; }}
+        .momentum-box .signal {{ font-size:clamp(10px,1.5vw,12px); font-weight:600; opacity:0.9; letter-spacing:1px; font-family:'Cinzel',serif; }}
+        .momentum-bar-wrap {{ margin-top:14px; height:3px; background:rgba(255,255,255,0.05); overflow:hidden; }}
+        .momentum-bar-fill {{ height:100%; background:var(--momentum-border); box-shadow:0 0 8px var(--momentum-border); }}
+        @keyframes momentum-glow-up {{ 0%,100% {{ box-shadow:0 8px 28px rgba(0,0,0,.6),0 0 0 1px var(--momentum-border); }} 50% {{ box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 24px var(--momentum-border); }} }}
+        .momentum-box.glow-anim {{ animation:momentum-glow-up 3s ease-in-out infinite; }}
 
-        /* ══════════════════════════════════════════
-           RECOMMENDATION BOX
-        ══════════════════════════════════════════ */
+        /* ── RECOMMENDATION BOX ── */
         .recommendation-box {{
             background: linear-gradient(135deg, {rec_color} 0%, {rec_color}cc 100%);
-            color: {rec_text_col};
-            padding: 24px;
-            border-radius: 2px;
-            text-align: center;
-            margin-bottom: 22px;
+            color: {rec_text_col}; padding: clamp(16px, 3vw, 24px);
+            border-radius: 2px; text-align: center;
+            margin-bottom: clamp(14px, 2.5vw, 22px);
             box-shadow: 0 8px 32px {rec_glow}, 0 0 0 1px {rec_border}44;
-            border: 1px solid {rec_border};
-            position: relative;
-            overflow: hidden;
+            border: 1px solid {rec_border}; position: relative; overflow: hidden;
         }}
-        .recommendation-box::before {{
-            content: '◆ SIGNAL ◆';
-            position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-            font-size: 9px; letter-spacing: 4px; color: {rec_border}99;
-            font-family: 'Cinzel', serif; white-space: nowrap;
-        }}
-        .recommendation-box h2 {{
-            font-family: 'Cinzel Decorative', serif;
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            letter-spacing: 4px;
-            text-shadow: 0 0 30px {rec_glow};
-        }}
-        .recommendation-box .subtitle {{ font-size: 14px; opacity: 0.85; font-weight: 500; letter-spacing: .5px; font-family: 'Cinzel', serif; }}
-        .signal-badge {{
-            display: inline-block;
-            padding: 5px 14px;
-            border-radius: 2px;
-            font-size: 12px;
-            font-weight: 700;
-            margin: 8px 4px 0 4px;
-            letter-spacing: 1px;
-            font-family: 'Cinzel', serif;
-        }}
-        .bullish {{ background: rgba(100,160,0,.12); border: 1px solid #8aaa00; color: #ccee44; }}
-        .bearish {{ background: rgba(180,50,0,.12); border: 1px solid #aa3300; color: #ee6644; }}
+        .recommendation-box::before {{ content:'◆ SIGNAL ◆'; position:absolute; top:8px; left:50%; transform:translateX(-50%); font-size:9px; letter-spacing:4px; color:{rec_border}99; font-family:'Cinzel',serif; white-space:nowrap; }}
+        .recommendation-box h2 {{ font-family:'Cinzel Decorative',serif; font-size:clamp(18px,5vw,28px); font-weight:700; margin-bottom:8px; letter-spacing:clamp(2px,1vw,4px); text-shadow:0 0 30px {rec_glow}; }}
+        .recommendation-box .subtitle {{ font-size:clamp(11px,2vw,14px); opacity:0.85; font-weight:500; letter-spacing:.5px; font-family:'Cinzel',serif; }}
+        .signal-badge {{ display:inline-block; padding:5px 14px; border-radius:2px; font-size:clamp(10px,1.5vw,12px); font-weight:700; margin:8px 4px 0 4px; letter-spacing:1px; font-family:'Cinzel',serif; }}
+        .bullish {{ background:rgba(100,160,0,.12); border:1px solid #8aaa00; color:#ccee44; }}
+        .bearish {{ background:rgba(180,50,0,.12); border:1px solid #aa3300; color:#ee6644; }}
 
-        /* ══════════════════════════════════════════
-           SECTION TITLES — Art Deco Gold (matching screenshot)
-        ══════════════════════════════════════════ */
-        .section {{ margin-bottom: 24px; }}
+        /* ── SECTION TITLES ── */
+        .section {{ margin-bottom: clamp(16px, 3vw, 24px); }}
         .section-title {{
             background: linear-gradient(180deg, #1a1200 0%, #100c01 100%);
-            color: var(--gold-light);
-            padding: 14px 22px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 14px;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            border-top: 1px solid var(--gold);
-            border-bottom: 1px solid var(--gold-dim);
-            border-left: none;
-            border-right: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            text-shadow: 0 0 20px rgba(201,168,76,.4);
-            font-family: 'Cinzel', serif;
-            position: relative;
+            color: var(--gold-light); padding: clamp(10px, 2vw, 14px) clamp(14px, 3vw, 22px);
+            font-size: clamp(10px, 1.8vw, 13px); font-weight: 600;
+            margin-bottom: clamp(10px, 2vw, 14px); letter-spacing: clamp(2px, 0.8vw, 4px);
+            text-transform: uppercase; border-top: 1px solid var(--gold); border-bottom: 1px solid var(--gold-dim);
+            display: flex; align-items: center; justify-content: center; gap: 14px;
+            text-shadow: 0 0 20px rgba(201,168,76,.4); font-family: 'Cinzel', serif; position: relative;
         }}
-        .section-title::before, .section-title::after {{
-            content: '◆';
-            color: var(--gold);
-            font-size: 10px;
-            flex-shrink: 0;
-        }}
-        /* side lines flanking the text */
-        .section-title span.st-line {{
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--gold-dim));
-        }}
-        .section-title span.st-line-r {{
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, var(--gold-dim), transparent);
-        }}
+        .section-title::before,.section-title::after {{ content:'◆'; color:var(--gold); font-size:10px; flex-shrink:0; }}
+        .section-title span.st-line {{ flex:1; height:1px; background:linear-gradient(90deg,transparent,var(--gold-dim)); }}
+        .section-title span.st-line-r {{ flex:1; height:1px; background:linear-gradient(90deg,var(--gold-dim),transparent); }}
 
-        /* ══════════════════════════════════════════
-           DATA GRID / ITEMS
-        ══════════════════════════════════════════ */
-        .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }}
+        /* ── DATA GRID ── */
+        .data-grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:clamp(8px,1.5vw,12px); }}
         .data-item {{
             background: linear-gradient(135deg, #1a1200 0%, #130e02 100%);
-            padding: 16px;
-            border: 1px solid var(--dark-border2);
-            border-top: 2px solid var(--gold-dim);
-            transition: border-color .2s;
+            padding: clamp(12px,2vw,16px); border: 1px solid var(--dark-border2);
+            border-top: 2px solid var(--gold-dim); transition: border-color .2s;
         }}
-        .data-item:hover {{ border-top-color: var(--gold); }}
-        .data-item .label {{
-            color: var(--text-dim);
-            font-size: 9px;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 2px;
-            margin-bottom: 8px;
-            font-family: 'Cinzel', serif;
-        }}
-        .data-item .value {{ color: var(--gold-light); font-size: 18px; font-weight: 600; font-family: 'Cinzel', serif; }}
+        .data-item:hover {{ border-top-color:var(--gold); }}
+        .data-item .label {{ color:var(--text-dim); font-size:clamp(8px,1.2vw,9px); text-transform:uppercase; font-weight:700; letter-spacing:2px; margin-bottom:8px; font-family:'Cinzel',serif; }}
+        .data-item .value {{ color:var(--gold-light); font-size:clamp(14px,2.5vw,18px); font-weight:600; font-family:'Cinzel',serif; }}
+
+        /* ── REASONS ── */
+        .reasons {{ background:linear-gradient(135deg,#1a1200 0%,#130e02 100%); border:1px solid var(--dark-border2); border-left:4px solid var(--gold-dim); padding:16px; }}
+        .reasons strong {{ color:var(--gold-light); font-size:clamp(12px,2vw,14px); letter-spacing:1px; font-family:'Cinzel',serif; }}
+        .reasons ul {{ margin:10px 0 0 0; padding-left:22px; }}
+        .reasons li {{ margin:6px 0; color:var(--text-main); font-size:clamp(11px,1.8vw,13px); line-height:1.6; }}
+
+        /* ── STRATEGY CARDS ── */
+        .strategies-grid {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:clamp(10px,2vw,14px); margin-top:14px; }}
+        .strategy-card {{ background:linear-gradient(135deg,#1a1200 0%,#130e02 100%); border:1px solid var(--dark-border2); border-top:2px solid var(--gold-dim); padding:16px; }}
+        .strategy-header {{ border-bottom:1px solid var(--dark-border2); padding-bottom:8px; margin-bottom:10px; }}
+        .strategy-header h4 {{ color:var(--gold-light); font-size:clamp(12px,2vw,14px); font-weight:600; letter-spacing:1px; font-family:'Cinzel',serif; }}
+        .strategy-type {{ display:inline-block; background:rgba(201,168,76,.08); color:var(--gold-dim); padding:3px 8px; font-size:10px; margin-top:4px; font-weight:600; border:1px solid var(--dark-border2); letter-spacing:.5px; font-family:'Cinzel',serif; }}
+        .strategy-body p {{ margin:7px 0; font-size:clamp(11px,1.8vw,13px); line-height:1.5; color:var(--text-main); }}
+        .strategy-body strong {{ color:var(--gold); }}
+        .recommendation-stars {{ color:var(--gold-bright); font-size:13px; font-weight:700; }}
+
+        /* ── FOOTER ── */
+        .footer {{ text-align:center; margin-top:30px; padding-top:20px; border-top:1px solid var(--dark-border2); color:var(--text-dim); font-size:clamp(9px,1.5vw,11px); line-height:1.8; letter-spacing:1px; font-family:'Cinzel',serif; }}
 
         /* ══════════════════════════════════════════
-           REASONS / ANALYSIS SUMMARY
-        ══════════════════════════════════════════ */
-        .reasons {{
-            background: linear-gradient(135deg, #1a1200 0%, #130e02 100%);
-            border: 1px solid var(--dark-border2);
-            border-left: 4px solid var(--gold-dim);
-            padding: 16px;
-        }}
-        .reasons strong {{ color: var(--gold-light); font-size: 14px; letter-spacing: 1px; font-family: 'Cinzel', serif; }}
-        .reasons ul {{ margin: 10px 0 0 0; padding-left: 22px; }}
-        .reasons li {{ margin: 6px 0; color: var(--text-main); font-size: 13px; line-height: 1.6; }}
-
-        /* ══════════════════════════════════════════
-           STRATEGY CARDS
-        ══════════════════════════════════════════ */
-        .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 14px; }}
-        .strategy-card {{
-            background: linear-gradient(135deg, #1a1200 0%, #130e02 100%);
-            border: 1px solid var(--dark-border2);
-            border-top: 2px solid var(--gold-dim);
-            padding: 16px;
-        }}
-        .strategy-header {{ border-bottom: 1px solid var(--dark-border2); padding-bottom: 8px; margin-bottom: 10px; }}
-        .strategy-header h4 {{ color: var(--gold-light); font-size: 14px; font-weight: 600; letter-spacing: 1px; font-family: 'Cinzel', serif; }}
-        .strategy-type {{
-            display: inline-block;
-            background: rgba(201,168,76,.08);
-            color: var(--gold-dim);
-            padding: 3px 8px;
-            font-size: 10px;
-            margin-top: 4px;
-            font-weight: 600;
-            border: 1px solid var(--dark-border2);
-            letter-spacing: .5px;
-            font-family: 'Cinzel', serif;
-        }}
-        .strategy-body p {{ margin: 7px 0; font-size: 13px; line-height: 1.5; color: var(--text-main); }}
-        .strategy-body strong {{ color: var(--gold); }}
-        .recommendation-stars {{ color: var(--gold-bright); font-size: 13px; font-weight: 700; }}
-
-        /* ══════════════════════════════════════════
-           FOOTER
-        ══════════════════════════════════════════ */
-        .footer {{
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid var(--dark-border2);
-            color: var(--text-dim);
-            font-size: 11px;
-            line-height: 1.8;
-            letter-spacing: 1px;
-            font-family: 'Cinzel', serif;
-        }}
-
-        /* ══════════════════════════════════════════
-           MOMENTUM ANIMATIONS
-        ══════════════════════════════════════════ */
-        @keyframes momentum-glow-up {{
-            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.6), 0 0 0 1px var(--momentum-border); }}
-            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.6), 0 0 24px var(--momentum-border); }}
-        }}
-        @keyframes momentum-glow-down {{
-            0%,100% {{ box-shadow: 0 8px 28px rgba(0,0,0,.6), 0 0 0 1px var(--momentum-border); }}
-            50%      {{ box-shadow: 0 8px 40px rgba(0,0,0,.6), 0 0 24px var(--momentum-border); }}
-        }}
-        .momentum-box.glow-anim {{ animation: momentum-glow-up 3s ease-in-out infinite; }}
-        .momentum-box::before {{
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 2px;
-            background: var(--momentum-border);
-            box-shadow: 0 0 10px var(--momentum-border);
-        }}
-        .momentum-bar-wrap {{
-            margin-top: 14px; height: 3px;
-            background: rgba(255,255,255,0.05); overflow: hidden;
-        }}
-        .momentum-bar-fill {{
-            height: 100%;
-            background: var(--momentum-border);
-            box-shadow: 0 0 8px var(--momentum-border);
-            transition: width 0.6s ease;
-        }}
-        /* ══════════════════════════════════════════
-           RESPONSIVE DESIGN — COMPREHENSIVE BREAKPOINTS
+           RESPONSIVE BREAKPOINTS — COMPREHENSIVE
         ══════════════════════════════════════════ */
 
-        /* ── TABLET: 1024px ── */
-        @media (max-width: 1024px) {{
-            .container {{
-                padding: 20px;
-            }}
-            .header h1 {{
-                font-size: 20px;
-                letter-spacing: 3px;
-            }}
-            .momentum-container {{
-                grid-template-columns: 1fr 1fr;
-                gap: 14px;
-            }}
-            .data-grid {{
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            }}
-            .strategies-grid {{
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            }}
-            .recommendation-box h2 {{
-                font-size: 22px;
-            }}
+        /* Tablet 900px */
+        @media (max-width: 900px) {{
+            .momentum-container {{ grid-template-columns: 1fr 1fr 1fr; }}
+            .data-grid {{ grid-template-columns: repeat(3, 1fr); }}
         }}
 
-        /* ── SMALL TABLET / LARGE PHONE: 768px ── */
-        @media (max-width: 768px) {{
-            body {{ padding: 8px; }}
-            .container {{
-                padding: 16px;
-                border-radius: 2px;
-            }}
-            .header {{
-                padding: 24px 14px 20px;
-            }}
-            .header h1 {{
-                font-size: 16px;
-                letter-spacing: 2px;
-            }}
-            /* hide corner diamonds on small screens */
-            .header-corner-tl, .header-corner-tr,
-            .header-corner-bl, .header-corner-br {{
-                display: none;
-            }}
-            .timeframe-badge {{
-                font-size: 9px;
-                letter-spacing: 2px;
-            }}
-            .timeframe-badge::before,
-            .timeframe-badge::after {{
-                width: 30px;
-            }}
-
-            /* Momentum: stack all 3 into 1 column */
-            .momentum-container {{
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }}
-            .momentum-box .value {{
-                font-size: 28px;
-            }}
-            .momentum-box {{
-                padding: 16px;
-            }}
-
-            /* Recommendation */
-            .recommendation-box {{
-                padding: 18px 14px;
-            }}
-            .recommendation-box h2 {{
-                font-size: 20px;
-                letter-spacing: 2px;
-            }}
-            .recommendation-box .subtitle {{
-                font-size: 12px;
-            }}
-
-            /* Section titles */
-            .section-title {{
-                font-size: 11px;
-                letter-spacing: 2px;
-                padding: 12px 14px;
-            }}
-            /* hide flanking lines on narrow screens — they collapse poorly */
-            .section-title .st-line,
-            .section-title .st-line-r {{
-                display: none;
-            }}
-
-            /* Data grid */
-            .data-grid {{
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-            }}
-            .data-item {{
-                padding: 12px 10px;
-            }}
-            .data-item .value {{
-                font-size: 15px;
-            }}
-
-            /* Strategy cards */
-            .strategies-grid {{
-                grid-template-columns: 1fr;
-            }}
-
-            /* Signal badges */
-            .signal-badge {{
-                font-size: 10px;
-                padding: 4px 10px;
-            }}
+        /* Small Tablet / Large Phone: 680px */
+        @media (max-width: 680px) {{
+            .momentum-container {{ grid-template-columns: 1fr 1fr; gap: 10px; }}
+            .header-corner-tl,.header-corner-tr,.header-corner-bl,.header-corner-br {{ display: none; }}
+            .section-title .st-line,.section-title .st-line-r {{ display: none; }}
+            .data-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
+            .strategies-grid {{ grid-template-columns: 1fr; }}
         }}
 
-        /* ── MOBILE: 480px ── */
+        /* Mobile: 480px */
         @media (max-width: 480px) {{
-            body {{ padding: 4px; }}
-            .container {{
-                padding: 12px 10px;
-            }}
-            .header {{
-                padding: 20px 10px 16px;
-            }}
-            .header h1 {{
-                font-size: 13px;
-                letter-spacing: 1px;
-            }}
-            .timeframe-badge {{
-                font-size: 8px;
-                gap: 6px;
-            }}
-            .timeframe-badge::before,
-            .timeframe-badge::after {{
-                width: 16px;
-            }}
-            .timestamp {{
-                font-size: 10px;
-            }}
-
-            /* Momentum */
-            .momentum-box .value {{
-                font-size: 24px;
-            }}
-            .momentum-box h3 {{
-                font-size: 9px;
-                letter-spacing: 2px;
-            }}
-            .momentum-box .signal {{
-                font-size: 10px;
-            }}
-
-            /* Recommendation */
-            .recommendation-box h2 {{
-                font-size: 17px;
-                letter-spacing: 1px;
-            }}
-            .recommendation-box .subtitle {{
-                font-size: 11px;
-            }}
-
-            /* Section */
-            .section-title {{
-                font-size: 10px;
-                letter-spacing: 1.5px;
-                padding: 10px 12px;
-                justify-content: center;
-            }}
-
-            /* Data grid: single column on very small */
-            .data-grid {{
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }}
-            .data-item .value {{
-                font-size: 16px;
-            }}
-            .data-item .label {{
-                font-size: 8px;
-            }}
-
-            /* Reasons */
-            .reasons li {{
-                font-size: 12px;
-            }}
-            .reasons strong {{
-                font-size: 12px;
-            }}
-
-            /* Footer */
-            .footer {{
-                font-size: 9px;
-                letter-spacing: 0.5px;
-                line-height: 1.6;
-            }}
+            .momentum-container {{ grid-template-columns: 1fr; gap: 10px; }}
+            .timeframe-badge::before,.timeframe-badge::after {{ width: 20px; }}
+            .data-grid {{ grid-template-columns: 1fr; }}
+            .recommendation-box::before {{ display: none; }}
         }}
 
-        /* ── ULTRA-WIDE: 1600px+ ── */
+        /* Large Desktop: 1600px+ */
         @media (min-width: 1600px) {{
-            .container {{
-                padding: 40px;
-            }}
-            .header h1 {{
-                font-size: 28px;
-            }}
-            .momentum-box .value {{
-                font-size: 38px;
-            }}
-            .data-grid {{
-                grid-template-columns: repeat(6, 1fr);
-            }}
+            .data-grid {{ grid-template-columns: repeat(6, 1fr); }}
+        }}
+
+        /* Print Stylesheet */
+        @media print {{
+            body {{ background: white; color: black; padding: 0; }}
+            .container {{ box-shadow: none; border: 1px solid #ccc; }}
+            .momentum-box, .recommendation-box {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
         }}
     </style>
 </head>
@@ -3891,13 +2595,17 @@ class NiftyAnalyzer:
         <span class="header-corner-bl"></span>
         <span class="header-corner-br"></span>
         <h1>&#9830; {title} &#9830;</h1>
-        <div class="timeframe-badge">
-            <div class="timeframe-inner">ONE HOUR TIMEFRAME</div>
-        </div>
+        <div class="timeframe-badge"><div class="timeframe-inner">ONE HOUR TIMEFRAME</div></div>
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- TRIPLE MOMENTUM — Plasma Pulse Theme -->
+    <!-- OPTION CHAIN — WIDGET 02 PLASMA RADIAL (top as requested) -->
+    <div class="section">
+        <div class="section-title"><span class="st-line"></span>Option Chain Analysis<span class="st-line-r"></span></div>
+        {oc_plasma_widget_html}
+    </div>
+
+    <!-- TRIPLE MOMENTUM -->
     <div class="momentum-container">
         <div class="momentum-box glow-anim" style="--momentum-bg:{momentum_1h_colors['bg']};--momentum-bg-dark:{momentum_1h_colors['bg_dark']};--momentum-text:{momentum_1h_colors['text']};--momentum-border:{momentum_1h_colors['border']};">
             <h3>&#9889; 1H MOMENTUM</h3>
@@ -3954,12 +2662,6 @@ class NiftyAnalyzer:
         {pivot_widget_html}
     </div>
 
-    <!-- OPTION CHAIN — WIDGET 02 PLASMA RADIAL -->
-    <div class="section">
-        <div class="section-title"><span class="st-line"></span>Option Chain Analysis<span class="st-line-r"></span></div>
-        {oc_plasma_widget_html}
-    </div>
-
     <!-- TOP 10 OI — WIDGET 01 NEON LEDGER -->
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Top 10 Open Interest (5 CE + 5 PE)<span class="st-line-r"></span></div>
@@ -3975,10 +2677,10 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- ═══ STRIKE RECOMMENDATIONS — DARK TICKER CARD ═══ -->
+    <!-- STRIKE RECOMMENDATIONS — DARK TICKER CARD -->
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Strike Recommendations<span class="st-line-r"></span></div>
-        <p style="color:#7a6030;margin-bottom:16px;font-size:13px;line-height:1.6;">
+        <p style="color:#7a6030;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
             <strong style="color:#c9a84c;">Based on {recommendation['bias']} bias &mdash; Nifty at &#8377;{tech_analysis.get('current_price', 0):.2f}</strong><br>
             Actionable trades with specific strike prices, LTP, targets &amp; risk management.
         </p>
@@ -3988,7 +2690,7 @@ class NiftyAnalyzer:
     <!-- OPTIONS STRATEGIES -->
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Options Strategies<span class="st-line-r"></span></div>
-        <p style="color:#7a6030;margin-bottom:14px;font-size:13px;letter-spacing:.5px;">
+        <p style="color:#7a6030;margin-bottom:14px;font-size:clamp(11px,2vw,13px);letter-spacing:.5px;">
             Based on <strong style="color:#c9a84c;">{recommendation['bias']}</strong> bias:
         </p>
         <div class="strategies-grid">{strategies_html}</div>
@@ -4003,7 +2705,6 @@ class NiftyAnalyzer:
 </div>
 </body>
 </html>"""
-
         return html
 
     def send_email(self, html_content):
@@ -4083,7 +2784,7 @@ class NiftyAnalyzer:
         self.logger.info(f"📧 Sending email to {self.config['email']['recipient']}...")
         self.send_email(html_report)
 
-        self.logger.info("✅ Deep Ocean · Neon Runway Pivot · Bloomberg S/R Table · Neon Ledger OI · Dark Ticker Card Strike — Analysis Complete!")
+        self.logger.info("✅ Analysis Complete!")
 
         return {
             'oc_analysis':    oc_analysis,
@@ -4093,6 +2794,9 @@ class NiftyAnalyzer:
         }
 
 
+# =============================================================================
+# ENTRY POINT
+# =============================================================================
 if __name__ == "__main__":
     analyzer = NiftyAnalyzer(config_path='config.yml')
     result   = analyzer.run_analysis()
