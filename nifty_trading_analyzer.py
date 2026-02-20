@@ -12,6 +12,9 @@ FIXED:  Using curl-cffi for NSE API to bypass anti-scraping
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str'
 BUGFIX: Live LTP now fetched via yfinance fast_info to show real-time price
         (not last completed candle close) — both LTP and Nifty Spot are live
+BUGFIX: Max Pain now correctly uses idxmin() instead of idxmax()
+        Max Pain = strike where total pain to OPTION BUYERS is MINIMUM
+        (i.e. option WRITERS/SELLERS gain most = most contracts expire worthless)
 OI FIX: Top 5 CE picked from 10 strikes ABOVE ATM only (not full chain)
         Top 5 PE picked from 10 strikes BELOW ATM only (not full chain)
         PCR, buildup, IV also computed from this ±10 ATM window for accuracy
@@ -432,6 +435,64 @@ class NiftyAnalyzer:
                 'ce_window': ce_window_strikes,
                 'pe_window': pe_window_strikes}
 
+    def calculate_max_pain(self, oc_df):
+        """
+        =====================================================================
+        CORRECTED Max Pain Calculation
+        =====================================================================
+        Max Pain = the strike price at which the TOTAL DOLLAR LOSS to all
+        option BUYERS is at its MINIMUM.
+
+        At this strike, option SELLERS/WRITERS retain the maximum premium,
+        i.e. the maximum number of contracts expire worthless.
+
+        Formula for each candidate strike K:
+          CE pain at K = sum over all CALL strikes C:  Call_OI(C) * max(0, K - C)
+          PE pain at K = sum over all PUT  strikes P:  Put_OI(P)  * max(0, P - K)
+          Total pain   = CE pain + PE pain
+
+        Max Pain Strike = strike K where Total pain is MINIMUM  ← idxmin() ✅
+
+        PREVIOUS BUG: used idxmax() which returned the strike where buyers
+        lose the MOST — the exact opposite of Max Pain definition.
+        =====================================================================
+        """
+        if oc_df is None or oc_df.empty:
+            return None
+
+        strikes = sorted(oc_df['Strike'].unique())
+        pain_records = []
+
+        for candidate_strike in strikes:
+            # Pain to CALL buyers if market expires at candidate_strike
+            call_pain = 0
+            for _, row in oc_df.iterrows():
+                call_pain += row['Call_OI'] * max(0, candidate_strike - row['Strike'])
+
+            # Pain to PUT buyers if market expires at candidate_strike
+            put_pain = 0
+            for _, row in oc_df.iterrows():
+                put_pain += row['Put_OI'] * max(0, row['Strike'] - candidate_strike)
+
+            total_pain = call_pain + put_pain
+            pain_records.append({
+                'Strike':     candidate_strike,
+                'Call_Pain':  call_pain,
+                'Put_Pain':   put_pain,
+                'Total_Pain': total_pain
+            })
+
+        pain_df = pd.DataFrame(pain_records)
+
+        # ✅ CORRECTED: idxmin() — Max Pain is where total buyer pain is MINIMUM
+        max_pain_strike = pain_df.loc[pain_df['Total_Pain'].idxmin(), 'Strike']
+
+        self.logger.info(
+            f"✅ Max Pain (CORRECTED): ₹{max_pain_strike:,}  "
+            f"[min total buyer pain = {pain_df['Total_Pain'].min():,.0f}]"
+        )
+        return int(max_pain_strike)
+
     def analyze_option_chain(self, oc_df, spot_price):
         """
         Analyze option chain for trading signals.
@@ -439,7 +500,8 @@ class NiftyAnalyzer:
         PCR, buildup, and IV are calculated over the ±10 strike ATM window
         (same window used for the OI display), so the numbers are meaningful
         and not diluted by far OTM/ITM strikes with negligible open interest.
-        Max Pain still uses the full chain (it needs all strikes by definition).
+
+        Max Pain uses the CORRECTED full-chain calculation (idxmin).
         """
         if oc_df is None or oc_df.empty:
             self.logger.warning("No option chain data, using sample analysis")
@@ -469,15 +531,10 @@ class NiftyAnalyzer:
         window_put_oi  = atm_df['Put_OI'].sum()
         pcr = window_put_oi / window_call_oi if window_call_oi > 0 else 0
 
-        # ── Step 3: Max Pain (needs full chain) ──────────────────────────────
-        oc_df['Call_Pain'] = oc_df.apply(
-            lambda row: row['Call_OI'] * max(0, spot_price - row['Strike']), axis=1
-        )
-        oc_df['Put_Pain'] = oc_df.apply(
-            lambda row: row['Put_OI'] * max(0, row['Strike'] - spot_price), axis=1
-        )
-        oc_df['Total_Pain'] = oc_df['Call_Pain'] + oc_df['Put_Pain']
-        max_pain_strike = oc_df.loc[oc_df['Total_Pain'].idxmax(), 'Strike']
+        # ── Step 3: CORRECTED Max Pain (full chain, idxmin) ──────────────────
+        max_pain_strike = self.calculate_max_pain(oc_df)
+        if max_pain_strike is None:
+            max_pain_strike = int(atm_strike)
 
         # ── Step 4: Resistance / Support from ATM window ────────────────────
         num_resistance = self.config['technical']['num_resistance_levels']
@@ -584,9 +641,6 @@ class NiftyAnalyzer:
             self.logger.info(f"Last candle time: {df.index[-1]}")
 
             # ── LIVE LTP FIX ────────────────────────────────────────────────
-            # fetch_live_ltp() returns the real-time price (fast_info or 1m bar).
-            # If it succeeds, we store it on the DataFrame for use everywhere.
-            # Momentum/RSI calculations still use candle history (correct).
             live_price = self.fetch_live_ltp()
             df.attrs['live_price'] = live_price  # None if fetch failed
             # ────────────────────────────────────────────────────────────────
@@ -712,11 +766,6 @@ class NiftyAnalyzer:
     def technical_analysis(self, df):
         """
         Perform complete technical analysis - 1 HOUR TIMEFRAME with DUAL MOMENTUM.
-
-        LIVE LTP FIX:
-          - current_price displayed in the report = live LTP from fast_info (real-time)
-          - candle_close_price = last 1h bar close (used for momentum calcs vs history)
-          - Momentum percentages computed against candle history (unchanged logic)
         """
         if df is None or df.empty:
             self.logger.warning("No technical data, using sample analysis")
@@ -734,7 +783,6 @@ class NiftyAnalyzer:
             self.logger.warning(f"⚠️ Live LTP unavailable — using candle close: ₹{current_price:.2f}")
         # ────────────────────────────────────────────────────────────────────
 
-        # Momentum calculations use candle history (correct behaviour)
         if len(df) > 1:
             price_1h_ago        = df['Close'].iloc[-2]
             price_change_1h     = current_price - float(price_1h_ago)
@@ -811,7 +859,7 @@ class NiftyAnalyzer:
 
         return {
             'current_price':       round(current_price, 2),
-            'candle_close_price':  round(candle_close_price, 2),   # kept for reference
+            'candle_close_price':  round(candle_close_price, 2),
             'rsi':                 round(current_rsi, 2),
             'rsi_signal':          rsi_signal,
             'ema20':               round(ema_short_val, 2),
@@ -1673,6 +1721,7 @@ class NiftyAnalyzer:
             .w2oc-maxpain {{ background: rgba(0,100,200,.1); border: 1px solid #0a3a5a; border-radius: 10px; padding: 10px 16px; text-align: center; width: 100%; }}
             .w2oc-maxpain-lbl {{ font-size: 9px; color: #4499ff; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }}
             .w2oc-maxpain-val {{ font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: #00ddff; text-shadow: 0 0 18px rgba(0,220,255,.7); }}
+            .w2oc-maxpain-note {{ font-size: 9px; color: #2a6a8a; margin-top: 4px; letter-spacing: 1px; }}
             .w2oc-right {{ padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }}
             .w2oc-stats-row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
             .w2oc-stat-card {{
@@ -1758,6 +1807,7 @@ class NiftyAnalyzer:
                     <div class="w2oc-maxpain">
                         <div class="w2oc-maxpain-lbl">Max Pain Strike</div>
                         <div class="w2oc-maxpain-val">&#8377;{max_pain:,}</div>
+                        <div class="w2oc-maxpain-note">Price magnet at expiry</div>
                     </div>
                 </div>
                 <div class="w2oc-right">
@@ -1792,7 +1842,7 @@ class NiftyAnalyzer:
                 </div>
             </div>
             <div class="w2oc-footer">
-                <span class="w2oc-footer-l">WIDGET 02 &middot; PLASMA RADIAL &middot; OPTION CHAIN ANALYSIS</span>
+                <span class="w2oc-footer-l">WIDGET 02 &middot; PLASMA RADIAL &middot; MAX PAIN = MIN BUYER PAIN (CORRECTED)</span>
                 <span class="w2oc-footer-r"><div class="w2oc-footer-dot"></div>NIFTY &middot; WEEKLY EXPIRY</span>
             </div>
         </div>'''
@@ -2234,7 +2284,6 @@ class NiftyAnalyzer:
         bias          = recommendation['bias']
         current_price = tech_analysis.get('current_price', 0)
         confidence    = recommendation['confidence']
-        # Also show candle close alongside live LTP for transparency
         candle_close  = tech_analysis.get('candle_close_price', current_price)
 
         if bias == 'Bullish':
@@ -2488,9 +2537,6 @@ class NiftyAnalyzer:
     def create_html_report(self, oc_analysis, tech_analysis, recommendation, nse_spot_price=None):
         """
         Create professional HTML report — Deep Ocean Trading Desk Theme.
-        nse_spot_price: live spot from NSE option chain API (underlyingValue).
-        tech_analysis['current_price']: live LTP from yfinance fast_info.
-        Both are now correctly real-time, not stale candle closes.
         """
         now_ist = self.format_ist_time()
         rec = recommendation['recommendation']
@@ -2548,7 +2594,6 @@ class NiftyAnalyzer:
         bar_5h = min(abs(momentum_5h_pct) * 20, 100)
         bar_2d = min(abs(momentum_2d_pct) * 10, 100)
 
-        # Spot price display: prefer NSE underlyingValue, else live LTP
         spot_display = nse_spot_price if nse_spot_price else current_price
 
         strategies_html = ''
@@ -2790,7 +2835,7 @@ class NiftyAnalyzer:
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- LIVE PRICE BANNER (NEW — shows real-time LTP + NSE Spot clearly) -->
+    <!-- LIVE PRICE BANNER -->
     <div class="live-price-banner">
         <div class="live-price-item">
             <div class="live-price-label"><span class="live-dot"></span>NSE SPOT PRICE</div>
@@ -2905,7 +2950,7 @@ class NiftyAnalyzer:
     <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; NSE Spot via Option Chain API &nbsp;&#9830;&nbsp; 1H Technical Analysis &nbsp;&#9830;&nbsp; Art Deco Gold Theme</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; Max Pain = Min Buyer Pain (CORRECTED) &nbsp;&#9830;&nbsp; NSE Spot via Option Chain API &nbsp;&#9830;&nbsp; Art Deco Gold Theme</p>
     </div>
 
 </div>
@@ -2945,7 +2990,7 @@ class NiftyAnalyzer:
 
     def run_analysis(self):
         """Run complete analysis with DUAL MOMENTUM DETECTION"""
-        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum + Live LTP Fix...")
+        self.logger.info("🚀 Starting Nifty 1-HOUR Analysis with Dual Momentum + Corrected Max Pain...")
         self.logger.info("=" * 60)
 
         oc_df, nse_spot_price = self.fetch_option_chain()
@@ -2956,7 +3001,6 @@ class NiftyAnalyzer:
             nse_spot_price = None
             oc_analysis = self.get_sample_oc_analysis()
 
-        # fetch_technical_data now also calls fetch_live_ltp() internally
         tech_df = self.fetch_technical_data()
 
         if tech_df is not None and not tech_df.empty:
@@ -2977,9 +3021,9 @@ class NiftyAnalyzer:
         self.logger.info(f"⚡ 1H Momentum: {tech_analysis.get('price_change_pct_1h', 0):+.2f}% - {tech_analysis.get('momentum_1h_signal')}")
         self.logger.info(f"📊 5H Momentum: {tech_analysis.get('momentum_5h_pct', 0):+.2f}% - {tech_analysis.get('momentum_5h_signal')}")
         self.logger.info(f"📍 Pivot Point: ₹{tech_analysis.get('pivot_points', {}).get('pivot', 'N/A')}")
+        self.logger.info(f"🎯 Max Pain (Corrected): ₹{oc_analysis.get('max_pain', 'N/A'):,}")
         self.logger.info("=" * 60)
 
-        # Pass nse_spot_price to report so it can be shown in the banner
         html_report = self.create_html_report(oc_analysis, tech_analysis, recommendation,
                                               nse_spot_price=nse_spot_price)
 
@@ -3021,6 +3065,7 @@ if __name__ == "__main__":
     print(f"NSE Spot:          ₹{result['nse_spot_price'] or 'N/A'}  ← via NSE option chain API")
     print(f"1H Candle Close:   ₹{result['tech_analysis']['candle_close_price']:,.2f}  ← last completed bar")
     print(f"RSI (1H):          {result['tech_analysis']['rsi']}")
+    print(f"Max Pain:          ₹{result['oc_analysis']['max_pain']:,}  ← CORRECTED (min buyer pain)")
     print(f"1H Momentum:       {result['tech_analysis']['price_change_pct_1h']:+.2f}% - {result['tech_analysis']['momentum_1h_signal']}")
     print(f"5H Momentum:       {result['tech_analysis']['momentum_5h_pct']:+.2f}% - {result['tech_analysis']['momentum_5h_signal']}")
     print(f"Check your email or ./reports/ for the detailed HTML report!")
