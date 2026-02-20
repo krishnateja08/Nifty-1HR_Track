@@ -2467,7 +2467,7 @@ class NiftyAnalyzer:
                 <div class="stc-master-right">
                     <div class="stc-bias-pill">{bias.upper()}</div>
                     <div class="stc-price-chip">
-                        <span class="stc-price-lbl">NIFTY LIVE LTP</span>
+                        <span class="stc-price-lbl">NSE SPOT PRICE</span>
                         <span class="stc-price-val">&#8377;{current_price:,.2f}</span>
                         <span class="stc-price-sub">1H Close: &#8377;{candle_close:,.2f}</span>
                     </div>
@@ -2793,12 +2793,6 @@ class NiftyAnalyzer:
     <!-- LIVE PRICE BANNER (NEW — shows real-time LTP + NSE Spot clearly) -->
     <div class="live-price-banner">
         <div class="live-price-item">
-            <div class="live-price-label"><span class="live-dot"></span>NIFTY LIVE LTP</div>
-            <div class="live-price-value">&#8377;{current_price:,.2f}</div>
-            <div class="live-price-sub">via yfinance fast_info (real-time)</div>
-        </div>
-        <div class="live-price-sep"></div>
-        <div class="live-price-item">
             <div class="live-price-label"><span class="live-dot"></span>NSE SPOT PRICE</div>
             <div class="live-price-value">&#8377;{spot_display:,.2f}</div>
             <div class="live-price-sub">via NSE Option Chain API</div>
@@ -2853,7 +2847,6 @@ class NiftyAnalyzer:
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Technical Analysis (1H)<span class="st-line-r"></span></div>
         <div class="data-grid">
-            <div class="data-item"><div class="label">Live LTP</div><div class="value">&#8377;{current_price:,.2f}</div></div>
             <div class="data-item"><div class="label">1H Candle Close</div><div class="value">&#8377;{candle_close:,.2f}</div></div>
             <div class="data-item"><div class="label">RSI (14)</div><div class="value">{tech_analysis.get('rsi','N/A')}</div></div>
             <div class="data-item"><div class="label">EMA 20</div><div class="value">&#8377;{tech_analysis.get('ema20','N/A')}</div></div>
@@ -2894,7 +2887,7 @@ class NiftyAnalyzer:
     <div class="section">
         <div class="section-title"><span class="st-line"></span>Strike Recommendations<span class="st-line-r"></span></div>
         <p style="color:#7a6030;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
-            <strong style="color:#c9a84c;">Based on {recommendation['bias']} bias &mdash; Live Nifty LTP &#8377;{current_price:,.2f}</strong><br>
+            <strong style="color:#c9a84c;">Based on {recommendation['bias']} bias &mdash; NSE Spot &#8377;{current_price:,.2f}</strong><br>
             Actionable trades with specific strike prices, LTP, targets &amp; risk management.
         </p>
         {strike_ticker_card_html}
@@ -2912,7 +2905,7 @@ class NiftyAnalyzer:
     <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#0a3d5c;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
-        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; Live LTP via yfinance fast_info &nbsp;&#9830;&nbsp; NSE Spot via Option Chain API &nbsp;&#9830;&nbsp; Art Deco Gold Theme</p>
+        <p>&copy; 2025 Nifty Trading Analyzer &nbsp;&#9830;&nbsp; NSE Spot via Option Chain API &nbsp;&#9830;&nbsp; 1H Technical Analysis &nbsp;&#9830;&nbsp; Art Deco Gold Theme</p>
     </div>
 
 </div>
