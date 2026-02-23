@@ -14,6 +14,8 @@ BUGFIX: Live LTP now fetched via yfinance fast_info to show real-time price
 OI FIX: Top 5 CE picked from 10 strikes ABOVE ATM only
         Top 5 PE picked from 10 strikes BELOW ATM only
 RESPONSIVE: Auto-adjusts for Mobile / iPad / Desktop / Ultra-wide
+AUTO-REFRESH: Silent 30-second background refresh with scroll position preservation
+              Displays Last Refresh IST time + Live Current IST time (updates every second)
 """
 
 import pandas as pd
@@ -1998,6 +2000,194 @@ class NiftyAnalyzer:
                     </div>
                 </div>"""
 
+        # ── AUTO-REFRESH JAVASCRIPT BLOCK ──────────────────────────────────
+        # Silent 30-second background refresh:
+        #   • Saves scroll position to sessionStorage before reload
+        #   • Restores scroll position immediately after reload
+        #   • Shows live IST clock (updates every second)
+        #   • Shows countdown to next refresh
+        #   • Shows last-refresh IST timestamp
+        #   • No flickering — browser handles scroll restore before paint
+        auto_refresh_js = """
+<script>
+(function () {
+    'use strict';
+
+    // ── CONSTANTS ──────────────────────────────────────────────────
+    var REFRESH_INTERVAL_MS = 30000;   // 30 seconds
+    var SCROLL_KEY          = 'nifty_scroll_y';
+    var LAST_REFRESH_KEY    = 'nifty_last_refresh';
+
+    // ── RESTORE SCROLL POSITION (run immediately, before paint) ────
+    var savedScroll = sessionStorage.getItem(SCROLL_KEY);
+    if (savedScroll !== null) {
+        window.scrollTo(0, parseInt(savedScroll, 10));
+        sessionStorage.removeItem(SCROLL_KEY);
+    }
+
+    // ── IST TIME HELPER ────────────────────────────────────────────
+    function getISTString() {
+        var now = new Date();
+        var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+        var istMs = utcMs + 5.5 * 3600000;   // IST = UTC+5:30
+        var ist   = new Date(istMs);
+        var pad   = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return ist.getFullYear() + '-' +
+               pad(ist.getMonth() + 1) + '-' +
+               pad(ist.getDate())      + '  ' +
+               pad(ist.getHours())     + ':' +
+               pad(ist.getMinutes())   + ':' +
+               pad(ist.getSeconds())   + ' IST';
+    }
+
+    // ── RECORD LAST REFRESH TIME ON FIRST LOAD ─────────────────────
+    // If we just refreshed, record the time; otherwise keep previous
+    if (!sessionStorage.getItem(LAST_REFRESH_KEY)) {
+        sessionStorage.setItem(LAST_REFRESH_KEY, getISTString());
+    } else {
+        // update it every page load
+        sessionStorage.setItem(LAST_REFRESH_KEY, getISTString());
+    }
+
+    // ── UPDATE STATUS BAR ──────────────────────────────────────────
+    var liveClockEl    = document.getElementById('ar-live-clock');
+    var lastRefreshEl  = document.getElementById('ar-last-refresh');
+    var countdownEl    = document.getElementById('ar-countdown');
+    var progressBarEl  = document.getElementById('ar-progress-fill');
+
+    var lastRefreshText = sessionStorage.getItem(LAST_REFRESH_KEY) || getISTString();
+    if (lastRefreshEl) { lastRefreshEl.textContent = lastRefreshText; }
+
+    var refreshAt = Date.now() + REFRESH_INTERVAL_MS;
+
+    function tick() {
+        // Live clock
+        if (liveClockEl) { liveClockEl.textContent = getISTString(); }
+
+        // Countdown
+        var remaining = Math.max(0, Math.ceil((refreshAt - Date.now()) / 1000));
+        if (countdownEl) { countdownEl.textContent = remaining + 's'; }
+
+        // Progress bar (fills left-to-right as time passes)
+        if (progressBarEl) {
+            var elapsed = REFRESH_INTERVAL_MS - (refreshAt - Date.now());
+            var pct     = Math.min(100, Math.max(0, (elapsed / REFRESH_INTERVAL_MS) * 100));
+            progressBarEl.style.width = pct.toFixed(1) + '%';
+        }
+    }
+
+    // Start the every-second tick
+    var tickTimer = setInterval(tick, 1000);
+    tick(); // run once immediately
+
+    // ── PERFORM SILENT REFRESH ─────────────────────────────────────
+    var refreshTimer = setTimeout(function () {
+        clearInterval(tickTimer);
+        // Save scroll position before leaving
+        sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+        // Clear last-refresh so it gets re-recorded on next load
+        // (we actually want to update it, so just let the next load set it)
+        window.location.reload();
+    }, REFRESH_INTERVAL_MS);
+
+    // ── PAUSE ON VISIBILITY HIDDEN (optional nicety) ───────────────
+    // If user switches tabs, we pause the countdown timer to avoid
+    // refreshing in the background and annoying them on return.
+    var pausedAt = null;
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            // Pause: record remaining time
+            pausedAt = refreshAt - Date.now();
+            clearTimeout(refreshTimer);
+            clearInterval(tickTimer);
+        } else {
+            // Resume: reset timers with remaining time
+            if (pausedAt !== null && pausedAt > 0) {
+                refreshAt = Date.now() + pausedAt;
+                pausedAt  = null;
+                tickTimer    = setInterval(tick, 1000);
+                refreshTimer = setTimeout(function () {
+                    clearInterval(tickTimer);
+                    sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+                    window.location.reload();
+                }, refreshAt - Date.now());
+                tick();
+            }
+        }
+    });
+})();
+</script>
+"""
+
+        # ── AUTO-REFRESH STATUS BAR HTML ──────────────────────────────────
+        auto_refresh_bar_html = """
+<div id="ar-status-bar" style="
+    position: sticky; top: 0; z-index: 9999;
+    background: linear-gradient(135deg, #0a1018 0%, #0e1828 100%);
+    border-bottom: 1px solid #1e2a38;
+    border-top: 2px solid #44eecc;
+    padding: 0;
+    font-family: 'IBM Plex Mono', 'Chakra Petch', monospace;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.8);
+">
+    <!-- Progress bar track -->
+    <div style="height:3px;background:#0c1018;width:100%;overflow:hidden;">
+        <div id="ar-progress-fill" style="
+            height:100%;width:0%;
+            background:linear-gradient(90deg,#22aa88,#44eecc);
+            box-shadow:0 0 10px #44eecc;
+            transition:width 0.9s linear;
+        "></div>
+    </div>
+
+    <!-- Info row -->
+    <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:7px 18px; flex-wrap:wrap; gap:8px;
+    ">
+        <!-- Left: Live Clock -->
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#44eecc;
+                        box-shadow:0 0 8px #44eecc;
+                        animation:ar-blink 1s ease-in-out infinite;flex-shrink:0;"></div>
+            <span style="font-size:10px;color:#88a0b8;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">IST NOW</span>
+            <span id="ar-live-clock" style="font-size:11px;color:#44eecc;font-weight:700;
+                                            text-shadow:0 0 10px rgba(68,238,204,0.5);letter-spacing:0.5px;">
+                --:--:-- IST
+            </span>
+        </div>
+
+        <!-- Centre: Last Refresh -->
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;color:#556070;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">LAST REFRESH</span>
+            <span id="ar-last-refresh" style="font-size:11px;color:#66ffdd;font-weight:700;letter-spacing:0.5px;">
+                --
+            </span>
+        </div>
+
+        <!-- Right: Countdown -->
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;color:#556070;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">NEXT REFRESH</span>
+            <span id="ar-countdown" style="
+                font-size:13px;font-weight:800;color:#44eecc;
+                background:rgba(68,238,204,0.08);
+                border:1px solid rgba(68,238,204,0.3);
+                border-radius:6px;padding:2px 10px;
+                text-shadow:0 0 10px rgba(68,238,204,0.5);
+                min-width:44px;text-align:center;
+            ">30s</span>
+            <span style="font-size:9px;color:#2a4a3a;letter-spacing:1px;text-transform:uppercase;">AUTO</span>
+        </div>
+    </div>
+</div>
+<style>
+@keyframes ar-blink {
+    0%,100% { opacity:1; transform:scale(1);   }
+    50%      { opacity:0.4; transform:scale(0.8); }
+}
+</style>
+"""
+
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2066,7 +2256,7 @@ class NiftyAnalyzer:
             color: #88a0b8; padding: 8px 0; font-size: clamp(9px, 1.5vw, 11px);
             font-weight: 600; margin-top: 10px; letter-spacing: 4px; text-transform: uppercase;
         }}
-        .timeframe-badge::before,.timeframe-badge::after {{ content:'▸'; color:#44eecc; }}
+        .timeframe-badge::before,.timeframe-badge::after {{ content: '▸'; color: #44eecc; }}
         /* ── MOMENTUM BOXES ── */
         .momentum-container {{
             display: grid; grid-template-columns: repeat(3, 1fr);
@@ -2150,6 +2340,9 @@ class NiftyAnalyzer:
     </style>
 </head>
 <body>
+
+{auto_refresh_bar_html}
+
 <div class="container">
 
     <!-- HEADER -->
@@ -2283,9 +2476,13 @@ class NiftyAnalyzer:
     <div class="footer">
         <p><strong style="color:#44eecc;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
         <p style="margin-top:6px;">&#9679; PHANTOM SLATE THEME &nbsp;&#9679;&nbsp; Charcoal Blue-Grey + Neon Mint + Graphite Steel &nbsp;&#9679;&nbsp; Max Pain = Min Buyer Pain (CORRECTED)</p>
+        <p style="margin-top:6px;color:#2a4a3a;">AUTO-REFRESH: 30s &nbsp;&#9679;&nbsp; SCROLL POSITION PRESERVED &nbsp;&#9679;&nbsp; SILENT BACKGROUND RELOAD</p>
     </div>
 
 </div>
+
+{auto_refresh_js}
+
 </body>
 </html>"""
         return html
