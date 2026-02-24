@@ -8,6 +8,7 @@ STRIKE: DARK TICKER CARD  |  Phantom Slate edition
 1-HOUR TIMEFRAME with WILDER'S RSI (matches TradingView)
 Enhanced with Pivot Points + Dual Momentum Analysis + Top 10 OI Display
 EXPIRY: Weekly TUESDAY expiry with 3:30 PM IST cutoff logic
+        If Tuesday is NSE holiday → expiry shifts to Monday
 FIXED:  Using curl-cffi for NSE API to bypass anti-scraping
 BUGFIX: ValueError: Unknown format code 'f' for object of type 'str'
 BUGFIX: Live LTP now fetched via yfinance fast_info to show real-time price
@@ -16,6 +17,7 @@ OI FIX: Top 5 CE picked from 10 strikes ABOVE ATM only
 RESPONSIVE: Auto-adjusts for Mobile / iPad / Desktop / Ultra-wide
 AUTO-REFRESH: Silent 30-second background refresh with scroll position preservation
               Displays Last Refresh IST time + Live Current IST time (updates every second)
+HOLIDAY FIX: If Tuesday expiry falls on NSE holiday, moves to Monday
 """
 
 import pandas as pd
@@ -173,10 +175,32 @@ class NiftyAnalyzer:
         return dt.strftime("%Y-%m-%d %H:%M:%S IST")
 
     def get_next_expiry_date(self):
-        now_ist = self.get_ist_time()
-        current_day = now_ist.weekday()
-        if current_day == 1:
-            current_hour = now_ist.hour
+        # ── NSE market holidays 2026 ──────────────────────────────────────
+        nse_holidays = {
+            datetime(2026, 1, 15).date(),   # Municipal Corporation Election - Maharashtra
+            datetime(2026, 1, 26).date(),   # Republic Day
+            datetime(2026, 3, 3).date(),    # Holi                          ← TUESDAY → Monday 02-Mar
+            datetime(2026, 3, 26).date(),   # Shri Ram Navami
+            datetime(2026, 3, 31).date(),   # Shri Mahavir Jayanti          ← TUESDAY → Monday 30-Mar
+            datetime(2026, 4, 3).date(),    # Good Friday
+            datetime(2026, 4, 14).date(),   # Dr. Baba Saheb Ambedkar Jayanti ← TUESDAY → Monday 13-Apr
+            datetime(2026, 5, 1).date(),    # Maharashtra Day
+            datetime(2026, 5, 28).date(),   # Bakri Id
+            datetime(2026, 6, 26).date(),   # Muharram
+            datetime(2026, 9, 14).date(),   # Ganesh Chaturthi
+            datetime(2026, 10, 2).date(),   # Mahatma Gandhi Jayanti
+            datetime(2026, 10, 20).date(),  # Dussehra                      ← TUESDAY → Monday 19-Oct
+            datetime(2026, 11, 10).date(),  # Diwali-Balipratipada          ← TUESDAY → Monday 09-Nov
+            datetime(2026, 11, 24).date(),  # Prakash Gurpurb Sri Guru Nanak Dev ← TUESDAY → Monday 23-Nov
+            datetime(2026, 12, 25).date(),  # Christmas
+        }
+
+        now_ist      = self.get_ist_time()
+        current_day  = now_ist.weekday()   # Monday=0 ... Sunday=6
+
+        # ── Find the candidate Tuesday ────────────────────────────────────
+        if current_day == 1:  # today IS Tuesday
+            current_hour   = now_ist.hour
             current_minute = now_ist.minute
             if current_hour < 15 or (current_hour == 15 and current_minute < 30):
                 days_until_tuesday = 0
@@ -184,13 +208,23 @@ class NiftyAnalyzer:
             else:
                 days_until_tuesday = 7
                 self.logger.info("📅 Tuesday after 3:30 PM - Moving to next Tuesday")
-        elif current_day == 0:
+        elif current_day == 0:   # Monday
             days_until_tuesday = 1
         else:
             days_until_tuesday = (1 - current_day) % 7
             if days_until_tuesday == 0:
                 days_until_tuesday = 7
-        expiry_date = now_ist + timedelta(days=days_until_tuesday)
+
+        expiry_date = (now_ist + timedelta(days=days_until_tuesday)).date()
+
+        # ── Holiday check: if Tuesday is a holiday, shift to Monday ──────
+        if expiry_date in nse_holidays:
+            self.logger.info(
+                f"📅 Expiry {expiry_date.strftime('%d-%b-%Y')} is a NSE holiday "
+                f"({expiry_date.strftime('%A')}) — shifting expiry to Monday"
+            )
+            expiry_date = expiry_date - timedelta(days=1)
+
         expiry_str = expiry_date.strftime('%d-%b-%Y')
         self.logger.info(f"📅 Next NIFTY Expiry: {expiry_str} ({expiry_date.strftime('%A')})")
         return expiry_str
@@ -2000,36 +2034,25 @@ class NiftyAnalyzer:
                     </div>
                 </div>"""
 
-        # ── AUTO-REFRESH JAVASCRIPT BLOCK ──────────────────────────────────
-        # Silent 30-second background refresh:
-        #   • Saves scroll position to sessionStorage before reload
-        #   • Restores scroll position immediately after reload
-        #   • Shows live IST clock (updates every second)
-        #   • Shows countdown to next refresh
-        #   • Shows last-refresh IST timestamp
-        #   • No flickering — browser handles scroll restore before paint
         auto_refresh_js = """
 <script>
 (function () {
     'use strict';
 
-    // ── CONSTANTS ──────────────────────────────────────────────────
-    var REFRESH_INTERVAL_MS = 30000;   // 30 seconds
+    var REFRESH_INTERVAL_MS = 30000;
     var SCROLL_KEY          = 'nifty_scroll_y';
     var LAST_REFRESH_KEY    = 'nifty_last_refresh';
 
-    // ── RESTORE SCROLL POSITION (run immediately, before paint) ────
     var savedScroll = sessionStorage.getItem(SCROLL_KEY);
     if (savedScroll !== null) {
         window.scrollTo(0, parseInt(savedScroll, 10));
         sessionStorage.removeItem(SCROLL_KEY);
     }
 
-    // ── IST TIME HELPER ────────────────────────────────────────────
     function getISTString() {
         var now = new Date();
         var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-        var istMs = utcMs + 5.5 * 3600000;   // IST = UTC+5:30
+        var istMs = utcMs + 5.5 * 3600000;
         var ist   = new Date(istMs);
         var pad   = function (n) { return n < 10 ? '0' + n : '' + n; };
         return ist.getFullYear() + '-' +
@@ -2040,16 +2063,8 @@ class NiftyAnalyzer:
                pad(ist.getSeconds())   + ' IST';
     }
 
-    // ── RECORD LAST REFRESH TIME ON FIRST LOAD ─────────────────────
-    // If we just refreshed, record the time; otherwise keep previous
-    if (!sessionStorage.getItem(LAST_REFRESH_KEY)) {
-        sessionStorage.setItem(LAST_REFRESH_KEY, getISTString());
-    } else {
-        // update it every page load
-        sessionStorage.setItem(LAST_REFRESH_KEY, getISTString());
-    }
+    sessionStorage.setItem(LAST_REFRESH_KEY, getISTString());
 
-    // ── UPDATE STATUS BAR ──────────────────────────────────────────
     var liveClockEl    = document.getElementById('ar-live-clock');
     var lastRefreshEl  = document.getElementById('ar-last-refresh');
     var countdownEl    = document.getElementById('ar-countdown');
@@ -2061,14 +2076,9 @@ class NiftyAnalyzer:
     var refreshAt = Date.now() + REFRESH_INTERVAL_MS;
 
     function tick() {
-        // Live clock
         if (liveClockEl) { liveClockEl.textContent = getISTString(); }
-
-        // Countdown
         var remaining = Math.max(0, Math.ceil((refreshAt - Date.now()) / 1000));
         if (countdownEl) { countdownEl.textContent = remaining + 's'; }
-
-        // Progress bar (fills left-to-right as time passes)
         if (progressBarEl) {
             var elapsed = REFRESH_INTERVAL_MS - (refreshAt - Date.now());
             var pct     = Math.min(100, Math.max(0, (elapsed / REFRESH_INTERVAL_MS) * 100));
@@ -2076,32 +2086,22 @@ class NiftyAnalyzer:
         }
     }
 
-    // Start the every-second tick
     var tickTimer = setInterval(tick, 1000);
-    tick(); // run once immediately
+    tick();
 
-    // ── PERFORM SILENT REFRESH ─────────────────────────────────────
     var refreshTimer = setTimeout(function () {
         clearInterval(tickTimer);
-        // Save scroll position before leaving
         sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-        // Clear last-refresh so it gets re-recorded on next load
-        // (we actually want to update it, so just let the next load set it)
         window.location.reload();
     }, REFRESH_INTERVAL_MS);
 
-    // ── PAUSE ON VISIBILITY HIDDEN (optional nicety) ───────────────
-    // If user switches tabs, we pause the countdown timer to avoid
-    // refreshing in the background and annoying them on return.
     var pausedAt = null;
     document.addEventListener('visibilitychange', function () {
         if (document.hidden) {
-            // Pause: record remaining time
             pausedAt = refreshAt - Date.now();
             clearTimeout(refreshTimer);
             clearInterval(tickTimer);
         } else {
-            // Resume: reset timers with remaining time
             if (pausedAt !== null && pausedAt > 0) {
                 refreshAt = Date.now() + pausedAt;
                 pausedAt  = null;
@@ -2119,7 +2119,6 @@ class NiftyAnalyzer:
 </script>
 """
 
-        # ── AUTO-REFRESH STATUS BAR HTML ──────────────────────────────────
         auto_refresh_bar_html = """
 <div id="ar-status-bar" style="
     position: sticky; top: 0; z-index: 9999;
@@ -2130,7 +2129,6 @@ class NiftyAnalyzer:
     font-family: 'IBM Plex Mono', 'Chakra Petch', monospace;
     box-shadow: 0 4px 24px rgba(0,0,0,0.8);
 ">
-    <!-- Progress bar track -->
     <div style="height:3px;background:#0c1018;width:100%;overflow:hidden;">
         <div id="ar-progress-fill" style="
             height:100%;width:0%;
@@ -2139,13 +2137,10 @@ class NiftyAnalyzer:
             transition:width 0.9s linear;
         "></div>
     </div>
-
-    <!-- Info row -->
     <div style="
         display:flex; align-items:center; justify-content:space-between;
         padding:7px 18px; flex-wrap:wrap; gap:8px;
     ">
-        <!-- Left: Live Clock -->
         <div style="display:flex;align-items:center;gap:8px;">
             <div style="width:7px;height:7px;border-radius:50%;background:#44eecc;
                         box-shadow:0 0 8px #44eecc;
@@ -2156,16 +2151,12 @@ class NiftyAnalyzer:
                 --:--:-- IST
             </span>
         </div>
-
-        <!-- Centre: Last Refresh -->
         <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:10px;color:#556070;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">LAST REFRESH</span>
             <span id="ar-last-refresh" style="font-size:11px;color:#66ffdd;font-weight:700;letter-spacing:0.5px;">
                 --
             </span>
         </div>
-
-        <!-- Right: Countdown -->
         <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:10px;color:#556070;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">NEXT REFRESH</span>
             <span id="ar-countdown" style="
@@ -2214,7 +2205,6 @@ class NiftyAnalyzer:
             box-shadow: 0 0 0 1px #1e2a38, 0 0 80px rgba(68,238,204,.03), 0 32px 80px rgba(0,0,0,.95);
             padding: clamp(12px, 3vw, 28px); border: 1px solid #1e2a38;
         }}
-        /* ── HEADER ── */
         .header {{
             text-align: center;
             background: linear-gradient(180deg, #0e1420, #141c28 60%, #0e1420);
@@ -2234,7 +2224,6 @@ class NiftyAnalyzer:
             margin-bottom: 14px;
         }}
         .header-sub {{ color: #88a0b8; font-size: 11px; letter-spacing: 5px; text-transform: uppercase; font-weight: 600; }}
-        /* ── LIVE PRICE BANNER ── */
         .live-price-banner {{
             display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 40px);
             background: linear-gradient(135deg, #0e1420, #141c28);
@@ -2249,7 +2238,6 @@ class NiftyAnalyzer:
         .live-price-sep {{ width: 1px; height: 50px; background: linear-gradient(180deg, transparent, #1e2a38, transparent); flex-shrink: 0; }}
         .live-dot {{ width: 8px; height: 8px; border-radius: 50%; background: #44eecc; box-shadow: 0 0 10px #44eecc; display: inline-block; margin-right: 6px; animation: lp 1.5s ease-in-out infinite; }}
         @keyframes lp {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.4; }} }}
-        /* ── TIMESTAMP ── */
         .timestamp {{ color: #667788; font-size: clamp(10px, 2vw, 12px); font-weight: 600; margin-top: 10px; letter-spacing: 2px; }}
         .timeframe-badge {{
             display: inline-flex; align-items: center; gap: 12px;
@@ -2257,7 +2245,6 @@ class NiftyAnalyzer:
             font-weight: 600; margin-top: 10px; letter-spacing: 4px; text-transform: uppercase;
         }}
         .timeframe-badge::before,.timeframe-badge::after {{ content: '▸'; color: #44eecc; }}
-        /* ── MOMENTUM BOXES ── */
         .momentum-container {{
             display: grid; grid-template-columns: repeat(3, 1fr);
             gap: clamp(10px, 2vw, 14px); margin-bottom: clamp(14px, 2.5vw, 20px);
@@ -2274,7 +2261,6 @@ class NiftyAnalyzer:
         .momentum-box .msig {{ font-size: clamp(10px, 1.5vw, 11px); font-weight: 600; opacity: 0.9; letter-spacing: 1px; }}
         .mb-bar-wrap {{ margin-top: 14px; height: 3px; background: rgba(255,255,255,0.04); overflow: hidden; }}
         .mb-bar-fill {{ height: 100%; background: var(--mb-border); box-shadow: 0 0 8px var(--mb-border); }}
-        /* ── RECOMMENDATION ── */
         .recommendation-box {{
             background: linear-gradient(135deg, {rec_color}, {rec_color}dd);
             color: {rec_text_col}; padding: clamp(16px, 3vw, 24px);
@@ -2286,7 +2272,6 @@ class NiftyAnalyzer:
         .signal-badge {{ display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: clamp(10px, 1.5vw, 11px); font-weight: 700; margin: 8px 4px 0; letter-spacing: 1px; }}
         .badge-bull {{ background: rgba(68,238,204,.1); border: 1px solid #22aa88; color: #44eecc; }}
         .badge-bear {{ background: rgba(255,64,80,.1); border: 1px solid #cc2233; color: #ff4455; }}
-        /* ── SECTION TITLES ── */
         .section {{ margin-bottom: clamp(16px, 3vw, 24px); }}
         .section-title {{
             background: linear-gradient(135deg, #141c28, #0e1420);
@@ -2298,7 +2283,6 @@ class NiftyAnalyzer:
             text-shadow: 0 0 16px rgba(68,238,204,.4);
         }}
         .section-title::before,.section-title::after {{ content: '▸'; color: #44eecc; font-size: 12px; flex-shrink: 0; }}
-        /* ── DATA GRID ── */
         .data-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: clamp(8px, 1.5vw, 12px); }}
         .data-item {{
             background: linear-gradient(135deg, #141c28, #0e1420);
@@ -2308,12 +2292,10 @@ class NiftyAnalyzer:
         .data-item:hover {{ border-top-color: #44eecc; }}
         .data-item .dlabel {{ color: #667788; font-size: 9px; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; margin-bottom: 7px; }}
         .data-item .dvalue {{ color: #ddeeff; font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; font-family: 'IBM Plex Mono', monospace; }}
-        /* ── REASONS ── */
         .reasons {{ background: linear-gradient(135deg, #141c28, #0e1420); border: 1px solid #1e2a38; border-left: 4px solid #22aa88; padding: 16px; border-radius: 3px; }}
         .reasons strong {{ color: #44eecc; font-size: clamp(12px, 2vw, 14px); letter-spacing: 1px; }}
         .reasons ul {{ margin: 10px 0 0 0; padding-left: 22px; }}
         .reasons li {{ margin: 6px 0; color: #88a0b8; font-size: clamp(11px, 1.8vw, 13px); line-height: 1.6; }}
-        /* ── STRATEGY CARDS ── */
         .strategies-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: clamp(10px, 2vw, 14px); margin-top: 14px; }}
         .strategy-card {{ background: linear-gradient(135deg, #141c28, #0e1420); border: 1px solid #1e2a38; border-top: 2px solid #2a3a4a; padding: 16px; border-radius: 3px; }}
         .strategy-header {{ border-bottom: 1px solid #1e2a38; padding-bottom: 8px; margin-bottom: 10px; }}
@@ -2322,9 +2304,7 @@ class NiftyAnalyzer:
         .strategy-body p {{ margin: 7px 0; font-size: clamp(11px, 1.8vw, 13px); line-height: 1.5; color: #88a0b8; }}
         .strategy-body strong {{ color: #44eecc; }}
         .recommendation-stars {{ color: #44eecc; font-size: 13px; font-weight: 700; }}
-        /* ── FOOTER ── */
         .footer {{ text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #1e2a38; color: #556070; font-size: clamp(9px, 1.5vw, 11px); line-height: 1.8; letter-spacing: 1px; }}
-        /* ── RESPONSIVE ── */
         @media (max-width: 900px) {{ .data-grid {{ grid-template-columns: repeat(3,1fr); }} }}
         @media (max-width: 680px) {{
             .momentum-container {{ grid-template-columns: 1fr 1fr; gap: 10px; }}
@@ -2345,7 +2325,6 @@ class NiftyAnalyzer:
 
 <div class="container">
 
-    <!-- HEADER -->
     <div class="header">
         <div style="color:#556070;font-size:9px;letter-spacing:6px;margin-bottom:10px;">▸ &nbsp; ALGORITHMIC MARKET INTELLIGENCE &nbsp; ◂</div>
         <h1>&#9679; {title} &#9679;</h1>
@@ -2354,7 +2333,6 @@ class NiftyAnalyzer:
         <div class="timestamp">Generated on: {now_ist}</div>
     </div>
 
-    <!-- LIVE PRICE BANNER -->
     <div class="live-price-banner">
         <div class="live-price-item">
             <div class="live-price-label"><span class="live-dot"></span>NSE SPOT PRICE</div>
@@ -2375,13 +2353,11 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- OPTION CHAIN — PLASMA RADIAL -->
     <div class="section">
         <div class="section-title">Option Chain Analysis</div>
         {oc_plasma_widget_html}
     </div>
 
-    <!-- TRIPLE MOMENTUM -->
     <div class="momentum-container">
         <div class="momentum-box" style="--mb-bg:{momentum_1h_colors['bg']};--mb-bg2:{momentum_1h_colors['bg_dark']};--mb-text:{momentum_1h_colors['text']};--mb-border:{momentum_1h_colors['border']};">
             <h3>&#9889; 1H MOMENTUM</h3>
@@ -2403,7 +2379,6 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- RECOMMENDATION -->
     <div class="recommendation-box">
         <h2>{recommendation['recommendation']}</h2>
         <div class="subtitle">Market Bias: {recommendation['bias']} &nbsp;|&nbsp; Confidence: {recommendation['confidence']}</div>
@@ -2413,7 +2388,6 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- TECHNICAL ANALYSIS -->
     <div class="section">
         <div class="section-title">Technical Analysis (1H)</div>
         <div class="data-grid">
@@ -2426,25 +2400,21 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- S/R — BLOOMBERG TABLE -->
     <div class="section">
         <div class="section-title">Support &amp; Resistance (1H)</div>
         {sr_widget_html}
     </div>
 
-    <!-- PIVOT POINTS -->
     <div class="section">
         <div class="section-title">Pivot Points (Traditional - 30 Min)</div>
         {pivot_widget_html}
     </div>
 
-    <!-- TOP 10 OI — NEON LEDGER -->
     <div class="section">
         <div class="section-title">Top OI — ±10 Strikes from ATM (5 CE + 5 PE)</div>
         {oi_neon_ledger_html}
     </div>
 
-    <!-- ANALYSIS SUMMARY -->
     <div class="section">
         <div class="section-title">Analysis Summary</div>
         <div class="reasons">
@@ -2453,7 +2423,6 @@ class NiftyAnalyzer:
         </div>
     </div>
 
-    <!-- STRIKE RECOMMENDATIONS — DARK TICKER CARD -->
     <div class="section">
         <div class="section-title">Strike Recommendations</div>
         <p style="color:#88a0b8;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
@@ -2463,7 +2432,6 @@ class NiftyAnalyzer:
         {strike_ticker_card_html}
     </div>
 
-    <!-- OPTIONS STRATEGIES -->
     <div class="section">
         <div class="section-title">Options Strategies</div>
         <p style="color:#88a0b8;margin-bottom:14px;font-size:clamp(11px,2vw,13px);letter-spacing:.5px;">
@@ -2472,11 +2440,11 @@ class NiftyAnalyzer:
         <div class="strategies-grid">{strategies_html}</div>
     </div>
 
-    <!-- FOOTER -->
     <div class="footer">
         <p><strong style="color:#44eecc;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
         <p style="margin-top:6px;">&#9679; PHANTOM SLATE THEME &nbsp;&#9679;&nbsp; Charcoal Blue-Grey + Neon Mint + Graphite Steel &nbsp;&#9679;&nbsp; Max Pain = Min Buyer Pain (CORRECTED)</p>
         <p style="margin-top:6px;color:#2a4a3a;">AUTO-REFRESH: 30s &nbsp;&#9679;&nbsp; SCROLL POSITION PRESERVED &nbsp;&#9679;&nbsp; SILENT BACKGROUND RELOAD</p>
+        <p style="margin-top:6px;color:#2a4a3a;">HOLIDAY FIX: Tuesday NSE Holidays → Expiry shifts to Monday</p>
     </div>
 
 </div>
