@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIFTY DAY TRADING ANALYSIS (1H)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at 40% 0%, #141820 0%, #0c1018 50%, #080c12 100%);
+            color: #88a0b8;
+            padding: clamp(6px, 2vw, 16px); min-height: 100vh;
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 70px, rgba(100,140,180,0.005) 70px, rgba(100,140,180,0.005) 71px);
+        }
+        .container {
+            position: relative; z-index: 1; max-width: 1400px; margin: 0 auto;
+            background: linear-gradient(160deg, #0e1420 0%, #0a1018 100%);
+            border-radius: 6px;
+            box-shadow: 0 0 0 1px #1e2a38, 0 0 80px rgba(68,238,204,.03), 0 32px 80px rgba(0,0,0,.95);
+            padding: clamp(12px, 3vw, 28px); border: 1px solid #1e2a38;
+        }
+        .header {
+            text-align: center;
+            background: linear-gradient(180deg, #0e1420, #141c28 60%, #0e1420);
+            padding: clamp(18px, 4vw, 32px) clamp(14px, 3vw, 24px) clamp(16px, 3vw, 28px);
+            margin-bottom: clamp(16px, 3vw, 28px);
+            border: 1px solid #1e2a38; border-top: 3px solid #44eecc;
+            position: relative; overflow: hidden;
+        }
+        .header::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, #22aa8877, #44eeccaa, #22aa8877, transparent);
+        }
+        .header h1 {
+            font-size: clamp(14px, 4vw, 24px); font-weight: 700; color: #ddeeff;
+            letter-spacing: clamp(3px, 1.5vw, 7px); text-transform: uppercase;
+            text-shadow: 0 0 40px rgba(68,238,204,.5), 0 0 80px rgba(34,170,136,.2);
+            margin-bottom: 14px;
+        }
+        .header-sub { color: #88a0b8; font-size: 11px; letter-spacing: 5px; text-transform: uppercase; font-weight: 600; }
+        .live-price-banner {
+            display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 40px);
+            background: linear-gradient(135deg, #0e1420, #141c28);
+            border: 1px solid #1e2a38; border-top: 2px solid #44eecc;
+            padding: clamp(12px, 2vw, 18px) clamp(16px, 3vw, 28px);
+            margin: 14px 0; flex-wrap: wrap;
+        }
+        .live-price-item { text-align: center; }
+        .live-price-label { font-size: clamp(9px, 1.5vw, 11px); color: #88a0b8; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+        .live-price-value { font-family: 'IBM Plex Mono', monospace; font-size: clamp(20px, 4vw, 28px); font-weight: 800; color: #44eecc; text-shadow: 0 0 20px rgba(68,238,204,.45); }
+        .live-price-sub { font-size: clamp(9px, 1.5vw, 10px); color: #667788; margin-top: 4px; }
+        .live-price-sep { width: 1px; height: 50px; background: linear-gradient(180deg, transparent, #1e2a38, transparent); flex-shrink: 0; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #44eecc; box-shadow: 0 0 10px #44eecc; display: inline-block; margin-right: 6px; animation: lp 1.5s ease-in-out infinite; }
+        @keyframes lp { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .timestamp { color: #667788; font-size: clamp(10px, 2vw, 12px); font-weight: 600; margin-top: 10px; letter-spacing: 2px; }
+        .timeframe-badge {
+            display: inline-flex; align-items: center; gap: 12px;
+            color: #88a0b8; padding: 8px 0; font-size: clamp(9px, 1.5vw, 11px);
+            font-weight: 600; margin-top: 10px; letter-spacing: 4px; text-transform: uppercase;
+        }
+        .timeframe-badge::before,.timeframe-badge::after { content: '▸'; color: #44eecc; }
+        .momentum-container {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: clamp(10px, 2vw, 14px); margin-bottom: clamp(14px, 2.5vw, 20px);
+        }
+        .momentum-box {
+            background: linear-gradient(135deg, var(--mb-bg,#0e1420), var(--mb-bg2,#0a1018));
+            color: var(--mb-text,#44eecc); padding: clamp(14px, 2.5vw, 22px);
+            border-radius: 4px; text-align: center;
+            border: 1px solid var(--mb-border,#1e2a38); border-top: 2px solid var(--mb-border,#44eecc);
+            box-shadow: 0 8px 24px rgba(0,0,0,.7);
+        }
+        .momentum-box h3 { font-size: clamp(9px, 1.5vw, 10px); font-weight: 700; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 10px; opacity: 0.75; }
+        .momentum-box .mval { font-family: 'IBM Plex Mono', monospace; font-size: clamp(22px, 5vw, 30px); font-weight: 800; margin: 10px 0; text-shadow: 0 0 20px currentColor; }
+        .momentum-box .msig { font-size: clamp(10px, 1.5vw, 11px); font-weight: 600; opacity: 0.9; letter-spacing: 1px; }
+        .mb-bar-wrap { margin-top: 14px; height: 3px; background: rgba(255,255,255,0.04); overflow: hidden; }
+        .mb-bar-fill { height: 100%; background: var(--mb-border); box-shadow: 0 0 8px var(--mb-border); }
+        .recommendation-box {
+            background: linear-gradient(135deg, #0e1420, #0e1420dd);
+            color: #88a0b8; padding: clamp(16px, 3vw, 24px);
+            border-radius: 4px; text-align: center; margin-bottom: clamp(14px, 2.5vw, 20px);
+            box-shadow: 0 8px 28px rgba(68,238,204,0.08); border: 1px solid #1e2a38; border-top: 2px solid #1e2a38;
+        }
+        .recommendation-box h2 { font-size: clamp(18px, 5vw, 28px); font-weight: 800; margin-bottom: 8px; letter-spacing: clamp(2px, 1vw, 4px); text-shadow: 0 0 28px rgba(68,238,204,0.08); }
+        .recommendation-box .subtitle { font-size: clamp(11px, 2vw, 14px); opacity: 0.85; font-weight: 600; letter-spacing: .5px; }
+        .signal-badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: clamp(10px, 1.5vw, 11px); font-weight: 700; margin: 8px 4px 0; letter-spacing: 1px; }
+        .badge-bull { background: rgba(68,238,204,.1); border: 1px solid #22aa88; color: #44eecc; }
+        .badge-bear { background: rgba(255,64,80,.1); border: 1px solid #cc2233; color: #ff4455; }
+        .section { margin-bottom: clamp(16px, 3vw, 24px); }
+        .section-title {
+            background: linear-gradient(135deg, #141c28, #0e1420);
+            color: #44eecc; padding: clamp(10px, 2vw, 14px) clamp(14px, 3vw, 22px);
+            font-size: clamp(10px, 1.8vw, 12px); font-weight: 700;
+            margin-bottom: clamp(10px, 2vw, 14px); letter-spacing: clamp(2px, 0.8vw, 4px);
+            text-transform: uppercase; border-top: 1px solid #44eecc; border-bottom: 1px solid #1e2a38;
+            display: flex; align-items: center; justify-content: center; gap: 14px;
+            text-shadow: 0 0 16px rgba(68,238,204,.4);
+        }
+        .section-title::before,.section-title::after { content: '▸'; color: #44eecc; font-size: 12px; flex-shrink: 0; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: clamp(8px, 1.5vw, 12px); }
+        .data-item {
+            background: linear-gradient(135deg, #141c28, #0e1420);
+            padding: clamp(12px, 2vw, 16px); border: 1px solid #1e2a38;
+            border-top: 2px solid #2a3a4a; border-radius: 3px; transition: border-top-color .2s;
+        }
+        .data-item:hover { border-top-color: #44eecc; }
+        .data-item .dlabel { color: #667788; font-size: 9px; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; margin-bottom: 7px; }
+        .data-item .dvalue { color: #ddeeff; font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+        .reasons { background: linear-gradient(135deg, #141c28, #0e1420); border: 1px solid #1e2a38; border-left: 4px solid #22aa88; padding: 16px; border-radius: 3px; }
+        .reasons strong { color: #44eecc; font-size: clamp(12px, 2vw, 14px); letter-spacing: 1px; }
+        .reasons ul { margin: 10px 0 0 0; padding-left: 22px; }
+        .reasons li { margin: 6px 0; color: #88a0b8; font-size: clamp(11px, 1.8vw, 13px); line-height: 1.6; }
+        .strategies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: clamp(10px, 2vw, 14px); margin-top: 14px; }
+        .strategy-card { background: linear-gradient(135deg, #141c28, #0e1420); border: 1px solid #1e2a38; border-top: 2px solid #2a3a4a; padding: 16px; border-radius: 3px; }
+        .strategy-header { border-bottom: 1px solid #1e2a38; padding-bottom: 8px; margin-bottom: 10px; }
+        .strategy-header h4 { color: #ddeeff; font-size: clamp(12px, 2vw, 14px); font-weight: 700; letter-spacing: 1px; }
+        .strategy-type { display: inline-block; background: rgba(68,238,204,.06); color: #88a0b8; padding: 3px 8px; font-size: 10px; margin-top: 4px; font-weight: 600; border: 1px solid #1e2a38; letter-spacing: .5px; border-radius: 3px; }
+        .strategy-body p { margin: 7px 0; font-size: clamp(11px, 1.8vw, 13px); line-height: 1.5; color: #88a0b8; }
+        .strategy-body strong { color: #44eecc; }
+        .recommendation-stars { color: #44eecc; font-size: 13px; font-weight: 700; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #1e2a38; color: #556070; font-size: clamp(9px, 1.5vw, 11px); line-height: 1.8; letter-spacing: 1px; }
+        @media (max-width: 900px) { .data-grid { grid-template-columns: repeat(3,1fr); } }
+        @media (max-width: 680px) {
+            .momentum-container { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .data-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
+            .strategies-grid { grid-template-columns: 1fr; }
+            .live-price-sep { display: none; }
+        }
+        @media (max-width: 480px) {
+            .momentum-container { grid-template-columns: 1fr; gap: 10px; }
+            .data-grid { grid-template-columns: 1fr; }
+        }
+        @media (min-width: 1600px) { .data-grid { grid-template-columns: repeat(6,1fr); } }
+    </style>
+</head>
+<body>
+
+
+<div id="ar-status-bar" style="
+    position: sticky; top: 0; z-index: 9999;
+    background: linear-gradient(135deg, #0a1018 0%, #0e1828 100%);
+    border-bottom: 1px solid #1e2a38;
+    border-top: 2px solid #44eecc;
+    padding: 0;
+    font-family: 'IBM Plex Mono', 'Chakra Petch', monospace;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.8);
+">
+    <div style="height:3px;background:#0c1018;width:100%;overflow:hidden;">
+        <div id="ar-progress-fill" style="
+            height:100%;width:0%;
+            background:linear-gradient(90deg,#22aa88,#44eecc);
+            box-shadow:0 0 10px #44eecc;
+            transition:width 0.9s linear;
+        "></div>
+    </div>
+    <div style="
+        display:flex; align-items:center; justify-content:space-between;
+        padding:7px 18px; flex-wrap:wrap; gap:8px;
+    ">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#44eecc;
+                        box-shadow:0 0 8px #44eecc;
+                        animation:ar-blink 1s ease-in-out infinite;flex-shrink:0;"></div>
+            <span style="font-size:10px;color:#88a0b8;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">IST NOW</span>
+            <span id="ar-live-clock" style="font-size:11px;color:#44eecc;font-weight:700;
+                                            text-shadow:0 0 10px rgba(68,238,204,0.5);letter-spacing:0.5px;">
+                --:--:-- IST
+            </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;color:#556070;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">LAST REFRESH</span>
+            <span id="ar-last-refresh" style="font-size:11px;color:#66ffdd;font-weight:700;letter-spacing:0.5px;">
+                --
+            </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;color:#556070;letter-spacing:1.5px;font-weight:600;text-transform:uppercase;">NEXT REFRESH</span>
+            <span id="ar-countdown" style="
+                font-size:13px;font-weight:800;color:#44eecc;
+                background:rgba(68,238,204,0.08);
+                border:1px solid rgba(68,238,204,0.3);
+                border-radius:6px;padding:2px 10px;
+                text-shadow:0 0 10px rgba(68,238,204,0.5);
+                min-width:44px;text-align:center;
+            ">30s</span>
+            <span style="font-size:9px;color:#2a4a3a;letter-spacing:1px;text-transform:uppercase;">AUTO</span>
+        </div>
+    </div>
+</div>
+<style>
+@keyframes ar-blink {
+    0%,100% { opacity:1; transform:scale(1);   }
+    50%      { opacity:0.4; transform:scale(0.8); }
+}
+</style>
+
+
+<div class="container">
+
+    <div class="header">
+        <div style="color:#556070;font-size:9px;letter-spacing:6px;margin-bottom:10px;">▸ &nbsp; ALGORITHMIC MARKET INTELLIGENCE &nbsp; ◂</div>
+        <h1>&#9679; NIFTY DAY TRADING ANALYSIS (1H) &#9679;</h1>
+        <div class="timeframe-badge">ONE HOUR TIMEFRAME</div>
+        <div class="header-sub">LIVE DATA &nbsp;·&nbsp; NSE OPTION CHAIN &nbsp;·&nbsp; PHANTOM SLATE</div>
+        <div class="timestamp">Generated on: 2026-03-02 18:14:39 IST</div>
+    </div>
+
+    <div class="live-price-banner">
+        <div class="live-price-item">
+            <div class="live-price-label"><span class="live-dot"></span>NSE SPOT PRICE</div>
+            <div class="live-price-value">&#8377;24,865.70</div>
+            <div class="live-price-sub">via NSE Option Chain API</div>
+        </div>
+        <div class="live-price-sep"></div>
+        <div class="live-price-item">
+            <div class="live-price-label">1H CANDLE CLOSE</div>
+            <div class="live-price-value" style="color:#44eecc;font-size:clamp(16px,3vw,22px);">&#8377;24,849.75</div>
+            <div class="live-price-sub">last completed 1H bar</div>
+        </div>
+        <div class="live-price-sep"></div>
+        <div class="live-price-item">
+            <div class="live-price-label">&#128197; EXPIRY DATE</div>
+            <div class="live-price-value" style="color:#ff3a5c;font-size:clamp(13px,2.5vw,18px);text-shadow:0 0 16px rgba(255,58,92,.5);">02-Mar-2026</div>
+            <div class="live-price-sub">weekly tuesday expiry</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Option Chain Analysis</div>
+        
+        <style>
+            .w2oc-wrap {
+                font-family: 'Chakra Petch', sans-serif;
+                background: linear-gradient(135deg, #0c1018, #0e1420);
+                border: 1px solid #1e2a38; border-radius: 8px; overflow: hidden;
+                box-shadow: 0 0 50px rgba(68,238,204,.04), 0 20px 60px rgba(0,0,0,.9);
+            }
+            .w2oc-hdr {
+                background: linear-gradient(135deg, #0e1420, #141c28);
+                border-bottom: 1px solid #1e2a38; padding: 14px 22px;
+                display: flex; align-items: center; gap: 12px; position: relative; flex-wrap: wrap;
+            }
+            .w2oc-hdr::after {
+                content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                background: linear-gradient(90deg, transparent, #1e6688, #44eeccaa, #1e6688, transparent);
+            }
+            .w2oc-hdr-icon {
+                width: 36px; height: 36px; border-radius: 10px;
+                background: linear-gradient(135deg, #1a2840, #1e3050);
+                display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+                box-shadow: 0 0 16px rgba(68,238,204,.25), inset 0 1px 0 rgba(255,255,255,.05);
+            }
+            .w2oc-hdr-text h3 {
+                font-size: clamp(12px, 2.5vw, 14px); font-weight: 700; color: #ddeeff;
+                letter-spacing: 2.5px; text-transform: uppercase; text-shadow: 0 0 18px rgba(68,238,204,.4);
+            }
+            .w2oc-hdr-text p { font-size: 10px; color: #667788; margin-top: 3px; letter-spacing: 1.5px; font-weight: 600; }
+            .w2oc-hdr-badge {
+                margin-left: auto; background: rgba(68,238,204,.1); border: 1px solid #22aa8877; color: #44eecc;
+                padding: 5px 16px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 2px;
+                text-shadow: 0 0 10px rgba(68,238,204,.6); animation: w2oc-pulse 2s ease-in-out infinite;
+            }
+            @keyframes w2oc-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(68,238,204,.2); } 50% { box-shadow: 0 0 0 6px rgba(68,238,204,0); } }
+            .w2oc-body { display: grid; grid-template-columns: 240px 1fr; }
+            .w2oc-gauge-col {
+                padding: 24px 16px; border-right: 1px solid #1e2a38; background: #0a1018;
+                display: flex; flex-direction: column; align-items: center; gap: 16px;
+            }
+            .w2oc-gauge-wrap { position: relative; width: 170px; height: 170px; }
+            .w2oc-gauge-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 8px #44eecc44); }
+            .w2oc-gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+            .w2oc-gauge-lbl { font-size: 9px; color: #667788; letter-spacing: 3px; text-transform: uppercase; }
+            .w2oc-gauge-val { font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 700; color: #ddeeff; letter-spacing: -1px; text-shadow: 0 0 24px #44eecc; }
+            .w2oc-gauge-sub { font-size: 9px; color: #667788; letter-spacing: 2px; }
+            .w2oc-gauge-title { font-size: 11px; font-weight: 700; color: #44eecc; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 12px #44eecc88; }
+            .w2oc-sent-pill { background: rgba(255,60,80,.12); border: 1px solid #cc223366; border-radius: 10px; padding: 10px 16px; text-align: center; width: 100%; }
+            .w2oc-sent-lbl { font-size: 9px; color: #44eecc; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }
+            .w2oc-sent-val { font-size: 20px; font-weight: 700; color: #ff6070; text-shadow: 0 0 16px #ff607088; letter-spacing: 1px; }
+            .w2oc-maxpain { background: rgba(68,238,204,.06); border: 1px solid #1e3a3a; border-radius: 10px; padding: 10px 16px; text-align: center; width: 100%; }
+            .w2oc-maxpain-lbl { font-size: 9px; color: #44eecc; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }
+            .w2oc-maxpain-val { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: #44eecc; text-shadow: 0 0 16px rgba(68,238,204,.6); }
+            .w2oc-maxpain-note { font-size: 9px; color: #667788; margin-top: 4px; letter-spacing: 1px; }
+            .w2oc-right { padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+            .w2oc-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .w2oc-stat-card { background: rgba(68,238,204,.04); border: 1px solid #1e2a38; border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; }
+            .w2oc-stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--sc-accent); box-shadow:0 0 8px var(--sc-accent); }
+            .w2oc-stat-card-lbl { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; color: #88a0b8; }
+            .w2oc-stat-card-val { font-family: 'IBM Plex Mono', monospace; font-size: clamp(18px, 3vw, 22px); font-weight: 700; color: var(--sc-col); text-shadow: 0 0 14px var(--sc-accent); }
+            .w2oc-stat-card-sub { font-size: 10px; margin-top: 5px; color: var(--sc-col); font-family: 'IBM Plex Mono', monospace; opacity: 0.55; }
+            .w2oc-div { height: 1px; background: linear-gradient(90deg, transparent, #1e2a38, transparent); }
+            .w2oc-levels-section { display: flex; flex-direction: column; gap: 10px; }
+            .w2oc-levels-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+            .w2oc-level-row { display: flex; align-items: center; gap: 12px; }
+            .w2oc-level-tag { font-size: 10px; font-weight: 800; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+            .w2oc-r-tag { background:rgba(255,64,80,.12);border:1px solid rgba(255,64,80,.45);color:#ff5060; }
+            .w2oc-s-tag { background:rgba(68,238,204,.12);border:1px solid rgba(68,238,204,.45);color:#44eecc; }
+            .w2oc-level-track { flex: 1; height: 8px; background: #0e1420; border-radius: 4px; overflow: hidden; }
+            .w2oc-level-fill { height: 100%; border-radius: 4px; }
+            .w2oc-fill-r { background: linear-gradient(90deg,#ff405033,#ff4050cc); box-shadow:0 0 6px #ff405055; }
+            .w2oc-fill-s { background: linear-gradient(90deg,#44eecc33,#44eecccc); box-shadow:0 0 6px #44eecc55; }
+            .w2oc-level-price { font-family: 'IBM Plex Mono', monospace; font-size: clamp(13px, 2vw, 16px); font-weight: 700; min-width: 80px; text-align: right; flex-shrink: 0; }
+            .w2oc-r-price { color: #ff8090; text-shadow: 0 0 8px #ff405055; }
+            .w2oc-s-price { color: #44eecc; text-shadow: 0 0 8px #44eecc55; }
+            .w2oc-footer { background: #080c12; border-top: 1px solid #1e2a38; padding: 10px 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+            .w2oc-footer-l { font-size: 9px; color: #556070; letter-spacing: 1.5px; font-weight: 600; }
+            .w2oc-footer-r { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #44eecc; letter-spacing: 2px; font-weight: 700; }
+            .w2oc-footer-dot { width: 6px; height: 6px; border-radius: 50%; background: #44eecc; box-shadow: 0 0 8px #44eecc; animation: w2oc-pulse 1.5s ease-in-out infinite; }
+            @media (max-width: 700px) {
+                .w2oc-body { grid-template-columns: 1fr; }
+                .w2oc-gauge-col { border-right: none; border-bottom: 1px solid #1e2a38; padding: 20px; }
+                .w2oc-gauge-wrap { width: 140px; height: 140px; }
+                .w2oc-gauge-val { font-size: 26px; }
+                .w2oc-stats-row { grid-template-columns: 1fr; gap: 8px; }
+            }
+        </style>
+        <div class="w2oc-wrap">
+            <div class="w2oc-hdr">
+                <div class="w2oc-hdr-icon">&#128202;</div>
+                <div class="w2oc-hdr-text">
+                    <h3>Option Chain Analysis</h3>
+                    <p>NIFTY &middot; WEEKLY EXPIRY &middot; LIVE DATA</p>
+                </div>
+                <div class="w2oc-hdr-badge">&#9679; LIVE</div>
+            </div>
+            <div class="w2oc-body">
+                <div class="w2oc-gauge-col">
+                    <div class="w2oc-gauge-wrap">
+                        <svg viewBox="0 0 170 170">
+                            <defs>
+                                <linearGradient id="pcr-arc-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#1e6688"/>
+                                    <stop offset="100%" stop-color="#44eecc"/>
+                                </linearGradient>
+                                <filter id="arc-glow">
+                                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                </filter>
+                            </defs>
+                            <circle cx="85" cy="85" r="80" fill="none" stroke="#141c28" stroke-width="1"/>
+                            <circle cx="85" cy="85" r="65" fill="none" stroke="#1e2a38" stroke-width="11"
+                                stroke-dasharray="281.8 408.4" stroke-dashoffset="-63.3" stroke-linecap="round"/>
+                            <circle cx="85" cy="85" r="65" fill="none" stroke="#44eecc" stroke-width="18"
+                                stroke-dasharray="149.4 408.4" stroke-dashoffset="-63.3" stroke-linecap="round" opacity="0.08"/>
+                            <circle cx="85" cy="85" r="65" fill="none" stroke="url(#pcr-arc-grad)" stroke-width="11"
+                                stroke-dasharray="149.4 408.4" stroke-dashoffset="-63.3"
+                                stroke-linecap="round" filter="url(#arc-glow)"/>
+                            <circle cx="85" cy="85" r="52" fill="none" stroke="#141c28" stroke-width="1"/>
+                        </svg>
+                        <div class="w2oc-gauge-center">
+                            <span class="w2oc-gauge-lbl">PUT / CALL</span>
+                            <span class="w2oc-gauge-val">1.06</span>
+                            <span class="w2oc-gauge-sub">PCR RATIO</span>
+                        </div>
+                    </div>
+                    <div class="w2oc-gauge-title">&#9679; PCR GAUGE</div>
+                    <div class="w2oc-sent-pill">
+                        <div class="w2oc-sent-lbl">OI Sentiment</div>
+                        <div class="w2oc-sent-val">&#8681; BEARISH</div>
+                    </div>
+                    <div class="w2oc-maxpain">
+                        <div class="w2oc-maxpain-lbl">Max Pain Strike</div>
+                        <div class="w2oc-maxpain-val">&#8377;24,900</div>
+                        <div class="w2oc-maxpain-note">Price magnet at expiry</div>
+                    </div>
+                </div>
+                <div class="w2oc-right">
+                    <div class="w2oc-stats-row">
+                        <div class="w2oc-stat-card" style="--sc-accent:#ff5060;--sc-col:#ff8090;">
+                            <div class="w2oc-stat-card-lbl">Call Buildup (OI)</div>
+                            <div class="w2oc-stat-card-val">&#8679; 1.1M</div>
+                            <div class="w2oc-stat-card-sub">Avg IV: 6.6%</div>
+                        </div>
+                        <div class="w2oc-stat-card" style="--sc-accent:#44eecc;--sc-col:#66ffee;">
+                            <div class="w2oc-stat-card-lbl">Put Buildup (OI)</div>
+                            <div class="w2oc-stat-card-val">&#8679; 699K</div>
+                            <div class="w2oc-stat-card-sub">Avg IV: 10.2%</div>
+                        </div>
+                    </div>
+                    <div class="w2oc-div"></div>
+                    <div class="w2oc-levels-section">
+                        <div class="w2oc-levels-title" style="color:#ff5060;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#ff5060;display:inline-block;box-shadow:0 0 8px #ff5060;flex-shrink:0;"></span>
+                            OI RESISTANCE WALLS
+                        </div>
+                        
+            <div class="w2oc-level-row">
+                <span class="w2oc-level-tag w2oc-r-tag">R1</span>
+                <div class="w2oc-level-track"><div class="w2oc-level-fill w2oc-fill-r" style="width:85%;"></div></div>
+                <span class="w2oc-level-price w2oc-r-price">&#8377;25,000</span>
+            </div>
+            <div class="w2oc-level-row">
+                <span class="w2oc-level-tag w2oc-r-tag">R2</span>
+                <div class="w2oc-level-track"><div class="w2oc-level-fill w2oc-fill-r" style="width:65%;"></div></div>
+                <span class="w2oc-level-price w2oc-r-price">&#8377;24,900</span>
+            </div>
+                    </div>
+                    <div class="w2oc-div"></div>
+                    <div class="w2oc-levels-section">
+                        <div class="w2oc-levels-title" style="color:#44eecc;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#44eecc;display:inline-block;box-shadow:0 0 8px #44eecc;flex-shrink:0;"></span>
+                            OI SUPPORT FLOORS
+                        </div>
+                        
+            <div class="w2oc-level-row">
+                <span class="w2oc-level-tag w2oc-s-tag">S1</span>
+                <div class="w2oc-level-track"><div class="w2oc-level-fill w2oc-fill-s" style="width:85%;"></div></div>
+                <span class="w2oc-level-price w2oc-s-price">&#8377;24,850</span>
+            </div>
+            <div class="w2oc-level-row">
+                <span class="w2oc-level-tag w2oc-s-tag">S2</span>
+                <div class="w2oc-level-track"><div class="w2oc-level-fill w2oc-fill-s" style="width:65%;"></div></div>
+                <span class="w2oc-level-price w2oc-s-price">&#8377;24,800</span>
+            </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w2oc-footer">
+                <span class="w2oc-footer-l">PLASMA RADIAL &middot; MAX PAIN = MIN BUYER PAIN (CORRECTED)</span>
+                <span class="w2oc-footer-r"><div class="w2oc-footer-dot"></div>NIFTY &middot; WEEKLY EXPIRY</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="momentum-container">
+        <div class="momentum-box" style="--mb-bg:#3a1500;--mb-bg2:#280d00;--mb-text:#ff8855;--mb-border:#cc4400;">
+            <h3>&#9889; 1H MOMENTUM</h3>
+            <div class="mval">-0.22%</div>
+            <div class="msig">Moderate Downward</div>
+            <div class="mb-bar-wrap"><div class="mb-bar-fill" style="width:9%;"></div></div>
+        </div>
+        <div class="momentum-box" style="--mb-bg:#00334a;--mb-bg2:#00223a;--mb-text:#00c8ff;--mb-border:#0088bb;">
+            <h3>&#128202; 5H MOMENTUM</h3>
+            <div class="mval">+0.43%</div>
+            <div class="msig">Moderate Upward</div>
+            <div class="mb-bar-wrap"><div class="mb-bar-fill" style="width:9%;"></div></div>
+        </div>
+        <div class="momentum-box" style="--mb-bg:#4a0010;--mb-bg2:#380008;--mb-text:#ff6070;--mb-border:#cc2233;">
+            <h3>&#128374; 2D MOMENTUM</h3>
+            <div class="mval">-1.92%</div>
+            <div class="msig">Strong Downward</div>
+            <div class="mb-bar-wrap"><div class="mb-bar-fill" style="width:19%;"></div></div>
+        </div>
+    </div>
+
+    <div class="recommendation-box">
+        <h2>NEUTRAL / WAIT</h2>
+        <div class="subtitle">Market Bias: Neutral &nbsp;|&nbsp; Confidence: Low</div>
+        <div style="margin-top:12px;">
+            <span class="signal-badge badge-bull">&#9650; Bullish: 3</span>
+            <span class="signal-badge badge-bear">&#9660; Bearish: 3</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Technical Analysis (1H)</div>
+        <div class="data-grid">
+            <div class="data-item"><div class="dlabel">1H Candle Close</div><div class="dvalue">&#8377;24,849.75</div></div>
+            <div class="data-item"><div class="dlabel">RSI (14)</div><div class="dvalue">32.39</div></div>
+            <div class="data-item"><div class="dlabel">EMA 20</div><div class="dvalue">&#8377;25098.63</div></div>
+            <div class="data-item"><div class="dlabel">EMA 50</div><div class="dvalue">&#8377;25325.82</div></div>
+            <div class="data-item"><div class="dlabel">Trend</div><div class="dvalue">Strong Downtrend</div></div>
+            <div class="data-item"><div class="dlabel">RSI Signal</div><div class="dvalue">Bearish</div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Support &amp; Resistance (1H)</div>
+        
+        <style>
+            .w4-wrap {
+                font-family: 'Chakra Petch', 'Segoe UI', sans-serif; background: #0c1018;
+                border: 1px solid #1e2a38; border-radius: 8px; overflow: hidden;
+                box-shadow: 0 0 0 1px #141c28, 0 0 30px rgba(68,238,204,.03), 0 20px 50px rgba(0,0,0,.9);
+            }
+            .w4-header { background: linear-gradient(135deg, #0e1420 0%, #141c28 100%); border-bottom: 1px solid #1e2a38; display: flex; }
+            .w4-hdr-half { flex: 1; padding: 14px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+            .w4-hdr-half.resistance-hdr { border-right: 1px solid #1e2a38; border-bottom: 2px solid #ff4d6d; }
+            .w4-hdr-half.support-hdr { border-bottom: 2px solid #44eecc; }
+            .w4-hdr-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+            .w4-hdr-dot.r-dot { background: #ff4d6d; box-shadow: 0 0 8px #ff4d6d; }
+            .w4-hdr-dot.s-dot { background: #44eecc; box-shadow: 0 0 8px #44eecc; }
+            .w4-hdr-title { font-size: clamp(10px, 2vw, 12px); font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; }
+            .w4-hdr-title.r-title { color: #ff4d6d; } .w4-hdr-title.s-title { color: #44eecc; }
+            .w4-hdr-tf { margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: #667788; }
+            .w4-ltp-bar { background: #0a1018; border-bottom: 1px solid #1e2a38; display: flex; align-items: center; justify-content: center; padding: 10px 20px; gap: 12px; }
+            .w4-ltp-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #1e3a3a, transparent); }
+            .w4-ltp-chip { background: linear-gradient(135deg, #0a1820, #0c1c28); border: 1px solid #44eecc44; border-radius: 8px; padding: 8px 20px; display: flex; align-items: center; gap: 10px; }
+            .w4-ltp-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #22aa88; text-transform: uppercase; }
+            .w4-ltp-value { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 800; color: #44eecc; text-shadow: 0 0 14px rgba(68,238,204,.45); }
+            .w4-body { display: grid; grid-template-columns: 1fr 1fr; }
+            .w4-col { padding: 4px 0; } .w4-col.r-col { border-right: 1px solid #1e2a38; }
+            .w4-col-hdr { display: grid; grid-template-columns: 44px 1fr 90px 80px 1fr; padding: 6px 14px; border-bottom: 1px solid #1e2a38; }
+            .w4-col-hdr span { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #667788; }
+            .w4-table { width: 100%; border-collapse: collapse; min-width: 220px; }
+            .w4-row { transition: background 0.15s; cursor: default; }
+            .w4-row:hover { background: rgba(68,238,204,.025); }
+            .w4-row-r, .w4-row-s { border-bottom: 1px solid #0c1418; } .w4-row:last-child { border-bottom: none; }
+            .w4-td-label { padding: 14px 6px 14px 16px; width: 48px; vertical-align: middle; }
+            .w4-td-price { padding: 14px 8px; vertical-align: middle; }
+            .w4-td-dist { padding: 14px 8px; vertical-align: middle; white-space: nowrap; text-align: right; }
+            .w4-td-strength { padding: 14px 8px; vertical-align: middle; text-align: center; }
+            .w4-td-bar { padding: 14px 14px 14px 4px; vertical-align: middle; width: 60px; }
+            .w4-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 7px; font-size: 12px; font-weight: 800; }
+            .w4-badge-r { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.4); color: #ff4d6d; }
+            .w4-badge-s { background: rgba(68,238,204,0.1); border: 1px solid rgba(68,238,204,0.4); color: #44eecc; }
+            .w4-dist { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; }
+            .w4-dist-pct { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; margin-top: 2px; }
+            .w4-dist-r { color: #ff8099; } .w4-dist-pct-r { color: rgba(255,128,153,0.6); }
+            .w4-dist-s { color: #44eecc; } .w4-dist-pct-s { color: rgba(68,238,204,0.6); }
+            .w4-dots { display: flex; align-items: center; justify-content: center; }
+            .w4-bar-track { height: 4px; background: #1e2a38; border-radius: 2px; overflow: hidden; }
+            .w4-bar-fill { height: 100%; border-radius: 2px; min-width: 4px; }
+            .w4-bar-r { background: linear-gradient(90deg, #ff4d6d44, #ff4d6d); }
+            .w4-bar-s { background: linear-gradient(90deg, #44eecc44, #44eecc); }
+            .w4-footer { background: #080c12; border-top: 1px solid #1e2a38; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; flex-wrap: wrap; gap: 8px; }
+            .w4-footer-left { font-size: 10px; color: #556070; letter-spacing: 1px; font-weight: 600; }
+            .w4-footer-right { font-size: 10px; color: #22aa88; font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+            .w4-footer-dot { width:5px;height:5px;border-radius:50%;background:#44eecc;display:inline-block;margin-right:6px;box-shadow:0 0 6px #44eecc;animation:w4-blink 2s ease-in-out infinite; }
+            @keyframes w4-blink { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+            @media (max-width: 600px) {
+                .w4-body { grid-template-columns: 1fr; }
+                .w4-col.r-col { border-right: none; border-bottom: 2px solid #1e2a38; }
+                .w4-td-dist, .w4-td-bar { display: none; }
+            }
+        </style>
+        <div class="w4-wrap">
+            <div class="w4-header">
+                <div class="w4-hdr-half resistance-hdr">
+                    <div class="w4-hdr-dot r-dot"></div>
+                    <span class="w4-hdr-title r-title">RESISTANCE LEVELS</span>
+                    <span class="w4-hdr-tf">1H TIMEFRAME</span>
+                </div>
+                <div class="w4-hdr-half support-hdr">
+                    <div class="w4-hdr-dot s-dot"></div>
+                    <span class="w4-hdr-title s-title">SUPPORT LEVELS</span>
+                    <span class="w4-hdr-tf">1H TIMEFRAME</span>
+                </div>
+            </div>
+            <div class="w4-ltp-bar">
+                <div class="w4-ltp-line"></div>
+                <div class="w4-ltp-chip">
+                    <span class="w4-ltp-label">LTP</span>
+                    <span class="w4-ltp-value">&#8377;24,849.75</span>
+                </div>
+                <div class="w4-ltp-line"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #1e2a38;">
+                <div class="w4-col-hdr" style="border-right:1px solid #1e2a38;">
+                    <span></span><span>PRICE</span><span style="text-align:right;">DISTANCE</span><span style="text-align:center;">STRENGTH</span><span></span>
+                </div>
+                <div class="w4-col-hdr">
+                    <span></span><span>PRICE</span><span style="text-align:right;">DISTANCE</span><span style="text-align:center;">STRENGTH</span><span></span>
+                </div>
+            </div>
+            <div class="w4-body">
+                <div class="w4-col r-col"><table class="w4-table"><tbody>
+                <tr class="w4-row w4-row-r" style="opacity:1;">
+                    <td class="w4-td-label"><span class="w4-badge w4-badge-r">R1</span></td>
+                    <td class="w4-td-price"><span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:800;color:#ddeeff;letter-spacing:-0.5px;">&#8377;25,345.3</span></td>
+                    <td class="w4-td-dist">
+                        <span class="w4-dist w4-dist-r">+495.6</span>
+                        <span class="w4-dist-pct w4-dist-pct-r">+1.99%</span>
+                    </td>
+                    <td class="w4-td-strength"><div class="w4-dots"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff4d6d;margin:0 2px;box-shadow:0 0 5px #ff4d6d77;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span></div></td>
+                    <td class="w4-td-bar"><div class="w4-bar-track"><div class="w4-bar-fill w4-bar-r" style="width:60%;"></div></div></td>
+                </tr>
+                <tr class="w4-row w4-row-r" style="opacity:0.82;">
+                    <td class="w4-td-label"><span class="w4-badge w4-badge-r">R2</span></td>
+                    <td class="w4-td-price"><span style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:800;color:#ddeeff;letter-spacing:-0.5px;">&#8377;25,371.4</span></td>
+                    <td class="w4-td-dist">
+                        <span class="w4-dist w4-dist-r">+521.7</span>
+                        <span class="w4-dist-pct w4-dist-pct-r">+2.10%</span>
+                    </td>
+                    <td class="w4-td-strength"><div class="w4-dots"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff4d6d;margin:0 2px;box-shadow:0 0 5px #ff4d6d77;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#1e2a38;border:1px solid #2a3a4a;margin:0 2px;"></span></div></td>
+                    <td class="w4-td-bar"><div class="w4-bar-track"><div class="w4-bar-fill w4-bar-r" style="width:63%;"></div></div></td>
+                </tr></tbody></table></div>
+                <div class="w4-col s-col"><table class="w4-table"><tbody></tbody></table></div>
+            </div>
+            <div class="w4-footer">
+                <span class="w4-footer-left">BLOOMBERG TABLE &middot; PRICE ACTION S/R &middot; 1H</span>
+                <span class="w4-footer-right"><span class="w4-footer-dot"></span>LTP &#8377;24,849.75</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Pivot Points (Traditional - 30 Min)</div>
+        
+        <style>
+            .w1-pv {
+                background: #0c1018; border: 1px solid #1e2a38; border-radius: 8px; overflow: hidden;
+                font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+                box-shadow: 0 0 0 1px #141c28, 0 16px 50px rgba(0,0,0,.9); width: 100%;
+            }
+            .w1-hdr {
+                background: linear-gradient(135deg, #0e1420, #141c28); padding: 14px 20px;
+                display: flex; align-items: center; justify-content: space-between;
+                border-bottom: 2px solid #44eecc; flex-wrap: wrap; gap: 10px;
+            }
+            .w1-hdr-title { font-size: clamp(13px, 3vw, 15px); font-weight: 700; color: #ddeeff; letter-spacing: 2px; }
+            .w1-hdr-sub   { font-size: 11px; color: #667788; margin-top: 3px; letter-spacing: .5px; }
+            .w1-hdr-badge { background: #44eecc; color: #080c12; font-size: 10px; font-weight: 800; padding: 4px 14px; border-radius: 20px; letter-spacing: 2px; }
+            .w1-gauge { padding: 16px 20px 4px; background: #0a1018; border-bottom: 1px solid #1e2a38; }
+            .w1-gauge-track {
+                height: 10px; border-radius: 20px; position: relative; overflow: visible;
+                background: linear-gradient(90deg, rgba(68,238,204,.1) 0%, rgba(68,238,204,.3) 30%, rgba(255,255,255,.04) 50%, rgba(255,96,112,.3) 70%, rgba(255,96,112,.1) 100%);
+                border: 1px solid #1e2a38;
+            }
+            .w1-gdot {
+                position: absolute; left: 68.7%; top: 50%; transform: translate(-50%, -50%);
+                width: 18px; height: 18px; background: #44eecc; border-radius: 50%;
+                border: 3px solid #0a1018; box-shadow: 0 0 0 2px #44eecc, 0 0 18px rgba(68,238,204,.8);
+                animation: w1-pulse 2s ease-in-out infinite; z-index: 2;
+            }
+            @keyframes w1-pulse {
+                0%,100% { box-shadow: 0 0 0 2px #44eecc, 0 0 18px rgba(68,238,204,.8); }
+                50%      { box-shadow: 0 0 0 3px #44eecc, 0 0 28px rgba(68,238,204,1); }
+            }
+            .w1-gauge-labels {
+                display: flex; justify-content: space-between; margin-top: 10px; padding-bottom: 10px;
+                font-family: 'IBM Plex Mono', monospace; font-size: clamp(11px, 2vw, 13px); font-weight: 700; flex-wrap: wrap; gap: 4px;
+            }
+            .w1-gl-s { color: #44eecc; } .w1-gl-ltp { color: #ddeeff; font-size: 14px; } .w1-gl-r { color: #ff6070; }
+            .w1-zone {
+                margin: 10px 16px; padding: 10px 16px; background: rgba(68,238,204,.05);
+                border: 1px solid #1e3a3a; border-radius: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            }
+            .w1-zone-dot { width:9px;height:9px;border-radius:50%;background:#44eecc;flex-shrink:0;box-shadow:0 0 10px #44eecc;animation:w1-pulse 2s ease-in-out infinite; }
+            .w1-zone-text { font-size: clamp(12px, 2.5vw, 14px); font-weight: 700; color: #ddeeff; letter-spacing: .5px; }
+            .w1-zone-val  { margin-left: auto; font-size: 12px; color: #44eecc; font-family: 'IBM Plex Mono'; white-space: nowrap; }
+            .w1-candle { display: flex; margin: 0 16px 14px; border: 1px solid #1e2a38; border-radius: 8px; overflow: hidden; }
+            .w1-ci { flex: 1; padding: 10px 14px; border-right: 1px solid #1e2a38; }
+            .w1-ci:last-child { border-right: none; }
+            .w1-ci-lbl { font-size: 10px; color: #667788; letter-spacing: 1.5px; margin-bottom: 5px; text-transform: uppercase; }
+            .w1-ci-val { font-size: clamp(13px, 2vw, 15px); font-weight: 700; font-family: 'IBM Plex Mono'; }
+            .w1-ci-h .w1-ci-val { color: #ff8090; } .w1-ci-l .w1-ci-val { color: #44eecc; } .w1-ci-c .w1-ci-val { color: #88a0b8; }
+            .w1-grid { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 1px solid #1e2a38; }
+            .w1-col-res { border-right: 1px solid #1e2a38; }
+            .w1-level-row {
+                display: flex; align-items: center; justify-content: space-between; padding: 13px 18px;
+                border-bottom: 1px solid #0c1418; gap: 8px; min-height: 54px; transition: background .15s; cursor: default;
+            }
+            .w1-level-row:last-child { border-bottom: none; }
+            .w1-level-row:hover { background: rgba(68,238,204,.03) !important; }
+            .w1-sup-row { flex-direction: row-reverse; }
+            .w1-lv-name  { font-size: clamp(12px, 2vw, 14px); font-weight: 700; letter-spacing: 1px; min-width: 26px; flex-shrink: 0; }
+            .w1-lv-price { font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: .5px; }
+            .w1-icon { width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0; }
+            .w1-icon-r { background:rgba(255,96,112,.12);color:#ff6070;border:1px solid rgba(255,96,112,.45); }
+            .w1-icon-s { background:rgba(68,238,204,.12);color:#44eecc;border:1px solid rgba(68,238,204,.45); }
+            .w1-near-tag { font-size:10px;padding:2px 8px;border-radius:6px;font-weight:800;letter-spacing:.5px;white-space:nowrap; }
+            .w1-near-r { background:rgba(255,96,112,.15);color:#ff6070;border:1px solid rgba(255,96,112,.5); }
+            .w1-near-s { background:rgba(68,238,204,.12);color:#44eecc;border:1px solid rgba(68,238,204,.45); }
+            .w1-pivot-col {
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                padding: 18px 16px; gap: 6px; background: rgba(68,238,204,.03);
+                border-left: 1px solid #1e2a38; border-right: 1px solid #1e2a38; min-width: 130px;
+            }
+            .w1-pp-tag  { font-size: 10px; color: #667788; letter-spacing: 2px; text-transform: uppercase; }
+            .w1-pp-val  { font-size: clamp(16px, 3vw, 20px); font-weight: 700; color: #44eecc; font-family: 'IBM Plex Mono', monospace; text-shadow: 0 0 12px rgba(68,238,204,.5); text-align: center; }
+            .w1-pp-dist { font-size: 12px; color: #667788; font-family: 'IBM Plex Mono'; }
+            .w1-pp-sep  { width: 36px; height: 1px; background: #1e2a38; margin: 3px 0; }
+            .w1-ltp-chip { background: #44eecc; color: #080c12; border-radius: 8px; padding: 7px 18px; text-align: center; margin-top: 4px; }
+            .w1-ltp-chip-lbl { font-size: 9px; font-weight: 800; letter-spacing: 2px; }
+            .w1-ltp-chip-val { font-size: clamp(13px, 2.5vw, 15px); font-weight: 800; font-family: 'IBM Plex Mono'; }
+            .w1-footer { display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#080c12;border-top:1px solid #1e2a38;font-family:'IBM Plex Mono',monospace;font-size:12px;flex-wrap:wrap;gap:8px; }
+            .w1-footer-l { color: #556070; letter-spacing: 1px; }
+            .w1-footer-r { color: #44eecc; font-weight: 700; text-shadow: 0 0 8px rgba(68,238,204,.4); }
+            @media (max-width: 600px) {
+                .w1-grid { grid-template-columns: 1fr; }
+                .w1-pivot-col { border: none; border-top: 1px solid #1e2a38; border-bottom: 1px solid #1e2a38; flex-direction: row; justify-content: space-around; padding: 12px 16px; }
+                .w1-col-res { border-right: none; }
+                .w1-candle { flex-direction: column; }
+                .w1-ci { border-right: none; border-bottom: 1px solid #1e2a38; }
+                .w1-ci:last-child { border-bottom: none; }
+            }
+        </style>
+        <div class="w1-pv">
+            <div class="w1-hdr">
+                <div>
+                    <div class="w1-hdr-title">&#128205; PIVOT POINTS</div>
+                    <div class="w1-hdr-sub">Traditional Method &middot; 30 Min &middot; Auto-calculated</div>
+                </div>
+                <div class="w1-hdr-badge">30 MIN</div>
+            </div>
+            <div class="w1-gauge">
+                <div class="w1-gauge-track"><div class="w1-gdot"></div></div>
+                <div class="w1-gauge-labels">
+                    <span class="w1-gl-s">S1 &#8377;24733.1</span>
+                    <span class="w1-gl-ltp">&#9650; &#8377;24849.75 LTP</span>
+                    <span class="w1-gl-r">R1 &#8377;24903.0</span>
+                </div>
+            </div>
+            <div class="w1-zone">
+                <div class="w1-zone-dot"></div>
+                <span class="w1-zone-text">Between S1 and R1</span>
+                <span class="w1-zone-val">+37.00 above PP</span>
+            </div>
+            <div class="w1-candle">
+                <div class="w1-ci w1-ci-h"><div class="w1-ci-lbl">&#9650; PREV HIGH</div><div class="w1-ci-val">&#8377;24892.4</div></div>
+                <div class="w1-ci w1-ci-l"><div class="w1-ci-lbl">&#9660; PREV LOW</div><div class="w1-ci-val">&#8377;24722.5</div></div>
+                <div class="w1-ci w1-ci-c"><div class="w1-ci-lbl">&#9679; PREV CLOSE</div><div class="w1-ci-val">&#8377;24823.35</div></div>
+            </div>
+            <div class="w1-grid">
+                <div class="w1-col-res">
+                <div class="w1-level-row" style="">
+                    <span class="w1-lv-name" style="color:rgba(255,96,112,0.45);">R3</span>
+                    <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="w1-lv-price" style="color:rgba(255,180,180,0.45);font-size:15px;">&#8377;25072.9</span>
+                        
+                    </span>
+                    
+                </div>
+                <div class="w1-level-row" style="">
+                    <span class="w1-lv-name" style="color:rgba(255,96,112,0.75);">R2</span>
+                    <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="w1-lv-price" style="color:rgba(255,180,180,0.75);font-size:16px;">&#8377;24982.65</span>
+                        
+                    </span>
+                    
+                </div>
+                <div class="w1-level-row" style="background:rgba(255,60,80,0.05);border-left:3px solid rgba(255,96,112,0.5);">
+                    <span class="w1-lv-name" style="color:#ff6070;">R1</span>
+                    <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="w1-lv-price" style="color:#ffcccc;font-size:18px;">&#8377;24903.0</span>
+                        <span class="w1-near-tag w1-near-r">NEAREST&nbsp;R</span>
+                    </span>
+                    <span class="w1-icon w1-icon-r">&#9650;</span>
+                </div></div>
+                <div class="w1-pivot-col">
+                    <div class="w1-pp-tag">PIVOT POINT</div>
+                    <div class="w1-pp-val">&#8377;24812.75</div>
+                    <div class="w1-pp-dist">-37.00 from LTP</div>
+                    <div class="w1-pp-sep"></div>
+                    <div class="w1-ltp-chip">
+                        <div class="w1-ltp-chip-lbl">LTP</div>
+                        <div class="w1-ltp-chip-val">&#8377;24849.75</div>
+                    </div>
+                </div>
+                <div class="w1-col-sup">
+                <div class="w1-level-row w1-sup-row" style="background:rgba(68,238,204,0.04);border-right:3px solid rgba(68,238,204,0.5);">
+                    <span class="w1-icon w1-icon-s">&#9660;</span>
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+                        <span class="w1-near-tag w1-near-s">NEAREST&nbsp;S</span>
+                        <span class="w1-lv-price" style="color:#ccffee;font-size:18px;">&#8377;24733.1</span>
+                    </span>
+                    <span class="w1-lv-name" style="color:#44eecc;text-align:right;">S1</span>
+                </div>
+                <div class="w1-level-row w1-sup-row" style="">
+                    
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+                        
+                        <span class="w1-lv-price" style="color:rgba(180,255,230,0.75);font-size:16px;">&#8377;24642.85</span>
+                    </span>
+                    <span class="w1-lv-name" style="color:rgba(68,238,204,0.75);text-align:right;">S2</span>
+                </div>
+                <div class="w1-level-row w1-sup-row" style="">
+                    
+                    <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+                        
+                        <span class="w1-lv-price" style="color:rgba(180,255,230,0.45);font-size:15px;">&#8377;24563.2</span>
+                    </span>
+                    <span class="w1-lv-name" style="color:rgba(68,238,204,0.45);text-align:right;">S3</span>
+                </div></div>
+            </div>
+            <div class="w1-footer">
+                <span class="w1-footer-l">Traditional &middot; 30 Min Candle</span>
+                <span class="w1-footer-r">LTP &#8377;24849.75</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Top OI — ±10 Strikes from ATM (5 CE + 5 PE)</div>
+        
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+            .nl-wrap {
+                font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+                background: #0c1018; border: 1px solid #1e2a38; border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 0 0 1px #141c28, 0 0 60px rgba(68,238,204,.04), 0 24px 60px rgba(0,0,0,.9);
+            }
+            .nl-master-hdr {
+                background: linear-gradient(135deg, #0e1420 0%, #141c28 100%);
+                border-bottom: 1px solid #1e2a38; padding: 16px 24px;
+                display: flex; align-items: center; justify-content: space-between; position: relative;
+                flex-wrap: wrap; gap: 10px;
+            }
+            .nl-master-hdr::after {
+                content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                background: linear-gradient(90deg, transparent 0%, #ff3a5c 20%, #ff3a5c 49%, #44eecc 51%, #44eecc 80%, transparent 100%);
+                opacity: 0.7;
+            }
+            .nl-master-title { display: flex; align-items: center; gap: 12px; }
+            .nl-master-icon {
+                width: 40px; height: 40px; border-radius: 10px;
+                background: linear-gradient(135deg, #141c28, #1e2a38); border: 1px solid #2a3a4a;
+                display: flex; align-items: center; justify-content: center; font-size: 18px;
+                box-shadow: 0 0 16px rgba(68,238,204,.15); flex-shrink: 0;
+            }
+            .nl-master-text h2 {
+                font-size: clamp(13px, 2.5vw, 16px); font-weight: 700; color: #ddeeff;
+                letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 20px rgba(68,238,204,.35);
+            }
+            .nl-master-text p { font-size: 10px; color: #667788; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }
+            .nl-master-badges { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+            .nl-ce-badge {
+                background: rgba(255,58,92,.12); border: 1px solid rgba(255,58,92,.5); color: #ff3a5c;
+                padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 10px rgba(255,58,92,.6); box-shadow: 0 0 12px rgba(255,58,92,.15);
+            }
+            .nl-atm-badge {
+                background: rgba(68,238,204,.12); border: 1px solid rgba(68,238,204,.5); color: #44eecc;
+                padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 10px rgba(68,238,204,.6); box-shadow: 0 0 12px rgba(68,238,204,.15);
+            }
+            .nl-pe-badge {
+                background: rgba(0,230,118,.12); border: 1px solid rgba(0,230,118,.5); color: #00e676;
+                padding: 6px 18px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+                text-shadow: 0 0 10px rgba(0,230,118,.6); box-shadow: 0 0 12px rgba(0,230,118,.15);
+            }
+            .nl-live-dot {
+                width: 8px; height: 8px; border-radius: 50%; background: #44eecc;
+                box-shadow: 0 0 10px #44eecc; animation: nl-pulse 1.5s ease-in-out infinite; flex-shrink: 0;
+            }
+            @keyframes nl-pulse { 0%,100% { opacity:1;transform:scale(1); } 50% { opacity:0.5;transform:scale(0.8); } }
+            .nl-panels { display: grid; grid-template-columns: 1fr 1fr; }
+            .nl-panel { overflow-x: auto; }
+            .nl-panel.nl-panel-ce { border-right: 2px solid #1e2a38; }
+            .nl-panel-hdr { display: flex; align-items: center; gap: 10px; padding: 14px 20px; position: relative; flex-wrap: wrap; }
+            .nl-panel-ce .nl-panel-hdr { background: linear-gradient(135deg, #1a0610, #110310); border-bottom: 2px solid #ff3a5c; }
+            .nl-panel-pe .nl-panel-hdr { background: linear-gradient(135deg, #041410, #030e0a); border-bottom: 2px solid #44eecc; }
+            .nl-panel-hdr-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+            .nl-ce-dot { background: #ff3a5c; box-shadow: 0 0 10px #ff3a5c; }
+            .nl-pe-dot { background: #44eecc; box-shadow: 0 0 10px #44eecc; }
+            .nl-panel-hdr-title { font-size: clamp(10px, 2vw, 13px); font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; }
+            .nl-ce-title { color: #ff3a5c; text-shadow: 0 0 12px rgba(255,58,92,.5); }
+            .nl-pe-title { color: #44eecc; text-shadow: 0 0 12px rgba(68,238,204,.5); }
+            .nl-panel-hdr-sub { margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; }
+            .nl-ce-sub { color: rgba(255,58,92,.45); } .nl-pe-sub { color: rgba(68,238,204,.45); }
+            .nl-col-hdr-row { background: #0a1018; border-bottom: 1px solid #1e2a38; }
+            .nl-th { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #667788; padding: 8px 10px; text-align: left; white-space: nowrap; }
+            .nl-th:first-child { padding-left: 16px; } .nl-th:last-child { padding-right: 16px; }
+            .nl-table { width: 100%; border-collapse: collapse; min-width: 380px; }
+            .nl-row { border-bottom: 1px solid #0c1418; transition: background .15s; cursor: default; }
+            .nl-row:last-child { border-bottom: none; }
+            .nl-panel-ce .nl-row:hover { background: rgba(255,58,92,.03); }
+            .nl-panel-pe .nl-row:hover { background: rgba(68,238,204,.03); }
+            .nl-td-rank { padding: 12px 8px 12px 14px; width: 42px; vertical-align: middle; }
+            .nl-td-strike,.nl-td-type,.nl-td-oi,.nl-td-chng,.nl-td-ltp { padding: 12px 8px; vertical-align: middle; }
+            .nl-td-oi { min-width: 100px; }
+            .nl-td-vol { padding: 12px 14px 12px 8px; vertical-align: middle; }
+            .nl-rank { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; font-family: 'IBM Plex Mono', monospace; flex-shrink: 0; }
+            .nl-strike-val { font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 15px); font-weight: 700; color: #ddeeff; letter-spacing: -0.3px; }
+            .nl-tbadge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+            .nl-itm { background: rgba(68,238,204,.1); color: #44eecc; border: 1px solid rgba(68,238,204,.4); }
+            .nl-atm { background: rgba(68,238,204,.08); color: #66ffee; border: 1px solid rgba(68,238,204,.35); }
+            .nl-otm { background: rgba(80,140,200,.1); color: #7ab4d8; border: 1px solid rgba(80,140,200,.35); }
+            .nl-oi-wrap { display: flex; flex-direction: column; gap: 5px; }
+            .nl-oi-val { font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 14px); font-weight: 700; }
+            .nl-oi-ce { color: #ff6680; text-shadow: 0 0 8px rgba(255,58,92,.3); }
+            .nl-oi-pe { color: #44eecc; text-shadow: 0 0 8px rgba(68,238,204,.3); }
+            .nl-bar-track { height: 5px; background: #0e1420; border-radius: 3px; overflow: hidden; width: 100%; max-width: 100px; }
+            .nl-bar-fill { height: 100%; border-radius: 3px; min-width: 3px; }
+            .nl-bar-ce { background: linear-gradient(90deg, #ff3a5c44, #ff3a5c); box-shadow: 0 0 5px #ff3a5c55; }
+            .nl-bar-pe { background: linear-gradient(90deg, #44eecc44, #44eecc); box-shadow: 0 0 5px #44eecc55; }
+            .nl-chng { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; }
+            .nl-chng-up { color: #44eecc; } .nl-chng-dn { color: #ff4d6d; } .nl-chng-flat { color: #556070; }
+            .nl-ltp { font-family: 'IBM Plex Mono', monospace; font-size: clamp(12px, 2vw, 14px); font-weight: 800; }
+            .nl-ltp-ce { color: #ffaacc; } .nl-ltp-pe { color: #88ffee; }
+            .nl-vol { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #667788; }
+            .nl-footer {
+                background: #080c12; border-top: 1px solid #1e2a38; padding: 10px 24px;
+                display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+            }
+            .nl-footer-l { font-size: 9px; color: #556070; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }
+            .nl-footer-r { display: flex; align-items: center; gap: 7px; font-size: 9px; color: #44eecc; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+            @media (max-width: 700px) {
+                .nl-panels { grid-template-columns: 1fr; }
+                .nl-panel.nl-panel-ce { border-right: none; border-bottom: 2px solid #1e2a38; }
+                .nl-td-vol, .nl-th:last-child { display: none; }
+            }
+            @media (max-width: 420px) { .nl-td-chng, .nl-th:nth-child(5) { display: none; } }
+        </style>
+        <div class="nl-wrap">
+            <div class="nl-master-hdr">
+                <div class="nl-master-title">
+                    <div class="nl-master-icon">&#9651;</div>
+                    <div class="nl-master-text">
+                        <h2>Top 10 Open Interest</h2>
+                        <p>NIFTY &middot; ±10 Strikes from ATM &middot; Highest OI in Window</p>
+                    </div>
+                </div>
+                <div class="nl-master-badges">
+                    <span class="nl-ce-badge">5 CE</span>
+                    <span class="nl-atm-badge">ATM &#8377;24,850</span>
+                    <span class="nl-pe-badge">5 PE</span>
+                    <div class="nl-live-dot"></div>
+                </div>
+            </div>
+            <div class="nl-panels">
+                <div class="nl-panel nl-panel-ce">
+                    <div class="nl-panel-hdr">
+                        <div class="nl-panel-hdr-dot nl-ce-dot"></div>
+                        <span class="nl-panel-hdr-title nl-ce-title">Top 5 Call Options (CE)</span>
+                        <span class="nl-panel-hdr-sub nl-ce-sub">10 STRIKES ABOVE ATM</span>
+                    </div>
+                    <table class="nl-table">
+                        <thead class="nl-col-hdr-row"><tr>
+            <th class="nl-th">#</th>
+            <th class="nl-th">STRIKE</th>
+            <th class="nl-th">TYPE</th>
+            <th class="nl-th">OPEN INTEREST</th>
+            <th class="nl-th">CHG OI</th>
+            <th class="nl-th">LTP</th>
+            <th class="nl-th">VOLUME</th></tr></thead>
+                        <tbody>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(255,58,92,0.15);border:1px solid rgba(255,58,92,0.5);color:#ff6680;box-shadow:0 0 10px #ff3a5c33;">1</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,900</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-ce">362.4K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-ce" style="width:100%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+361.2K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-ce">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">32.3M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(255,58,92,0.15);border:1px solid rgba(255,58,92,0.5);color:#ff6680;box-shadow:0 0 10px #ff3a5c33;">2</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;25,000</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-ce">241.7K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-ce" style="width:66%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+227.9K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-ce">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">19.3M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(255,58,92,0.15);border:1px solid rgba(255,58,92,0.5);color:#ff6680;box-shadow:0 0 10px #ff3a5c33;">3</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,950</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-ce">137.5K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-ce" style="width:37%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+136.9K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-ce">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">15.1M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(255,58,92,0.15);border:1px solid rgba(255,58,92,0.5);color:#ff6680;box-shadow:0 0 10px #ff3a5c33;">4</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;25,300</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-ce">120.4K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-ce" style="width:33%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-dn">-41840</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-ce">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">4.7M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(255,58,92,0.15);border:1px solid rgba(255,58,92,0.5);color:#ff6680;box-shadow:0 0 10px #ff3a5c33;">5</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;25,200</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-ce">101.8K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-ce" style="width:28%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+30.7K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-ce">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">7.1M</span></td>
+                </tr></tbody>
+                    </table>
+                </div>
+                <div class="nl-panel nl-panel-pe">
+                    <div class="nl-panel-hdr">
+                        <div class="nl-panel-hdr-dot nl-pe-dot"></div>
+                        <span class="nl-panel-hdr-title nl-pe-title">Top 5 Put Options (PE)</span>
+                        <span class="nl-panel-hdr-sub nl-pe-sub">10 STRIKES BELOW ATM</span>
+                    </div>
+                    <table class="nl-table">
+                        <thead class="nl-col-hdr-row"><tr>
+            <th class="nl-th">#</th>
+            <th class="nl-th">STRIKE</th>
+            <th class="nl-th">TYPE</th>
+            <th class="nl-th">OPEN INTEREST</th>
+            <th class="nl-th">CHG OI</th>
+            <th class="nl-th">LTP</th>
+            <th class="nl-th">VOLUME</th></tr></thead>
+                        <tbody>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(68,238,204,0.12);border:1px solid rgba(68,238,204,0.45);color:#44eecc;box-shadow:0 0 10px #44eecc33;">1</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,800</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-pe">256.5K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-pe" style="width:70%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+194.4K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-pe">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">26.2M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(68,238,204,0.12);border:1px solid rgba(68,238,204,0.45);color:#44eecc;box-shadow:0 0 10px #44eecc33;">2</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,850</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-atm">ATM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-pe">249.6K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-pe" style="width:68%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+228.5K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-pe">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">19.1M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(68,238,204,0.12);border:1px solid rgba(68,238,204,0.45);color:#44eecc;box-shadow:0 0 10px #44eecc33;">3</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,700</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-pe">162.3K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-pe" style="width:44%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+103.1K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-pe">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">26.5M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(68,238,204,0.12);border:1px solid rgba(68,238,204,0.45);color:#44eecc;box-shadow:0 0 10px #44eecc33;">4</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,600</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-pe">147.1K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-pe" style="width:40%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+111.2K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-pe">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">20.7M</span></td>
+                </tr>
+                <tr class="nl-row">
+                    <td class="nl-td-rank"><div class="nl-rank" style="background:rgba(68,238,204,0.12);border:1px solid rgba(68,238,204,0.45);color:#44eecc;box-shadow:0 0 10px #44eecc33;">5</div></td>
+                    <td class="nl-td-strike"><span class="nl-strike-val">&#8377;24,750</span></td>
+                    <td class="nl-td-type"><span class="nl-tbadge nl-otm">OTM</span></td>
+                    <td class="nl-td-oi">
+                        <div class="nl-oi-wrap">
+                            <span class="nl-oi-val nl-oi-pe">130.6K</span>
+                            <div class="nl-bar-track"><div class="nl-bar-fill nl-bar-pe" style="width:36%;"></div></div>
+                        </div>
+                    </td>
+                    <td class="nl-td-chng"><span class="nl-chng nl-chng-up">+106.7K</span></td>
+                    <td class="nl-td-ltp"><span class="nl-ltp nl-ltp-pe">&#8377;0.05</span></td>
+                    <td class="nl-td-vol"><span class="nl-vol">18.0M</span></td>
+                </tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="nl-footer">
+                <span class="nl-footer-l">NEON LEDGER &middot; TOP OI &middot; ±10 ATM STRIKES WINDOW</span>
+                <span class="nl-footer-r"><div class="nl-live-dot"></div>LIVE</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Analysis Summary</div>
+        <div class="reasons">
+            <strong>&#128161; Key Factors:</strong>
+            <ul><li>📈 5H Positive momentum: +0.43%</li><li>PCR at 1.06 shows bullish bias</li><li>Call OI buildup > Put OI buildup (Bearish)</li><li>RSI at 32.4 - Below neutral</li><li>Trend: Strong Downtrend</li><li>Price below EMA20 (Bearish)</li></ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Strike Recommendations</div>
+        <p style="color:#88a0b8;margin-bottom:16px;font-size:clamp(11px,2vw,13px);line-height:1.6;">
+            <strong style="color:#44eecc;">Based on Neutral bias &mdash; NSE Spot &#8377;24,849.75</strong><br>
+            Actionable trades with specific strike prices, LTP, targets &amp; risk management.
+        </p>
+        
+        <style>
+            .stc-wrap { font-family: 'Chakra Petch', sans-serif; }
+            .stc-master-hdr {
+                background: linear-gradient(135deg, #061420 0%, #040e18 100%);
+                border: 1px solid #1e668833; border-bottom: 2px solid #44eecc;
+                border-radius: 8px 8px 0 0; padding: 16px 22px;
+                display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            }
+            .stc-master-title { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+            .stc-master-icon {
+                width: 44px; height: 44px; border-radius: 12px;
+                background: linear-gradient(135deg, #0e1420, #141c28); border: 1px solid #1e668844;
+                display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+                box-shadow: 0 0 16px #44eecc22;
+            }
+            .stc-master-text h2 {
+                font-size: clamp(15px, 3.5vw, 18px); font-weight: 800; color: #ddeeff;
+                letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 0 20px #44eecc66;
+            }
+            .stc-master-text p { font-size: 10px; color: #667788; margin-top: 3px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }
+            .stc-master-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+            .stc-bias-pill { background:rgba(68,238,204,0.1);border:1.5px solid rgba(68,238,204,0.45);color:#44eecc;padding:7px 20px;border-radius:22px;font-size:13px;font-weight:800;letter-spacing:2px;text-shadow:0 0 12px #44eecc77;box-shadow:0 0 16px #44eecc18; }
+            .stc-price-chip { background:rgba(0,0,0,0.3);border:1px solid #1e2a38;border-radius:10px;padding:7px 16px;display:flex;align-items:center;gap:8px;flex-direction:column; }
+            .stc-price-lbl { font-size:9px;color:#88a0b8;letter-spacing:2px;font-weight:700;text-transform:uppercase; }
+            .stc-price-val { font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:800;color:#44eecc;text-shadow:0 0 12px rgba(68,238,204,.5); }
+            .stc-price-sub { font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#667788; }
+            .stc-cards { display:flex;flex-direction:column;gap:16px;padding:16px 0 0 0; }
+            @keyframes stc-pulse { 0%,100% { opacity:1;transform:scale(1); } 50% { opacity:0.5;transform:scale(0.8); } }
+            .stc-footer { background:#080c12;border:1px solid #1e2a38;border-top:none;border-radius:0 0 8px 8px;padding:10px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px; }
+            .stc-footer-l { font-size:9px;color:#556070;letter-spacing:2px;font-weight:700;text-transform:uppercase; }
+            .stc-footer-r { display:flex;align-items:center;gap:7px;font-size:9px;color:#44eecc;font-weight:700;letter-spacing:2px; }
+            .stc-footer-dot { width:6px;height:6px;border-radius:50%;background:#44eecc;box-shadow:0 0 8px #44eecc;animation:stc-pulse 1.5s ease-in-out infinite; }
+        </style>
+        <div class="stc-wrap">
+            <div class="stc-master-hdr">
+                <div class="stc-master-title">
+                    <div class="stc-master-icon">&#9654;</div>
+                    <div class="stc-master-text">
+                        <h2>&#9650; Strike Recommendations</h2>
+                        <p>NIFTY &middot; Weekly Expiry &middot; Actionable Trades</p>
+                    </div>
+                </div>
+                <div class="stc-master-right">
+                    <div class="stc-bias-pill">NEUTRAL</div>
+                    <div class="stc-price-chip">
+                        <span class="stc-price-lbl">NSE SPOT PRICE</span>
+                        <span class="stc-price-val">&#8377;24,849.75</span>
+                        <span class="stc-price-sub">1H Close: &#8377;24,849.75</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stc-cards">
+            <div style="background:linear-gradient(135deg,#0e1420 0%,#0c1018 100%);border:1px solid #1e2a38;border-left:4px solid #44eecc;border-radius:8px;overflow:hidden;box-shadow:0 0 24px rgba(68,238,204,0.07),0 10px 30px rgba(0,0,0,.75);font-family:'Chakra Petch',sans-serif;">
+                <div style="background:linear-gradient(135deg,#141c28 0%,#0e1420 100%);border-bottom:1px solid #1e2a38;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <span style="font-size:clamp(14px,3vw,17px);font-weight:800;color:#ddeeff;letter-spacing:1px;text-shadow:0 0 16px rgba(68,238,204,.2);">Long Straddle (ATM)</span>
+                        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(68,238,204,0.1);border:1.5px solid #1e6688;color:#44eecc;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:1.5px;text-shadow:0 0 10px #44eecc22;box-shadow:0 0 12px #44eecc22;">BUY 24900.0 CE + BUY 24900.0 PE</span>
+                        <span style="background:rgba(68,238,204,0.12);border:1px solid rgba(68,238,204,0.5);color:#44eecc;padding:4px 12px;border-radius:16px;font-size:10px;font-weight:800;letter-spacing:1px;">ATM</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1.5px;font-weight:600;">NIFTY</span>
+                        <span style="width:6px;height:6px;border-radius:50%;background:#44eecc;box-shadow:0 0 8px #44eecc;display:inline-block;animation:stc-pulse 1.5s ease-in-out infinite;"></span>
+                        <span style="font-size:10px;color:#44eecc;font-weight:700;letter-spacing:1.5px;">LIVE</span>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));border-bottom:1px solid #1e2a38;">
+                    <div style="padding:16px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.03);">
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">LTP</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,24px);font-weight:800;color:#44eecc;text-shadow:0 0 18px rgba(68,238,204,.6);">₹0.10</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">CURRENT PREMIUM</div>
+                    </div>
+                    <div style="padding:16px;border-right:1px solid #1e2a38;">
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">STRIKE</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,20px);font-weight:800;color:#ddeeff;">₹24,900.0</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">PRICE</div>
+                    </div>
+                    <div style="padding:16px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.02);">
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">INVEST</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#66ffdd;text-shadow:0 0 12px rgba(68,238,204,.4);">₹5</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">1 LOT (50 QTY)</div>
+                    </div>
+                    <div style="padding:16px;border-right:1px solid #1e2a38;">
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">OI</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#88a0b8;">362,362 / 249,567</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">OPEN INTEREST</div>
+                    </div>
+                    <div style="padding:16px;">
+                        <div style="font-size:9px;color:#88a0b8;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:8px;">VOL</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(14px,3vw,18px);font-weight:800;color:#5a7a8a;">32,275,094 / 19,122,163</div>
+                        <div style="font-size:9px;color:#667788;margin-top:4px;letter-spacing:1px;">VOLUME</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-bottom:1px solid #1e2a38;">
+                    <div style="padding:16px 18px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.03);border-bottom:2px solid rgba(68,238,204,.2);">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <span style="background:rgba(68,238,204,.15);border:1px solid #22aa88;color:#44eecc;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;">TARGET 1</span>
+                        </div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ddeeff;margin-bottom:6px;">₹24,900.1</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#ff6070;">Profit if moves ±0 points</div>
+                        <div style="font-size:11px;color:#44eecc;margin-top:4px;font-weight:600;">Per lot: Profit if moves ±0 points</div>
+                    </div>
+                    <div style="padding:16px 18px;border-right:1px solid #1e2a38;background:rgba(68,238,204,.02);border-bottom:2px solid rgba(68,238,204,.15);">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <span style="background:rgba(68,238,204,.1);border:1px solid #1e6688;color:#44ddbb;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;">TARGET 2</span>
+                        </div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ddeeff;margin-bottom:6px;">₹24,899.9</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#88a0b8;">Unlimited both sides</div>
+                        <div style="font-size:11px;color:#1e5a6a;margin-top:4px;font-weight:600;">Per lot: Unlimited both sides</div>
+                    </div>
+                    <div style="padding:16px 18px;background:rgba(255,50,80,.03);border-bottom:2px solid rgba(255,50,80,.2);">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                            <span style="background:rgba(255,50,80,.15);border:1px solid #cc2233;color:#ff4455;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;">STOP LOSS</span>
+                        </div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,4vw,22px);font-weight:800;color:#ff6677;margin-bottom:6px;">₹0.05</div>
+                        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#ff3344;">Max: -₹0.10</div>
+                        <div style="font-size:11px;color:#6a2233;margin-top:4px;font-weight:600;">Risk per lot: ₹5</div>
+                    </div>
+                </div>
+                <div style="padding:10px 18px;background:#0a1018;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1.5px;font-weight:600;">RISK:REWARD</span>
+                        <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:800;color:#44eecc;text-shadow:0 0 10px rgba(68,238,204,.45);">1 : 0.0</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1px;">TYPE: <span style="color:#44eecc;font-weight:700;">ATM/ATM</span></span>
+                        <span style="font-size:10px;color:#88a0b8;letter-spacing:1px;">LOT SIZE: <span style="color:#88a0b8;font-weight:700;">50</span></span>
+                    </div>
+                </div>
+            </div></div>
+            <div class="stc-footer">
+                <span class="stc-footer-l">DARK TICKER CARD &middot; STRIKE RECOMMENDATIONS &middot; LOW CONFIDENCE</span>
+                <span class="stc-footer-r"><div class="stc-footer-dot"></div>1 TRADE IDENTIFIED</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Options Strategies</div>
+        <p style="color:#88a0b8;margin-bottom:14px;font-size:clamp(11px,2vw,13px);letter-spacing:.5px;">
+            Based on <strong style="color:#44eecc;">Neutral</strong> bias:
+        </p>
+        <div class="strategies-grid">
+                <div class="strategy-card">
+                    <div class="strategy-header">
+                        <h4>Short Strangle</h4>
+                        <span class="strategy-type">Neutral - Low Volatility Expected</span>
+                    </div>
+                    <div class="strategy-body">
+                        <p><strong>Setup:</strong> Sell OTM Call + Sell OTM Put</p>
+                        <p><strong>Profit Potential:</strong> Limited to total premium collected</p>
+                        <p><strong>Risk:</strong> Unlimited (either direction)</p>
+                        <p><strong>Best When:</strong> Expect range-bound, less risk than straddle</p>
+                        <p class="recommendation-stars"><strong>Recommended:</strong> ⭐⭐⭐⭐⭐</p>
+                    </div>
+                </div></div>
+    </div>
+
+    <div class="footer">
+        <p><strong style="color:#44eecc;">Disclaimer:</strong> This analysis is for educational purposes only. Trading involves risk. Past performance is not indicative of future results.</p>
+        <p style="margin-top:6px;">&#9679; PHANTOM SLATE THEME &nbsp;&#9679;&nbsp; Charcoal Blue-Grey + Neon Mint + Graphite Steel &nbsp;&#9679;&nbsp; Max Pain = Min Buyer Pain (CORRECTED)</p>
+        <p style="margin-top:6px;color:#2a4a3a;">AUTO-REFRESH: 30s &nbsp;&#9679;&nbsp; SCROLL POSITION PRESERVED &nbsp;&#9679;&nbsp; SILENT BACKGROUND RELOAD</p>
+        <p style="margin-top:6px;color:#2a4a3a;">HOLIDAY FIX: Tuesday NSE Holidays → Expiry shifts to Monday</p>
+    </div>
+
+</div>
+
+
+<script>
+(function () {
+    'use strict';
+
+    var REFRESH_INTERVAL_MS = 30000;
+    var SCROLL_KEY          = 'nifty_scroll_y';
+    var LAST_REFRESH_KEY    = 'nifty_last_refresh';
+
+    var savedScroll = sessionStorage.getItem(SCROLL_KEY);
+    if (savedScroll !== null) {
+        window.scrollTo(0, parseInt(savedScroll, 10));
+        sessionStorage.removeItem(SCROLL_KEY);
+    }
+
+    function getISTString() {
+        var now = new Date();
+        var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+        var istMs = utcMs + 5.5 * 3600000;
+        var ist   = new Date(istMs);
+        var pad   = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return ist.getFullYear() + '-' +
+               pad(ist.getMonth() + 1) + '-' +
+               pad(ist.getDate())      + '  ' +
+               pad(ist.getHours())     + ':' +
+               pad(ist.getMinutes())   + ':' +
+               pad(ist.getSeconds())   + ' IST';
+    }
+
+    sessionStorage.setItem(LAST_REFRESH_KEY, getISTString());
+
+    var liveClockEl    = document.getElementById('ar-live-clock');
+    var lastRefreshEl  = document.getElementById('ar-last-refresh');
+    var countdownEl    = document.getElementById('ar-countdown');
+    var progressBarEl  = document.getElementById('ar-progress-fill');
+
+    var lastRefreshText = sessionStorage.getItem(LAST_REFRESH_KEY) || getISTString();
+    if (lastRefreshEl) { lastRefreshEl.textContent = lastRefreshText; }
+
+    var refreshAt = Date.now() + REFRESH_INTERVAL_MS;
+
+    function tick() {
+        if (liveClockEl) { liveClockEl.textContent = getISTString(); }
+        var remaining = Math.max(0, Math.ceil((refreshAt - Date.now()) / 1000));
+        if (countdownEl) { countdownEl.textContent = remaining + 's'; }
+        if (progressBarEl) {
+            var elapsed = REFRESH_INTERVAL_MS - (refreshAt - Date.now());
+            var pct     = Math.min(100, Math.max(0, (elapsed / REFRESH_INTERVAL_MS) * 100));
+            progressBarEl.style.width = pct.toFixed(1) + '%';
+        }
+    }
+
+    var tickTimer = setInterval(tick, 1000);
+    tick();
+
+    var refreshTimer = setTimeout(function () {
+        clearInterval(tickTimer);
+        sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+        window.location.reload();
+    }, REFRESH_INTERVAL_MS);
+
+    var pausedAt = null;
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            pausedAt = refreshAt - Date.now();
+            clearTimeout(refreshTimer);
+            clearInterval(tickTimer);
+        } else {
+            if (pausedAt !== null && pausedAt > 0) {
+                refreshAt = Date.now() + pausedAt;
+                pausedAt  = null;
+                tickTimer    = setInterval(tick, 1000);
+                refreshTimer = setTimeout(function () {
+                    clearInterval(tickTimer);
+                    sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+                    window.location.reload();
+                }, refreshAt - Date.now());
+                tick();
+            }
+        }
+    });
+})();
+</script>
+
+
+</body>
+</html>

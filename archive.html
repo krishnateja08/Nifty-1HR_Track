@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nifty Analysis - Report Archive</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #667eea;
+            margin: 0;
+            font-size: 36px;
+        }
+        .nav-links {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .nav-links a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .nav-links a:hover {
+            background-color: #764ba2;
+        }
+        .report-list {
+            list-style: none;
+            padding: 0;
+        }
+        .report-item {
+            background-color: #f8f9fa;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .report-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .report-item a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .report-item a:hover {
+            text-decoration: underline;
+        }
+        .report-date {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Nifty Analysis Archive</h1>
+            <p>Historical Reports</p>
+        </div>
+        
+        <div class="nav-links">
+            <a href="index.html">Latest Report</a>
+            <a href="archive.html">All Reports</a>
+        </div>
+        
+        <div class="reports">
+            <h2>Available Reports</h2>
+            <ul class="report-list" id="reportList">
+                <!-- Reports will be listed here -->
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 Nifty Trading Analyzer | Auto-updated via GitHub Actions</p>
+        </div>
+    </div>
+    
+    <script>
+        // This will be populated by the build script
+        const reports = [
+          {file: 'nifty_analysis_20260302_181439.html', name: 'nifty_analysis_20260302_181439.html'}
+        ];
+        
+        const reportList = document.getElementById('reportList');
+        if (reports.length === 0) {
+            reportList.innerHTML = '<li class="report-item">No reports available yet.</li>';
+        } else {
+            reports.forEach(report => {
+                const li = document.createElement('li');
+                li.className = 'report-item';
+                
+                const link = document.createElement('a');
+                link.href = report.file;
+                link.textContent = report.name.replace('.html', '').replace(/_/g, ' ');
+                
+                const date = document.createElement('div');
+                date.className = 'report-date';
+                date.textContent = 'View Report →';
+                
+                li.appendChild(link);
+                li.appendChild(date);
+                reportList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
